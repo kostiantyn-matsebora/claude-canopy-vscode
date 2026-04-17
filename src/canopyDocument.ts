@@ -20,8 +20,21 @@ export interface TreeNode {
   line: number;
   text: string;
   indent: number;
-  opName?: string;         // ALL_CAPS identifier if present
+  opName?: string;
   isPrimitive?: boolean;
+  hasInput: boolean;             // line contains <<
+  hasOutput: boolean;            // line contains >>
+  input?: string;                // trimmed content after <<
+  output?: string;               // trimmed content after >>
+  inputOutputReversed: boolean;  // >> appears before <<
+}
+
+export interface ReadRef {
+  line: number;
+  path: string;      // full backtick path, e.g. "schemas/foo.json"
+  category: string;  // directory prefix including slash, e.g. "schemas/"
+  colStart: number;
+  colEnd: number;
 }
 
 export interface OpDefinition {
@@ -174,15 +187,44 @@ export function parseDocument(document: vscode.TextDocument): ParsedSkillDocumen
 }
 
 function parseTreeLine(line: string, lineIdx: number): TreeNode | null {
-  // Strip tree drawing chars and list bullets
   const stripped = line.replace(/[│├└─]/g, '').replace(/^\s*\*\s*/, '').trim();
   if (!stripped) return null;
-  // Compute indent from original line (count leading spaces/tabs + tree chars)
   const indent = line.search(/[^\s│├└─*\t]/);
 
-  const node: TreeNode = { line: lineIdx, text: stripped, indent: Math.max(indent, 0) };
+  const inputIdx = stripped.indexOf('<<');
+  const outputIdx = stripped.indexOf('>>');
+  const hasInput = inputIdx !== -1;
+  const hasOutput = outputIdx !== -1;
+  const inputOutputReversed = hasInput && hasOutput && outputIdx < inputIdx;
 
-  const opMatch = stripped.match(/^([A-Z][A-Z0-9_]{1,})\b/);
+  let input: string | undefined;
+  let output: string | undefined;
+  if (hasInput && hasOutput && !inputOutputReversed) {
+    input = stripped.slice(inputIdx + 2, outputIdx).trim();
+    output = stripped.slice(outputIdx + 2).trim();
+  } else if (hasInput) {
+    input = stripped.slice(inputIdx + 2).trim();
+  } else if (hasOutput) {
+    output = stripped.slice(outputIdx + 2).trim();
+  }
+
+  // Op name lives before any << or >>
+  const beforeOps = hasInput
+    ? stripped.slice(0, inputIdx)
+    : hasOutput ? stripped.slice(0, outputIdx) : stripped;
+  const opMatch = beforeOps.trim().match(/^([A-Z][A-Z0-9_]{1,})\b/);
+
+  const node: TreeNode = {
+    line: lineIdx,
+    text: stripped,
+    indent: Math.max(indent, 0),
+    hasInput,
+    hasOutput,
+    input,
+    output,
+    inputOutputReversed,
+  };
+
   if (opMatch) {
     node.opName = opMatch[1];
     node.isPrimitive = isPrimitive(opMatch[1]);
@@ -231,6 +273,24 @@ export function extractOpRefs(line: string): string[] {
     names.push(match[1]);
   }
   return names;
+}
+
+/** Extract all Read `category/path` references from a document's lines. */
+export function extractReadRefs(lines: string[]): ReadRef[] {
+  const refs: ReadRef[] = [];
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const re = /\bRead\s+`([^`]+)`/g;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(line)) !== null) {
+      const fullPath = m[1];
+      const slashIdx = fullPath.indexOf('/');
+      const category = slashIdx !== -1 ? fullPath.slice(0, slashIdx + 1) : '';
+      const backtickStart = m.index + m[0].indexOf('`') + 1;
+      refs.push({ line: i, path: fullPath, category, colStart: backtickStart, colEnd: backtickStart + fullPath.length });
+    }
+  }
+  return refs;
 }
 
 /** Get the ALL_CAPS word at a given position in a line, if any. */

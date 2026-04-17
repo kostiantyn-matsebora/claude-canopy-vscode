@@ -42,17 +42,23 @@ export class CanopyCompletionProvider implements vscode.CompletionItemProvider {
     // --- Tree node completions: op names and primitives ---
     const currentSection = this.getSectionAtLine(parsed, position.line);
     if (currentSection === 'tree' || parsed.isOpsFile) {
+      const hasBoxConnector = /[├└]─/.test(line);   // ├── or └── already present
+      const hasBoxIndent = /│/.test(line) && !hasBoxConnector; // │ indent only, no connector
+      const hasListPrefix = /^\s*\*\s+/.test(line);
+      const hasNodePrefix = hasBoxConnector || hasListPrefix;
       const stripped = line.replace(/[│├└─]/g, '').replace(/^\s*\*\s*/, '').trimStart();
       // Only offer if at start of node content (no partial op name mid-line)
       const wordStart = stripped.match(/^([A-Z_]*)$/);
       if (wordStart !== null) {
+        const nodePrefix = hasNodePrefix ? '' : hasBoxIndent ? '├── ' : '* ';
         const items: vscode.CompletionItem[] = [];
-        items.push(...this.primitiveCompletions());
+        items.push(...this.primitiveCompletions(nodePrefix));
         const customOps = await registry.allOpNames(document.uri);
         for (const opName of customOps) {
           if (!isPrimitive(opName)) {
             const item = new vscode.CompletionItem(opName, vscode.CompletionItemKind.Function);
             item.detail = 'Custom op';
+            if (nodePrefix) item.insertText = nodePrefix + opName;
             items.push(item);
           }
         }
@@ -110,7 +116,7 @@ export class CanopyCompletionProvider implements vscode.CompletionItemProvider {
       });
   }
 
-  private primitiveCompletions(): vscode.CompletionItem[] {
+  private primitiveCompletions(nodePrefix = ''): vscode.CompletionItem[] {
     return Object.values(PRIMITIVE_DOCS).map(doc => {
       const isControl = ['IF', 'ELSE_IF', 'ELSE', 'BREAK', 'END'].includes(doc.name);
       const kind = isControl ? vscode.CompletionItemKind.Keyword : vscode.CompletionItemKind.Function;
@@ -120,6 +126,7 @@ export class CanopyCompletionProvider implements vscode.CompletionItemProvider {
         `**${doc.signature}**\n\n${doc.description}\n\n\`\`\`\n${doc.example}\n\`\`\``
       );
       item.sortText = '1' + doc.name;
+      if (nodePrefix) item.insertText = nodePrefix + doc.name;
       return item;
     });
   }

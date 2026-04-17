@@ -2,6 +2,33 @@
 
 All notable changes to the Canopy Skills extension are documented here.
 
+## [0.3.0] — 2026-04-17
+
+### Added
+- **Semantic diagnostics** — code analysis beyond syntax highlighting for `skill.md` and `ops.md`:
+  - Frontmatter: missing required `name`/`description` fields, empty values, unknown keys
+  - Tree node `<<`/`>>` syntax: `>>` before `<<`, empty operators
+  - Primitive signature conformance: `IF`/`ELSE_IF` without `<<`; `ASK` missing `|` options; `SHOW_PLAN` without `>>`; `VERIFY_EXPECTED` wrong path prefix; `ELSE`/`BREAK` with spurious operators; `EXPLORE` without `>>`
+  - Resource reference validation: `Read \`category/path\`` uses a recognised category directory and the file exists on disk; `VERIFY_EXPECTED` target file existence check
+  - Custom op conformance hints: tree node `<<`/`>>` usage compared against the op's declared signature (gated by `canopy.validate.opConformance`)
+  - ops.md: warn on ops with empty bodies
+- **IntelliSense tree node prefix** — accepting an op completion on a bare or indented line now inserts the correct node prefix: `* OP` for list style, `├── OP` after a `│` box-drawing indent
+- `canopy.validate.opConformance` setting (boolean, default `true`) — toggle custom op signature conformance hints
+
+### Fixed
+- Unknown-op check no longer produces false positives for ALL_CAPS words appearing inside `<<` binding expressions (e.g. `MY_OP << FILE_PATH` no longer flags `FILE_PATH`)
+
+### Changed
+- Extension description updated to reflect Canopy's full scope — all eight resource types now listed
+- Added `AI` to extension categories
+- Repository link points to the public `claude-canopy` framework repo
+- Language registration extended to all Canopy resource file types with syntax highlighting:
+  - `verify/*.md` and `checklists/*.md` → `canopy-verify` (checkbox item highlighting)
+  - `templates/*.md` and `templates/*.yaml` → `canopy-template` (`<token>` placeholder highlighting)
+  - `constants/*.md`, `policies/*.md`, `schemas/*.md` → `canopy-resource` (table and numbered-rule highlighting)
+  - `commands/*.ps1` and `commands/*.sh` → `canopy-commands` (`# === Section Name ===` header highlighting)
+  - All patterns extended to cover `.github/` target in addition to `.claude/`
+
 ## [0.2.0] — 2024-06-20
 
 ### Added

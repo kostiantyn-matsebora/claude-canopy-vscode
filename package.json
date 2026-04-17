@@ -1,8 +1,8 @@
 {
   "name": "canopy-skills",
   "displayName": "Canopy Skills",
-  "description": "Language support for the Canopy framework — syntax highlighting, IntelliSense, diagnostics, and go-to-definition for skill.md and ops.md files.",
-  "version": "0.2.0",
+  "description": "Write Claude Code AI skills as executable code, not prose — syntax highlighting, IntelliSense, semantic diagnostics, and go-to-definition for Canopy skills: skill.md, ops.md, schemas, templates, commands, constants, policies, checklists, and verify files.",
+  "version": "0.3.0",
   "publisher": "canopy",
   "license": "MIT",
   "engines": {
@@ -11,11 +11,12 @@
   "categories": [
     "Programming Languages",
     "Linters",
-    "Snippets"
+    "Snippets",
+    "AI"
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/kostiantyn-matsebora/claude-canopy-vscode"
+    "url": "https://github.com/kostiantyn-matsebora/claude-canopy"
   },
   "readme": "docs/README.md",
   "keywords": [
@@ -31,12 +32,71 @@
     "languages": [
       {
         "id": "canopy",
-        "aliases": ["Canopy Skill", "canopy"],
+        "aliases": [
+          "Canopy Skill",
+          "canopy"
+        ],
         "filenamePatterns": [
           "**/.claude/**/skill.md",
-          "**/.claude/**/ops.md"
+          "**/.claude/**/ops.md",
+          "**/.github/**/skill.md",
+          "**/.github/**/ops.md"
         ],
         "configuration": "./language-configuration.json"
+      },
+      {
+        "id": "canopy-verify",
+        "aliases": [
+          "Canopy Verify",
+          "canopy-verify"
+        ],
+        "filenamePatterns": [
+          "**/.claude/**/verify/*.md",
+          "**/.claude/**/checklists/*.md",
+          "**/.github/**/verify/*.md",
+          "**/.github/**/checklists/*.md"
+        ]
+      },
+      {
+        "id": "canopy-template",
+        "aliases": [
+          "Canopy Template",
+          "canopy-template"
+        ],
+        "filenamePatterns": [
+          "**/.claude/**/templates/*.md",
+          "**/.claude/**/templates/*.yaml",
+          "**/.github/**/templates/*.md",
+          "**/.github/**/templates/*.yaml"
+        ]
+      },
+      {
+        "id": "canopy-resource",
+        "aliases": [
+          "Canopy Resource",
+          "canopy-resource"
+        ],
+        "filenamePatterns": [
+          "**/.claude/**/constants/*.md",
+          "**/.claude/**/policies/*.md",
+          "**/.claude/**/schemas/*.md",
+          "**/.github/**/constants/*.md",
+          "**/.github/**/policies/*.md",
+          "**/.github/**/schemas/*.md"
+        ]
+      },
+      {
+        "id": "canopy-commands",
+        "aliases": [
+          "Canopy Commands",
+          "canopy-commands"
+        ],
+        "filenamePatterns": [
+          "**/.claude/**/commands/*.ps1",
+          "**/.claude/**/commands/*.sh",
+          "**/.github/**/commands/*.ps1",
+          "**/.github/**/commands/*.sh"
+        ]
       }
     ],
     "grammars": [
@@ -44,6 +104,26 @@
         "language": "canopy",
         "scopeName": "text.canopy",
         "path": "./syntaxes/canopy.tmLanguage.json"
+      },
+      {
+        "language": "canopy-verify",
+        "scopeName": "text.canopy-verify",
+        "path": "./syntaxes/canopy-verify.tmLanguage.json"
+      },
+      {
+        "language": "canopy-template",
+        "scopeName": "text.canopy-template",
+        "path": "./syntaxes/canopy-template.tmLanguage.json"
+      },
+      {
+        "language": "canopy-resource",
+        "scopeName": "text.canopy-resource",
+        "path": "./syntaxes/canopy-resource.tmLanguage.json"
+      },
+      {
+        "language": "canopy-commands",
+        "scopeName": "text.canopy-commands",
+        "path": "./syntaxes/canopy-commands.tmLanguage.json"
       }
     ],
     "snippets": [
@@ -164,9 +244,19 @@
         },
         "canopy.validate.unknownOps": {
           "type": "string",
-          "enum": ["error", "warning", "hint", "none"],
+          "enum": [
+            "error",
+            "warning",
+            "hint",
+            "none"
+          ],
           "default": "warning",
           "description": "Severity for ALL_CAPS op names not found in any ops registry."
+        },
+        "canopy.validate.opConformance": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show hints when a tree node's << / >> usage doesn't match the op's declared signature."
         }
       }
     }
@@ -178,9 +268,10 @@
     "package": "npx @vscode/vsce package"
   },
   "devDependencies": {
-    "@types/vscode": "^1.85.0",
     "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^2.24.0",
     "typescript": "^5.3.0",
-    "@vscode/vsce": "^2.24.0"
+    "vitest": "^4.1.4"
   }
 }
