@@ -4,7 +4,8 @@
       "Bash(npm run *)",
       "Bash(xargs ls *)",
       "Read(//c/Users/kmats/Projects/__Personal/canopy/**)",
-      "Bash(npm install *)"
+      "Bash(npm install *)",
+      "Bash(npm test *)"
     ]
   }
 }

@@ -394,7 +394,8 @@ describe('parseDocument — tree node operators', () => {
   });
 
   it('<< with | pipe — input preserved verbatim', () => {
-    const n = node('* ASK << Proceed? | Yes | No');
+    const nodes = parseDocument(treeDoc('* ASK << Proceed? | Yes | No') as any).treeNodes;
+    const n = nodes.find(nn => nn.opName === 'ASK')!;
     expect(n.opName).toBe('ASK');
     expect(n.input).toBe('Proceed? | Yes | No');
   });
