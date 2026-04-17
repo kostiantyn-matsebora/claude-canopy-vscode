@@ -1,0 +1,82 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Canopy Resource",
+  "scopeName": "text.canopy-resource",
+  "fileTypes": [],
+  "patterns": [
+    { "include": "#heading1" },
+    { "include": "#heading2" },
+    { "include": "#heading3" },
+    { "include": "#table-header-row" },
+    { "include": "#table-separator-row" },
+    { "include": "#table-row" },
+    { "include": "#numbered-rule" },
+    { "include": "#bold" },
+    { "include": "#code-inline" }
+  ],
+  "repository": {
+    "heading1": {
+      "match": "^(#)\\s+(.+)$",
+      "captures": {
+        "1": { "name": "punctuation.definition.heading.canopy" },
+        "2": { "name": "markup.heading.1.canopy entity.name.section.canopy" }
+      }
+    },
+    "heading2": {
+      "match": "^(##)\\s+(.+)$",
+      "captures": {
+        "1": { "name": "punctuation.definition.heading.canopy" },
+        "2": { "name": "markup.heading.2.canopy" }
+      }
+    },
+    "heading3": {
+      "match": "^(###)\\s+(.+)$",
+      "captures": {
+        "1": { "name": "punctuation.definition.heading.canopy" },
+        "2": { "name": "markup.heading.3.canopy" }
+      }
+    },
+    "table-header-row": {
+      "comment": "First table row — column names are named values in constants/",
+      "match": "^\\|(.+)\\|$",
+      "name": "meta.table.header.canopy",
+      "captures": {
+        "1": { "name": "markup.heading.table.canopy" }
+      }
+    },
+    "table-separator-row": {
+      "match": "^\\|[-| :]+\\|$",
+      "name": "punctuation.definition.table.separator.canopy"
+    },
+    "table-row": {
+      "comment": "Table data row — first cell is the constant/key name",
+      "match": "^(\\|)\\s*(`[^`]+`|[^|]+?)\\s*(\\|)(.+)(\\|)$",
+      "captures": {
+        "1": { "name": "punctuation.separator.table.canopy" },
+        "2": { "name": "support.type.property-name.canopy" },
+        "3": { "name": "punctuation.separator.table.canopy" },
+        "5": { "name": "punctuation.separator.table.canopy" }
+      }
+    },
+    "numbered-rule": {
+      "comment": "Numbered rule line (1. Rule text.) — common in policies/",
+      "match": "^(\\d+\\.)(\\s+)(.+)$",
+      "captures": {
+        "1": { "name": "constant.numeric.rule.canopy" },
+        "3": { "name": "string.unquoted.rule.canopy" }
+      }
+    },
+    "bold": {
+      "match": "(\\*\\*|__)(.+?)(\\*\\*|__)",
+      "captures": {
+        "2": { "name": "markup.bold.canopy" }
+      }
+    },
+    "code-inline": {
+      "match": "`([^`]+)`",
+      "captures": {
+        "1": { "name": "markup.inline.raw.canopy" }
+      }
+    }
+  }
+}

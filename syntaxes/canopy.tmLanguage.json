@@ -1,0 +1,169 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Canopy",
+  "scopeName": "text.canopy",
+  "fileTypes": [],
+  "patterns": [
+    { "include": "#frontmatter" },
+    { "include": "#section-separator" },
+    { "include": "#section-header-tree" },
+    { "include": "#section-header-agent" },
+    { "include": "#section-header-rules" },
+    { "include": "#section-header-response" },
+    { "include": "#ops-definition-header" },
+    { "include": "#tree-chars" },
+    { "include": "#list-bullet" },
+    { "include": "#read-statement" },
+    { "include": "#bind-statement" },
+    { "include": "#primitive-control" },
+    { "include": "#primitive-action" },
+    { "include": "#op-call" },
+    { "include": "#input-operator" },
+    { "include": "#output-operator" },
+    { "include": "#pipe-separator" },
+    { "include": "#variable" },
+    { "include": "#explore-declaration" },
+    { "include": "#angle-placeholder" }
+  ],
+  "repository": {
+    "frontmatter": {
+      "begin": "\\A(---)",
+      "end": "^(---)",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.frontmatter.begin.canopy" }
+      },
+      "endCaptures": {
+        "1": { "name": "punctuation.definition.frontmatter.end.canopy" }
+      },
+      "name": "meta.frontmatter.canopy",
+      "patterns": [
+        { "include": "#frontmatter-known-key" },
+        { "include": "#frontmatter-key" }
+      ]
+    },
+    "frontmatter-known-key": {
+      "match": "^(name|description|argument-hint)(:)(.*)$",
+      "captures": {
+        "1": { "name": "support.type.property-name.canopy" },
+        "2": { "name": "punctuation.separator.key-value.canopy" },
+        "3": { "name": "string.unquoted.frontmatter.value.canopy" }
+      }
+    },
+    "frontmatter-key": {
+      "match": "^([a-z][a-z0-9-]*)(:)(.*)$",
+      "captures": {
+        "1": { "name": "variable.other.key.canopy" },
+        "2": { "name": "punctuation.separator.key-value.canopy" },
+        "3": { "name": "string.unquoted.frontmatter.value.canopy" }
+      }
+    },
+    "section-separator": {
+      "match": "^---$",
+      "name": "meta.separator.canopy punctuation.definition.separator.canopy"
+    },
+    "section-header-tree": {
+      "match": "^(##\\s+)(Tree)\\s*$",
+      "captures": {
+        "1": { "name": "punctuation.definition.heading.canopy" },
+        "2": { "name": "markup.heading.canopy keyword.declaration.section.tree.canopy" }
+      }
+    },
+    "section-header-agent": {
+      "match": "^(##\\s+)(Agent)\\s*$",
+      "captures": {
+        "1": { "name": "punctuation.definition.heading.canopy" },
+        "2": { "name": "markup.heading.canopy keyword.declaration.section.agent.canopy" }
+      }
+    },
+    "section-header-rules": {
+      "match": "^(##\\s+)(Rules)\\s*$",
+      "captures": {
+        "1": { "name": "punctuation.definition.heading.canopy" },
+        "2": { "name": "markup.heading.canopy keyword.declaration.section.rules.canopy" }
+      }
+    },
+    "section-header-response": {
+      "match": "^(##\\s+)(Response:?.*)$",
+      "captures": {
+        "1": { "name": "punctuation.definition.heading.canopy" },
+        "2": { "name": "markup.heading.canopy keyword.declaration.section.response.canopy" }
+      }
+    },
+    "ops-definition-header": {
+      "comment": "Op definition header in ops.md: ## OP_NAME << inputs >> outputs",
+      "match": "^(##\\s+)([A-Z][A-Z0-9_]+)(\\s.*)?$",
+      "captures": {
+        "1": { "name": "punctuation.definition.heading.canopy" },
+        "2": { "name": "entity.name.function.definition.canopy" },
+        "3": { "name": "meta.op-signature.canopy" }
+      }
+    },
+    "tree-chars": {
+      "match": "[├└│](?:──)?|─+",
+      "name": "punctuation.definition.tree.canopy"
+    },
+    "list-bullet": {
+      "match": "^([ \\t]*)(\\*)(?=\\s)",
+      "captures": {
+        "2": { "name": "punctuation.definition.list.canopy" }
+      }
+    },
+    "read-statement": {
+      "match": "\\b(Read)\\s+(`[^`]+`)",
+      "captures": {
+        "1": { "name": "keyword.control.read.canopy" },
+        "2": { "name": "string.interpolated.path.canopy" }
+      }
+    },
+    "bind-statement": {
+      "match": "\\b(bind)\\s+([a-z_][a-z0-9_]*)\\s*(=)",
+      "captures": {
+        "1": { "name": "keyword.control.bind.canopy" },
+        "2": { "name": "variable.other.bound.canopy" },
+        "3": { "name": "keyword.operator.assignment.canopy" }
+      }
+    },
+    "primitive-control": {
+      "comment": "Control flow primitives — always resolved from framework/ops.md",
+      "match": "\\b(IF|ELSE_IF|ELSE|BREAK|END)\\b",
+      "name": "keyword.control.canopy"
+    },
+    "primitive-action": {
+      "comment": "Action primitives — ASK, SHOW_PLAN, VERIFY_EXPECTED, EXPLORE",
+      "match": "\\b(ASK|SHOW_PLAN|VERIFY_EXPECTED|EXPLORE)\\b",
+      "name": "support.function.builtin.canopy"
+    },
+    "op-call": {
+      "comment": "Custom ALL_CAPS op names (non-primitive)",
+      "match": "\\b(?!IF\\b|ELSE_IF\\b|ELSE\\b|BREAK\\b|END\\b|ASK\\b|SHOW_PLAN\\b|VERIFY_EXPECTED\\b|EXPLORE\\b)[A-Z][A-Z0-9_]{1,}\\b",
+      "name": "entity.name.function.canopy"
+    },
+    "input-operator": {
+      "match": "<<",
+      "name": "keyword.operator.input.canopy"
+    },
+    "output-operator": {
+      "match": ">>",
+      "name": "keyword.operator.output.canopy"
+    },
+    "pipe-separator": {
+      "match": "(?<=\\s)\\|(?=\\s)",
+      "name": "punctuation.separator.pipe.canopy"
+    },
+    "variable": {
+      "match": "\\$[A-Za-z_][A-Za-z0-9_]*",
+      "name": "variable.other.canopy"
+    },
+    "explore-declaration": {
+      "match": "\\*\\*(explore)\\*\\*",
+      "captures": {
+        "1": { "name": "support.function.builtin.canopy" }
+      }
+    },
+    "angle-placeholder": {
+      "comment": "Template placeholders like <token> and [optional]",
+      "match": "<[a-z][a-z0-9_-]*>|\\[[a-z][a-z0-9_-]*\\]",
+      "name": "variable.parameter.canopy"
+    }
+  }
+}

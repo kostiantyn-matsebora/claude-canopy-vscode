@@ -1,0 +1,220 @@
+/**
+ * Op Registry — resolves op definitions following the Canopy lookup chain:
+ *   1. <skill>/ops.md         (skill-local)
+ *   2. shared/project/ops.md  (project-wide)
+ *   3. shared/framework/ops.md (framework primitives)
+ *
+ * Also exposes static documentation for the built-in framework primitives.
+ */
+import * as vscode from 'vscode';
+import * as path from 'path';
+import * as fs from 'fs';
+import { parseOpDefinitions, OpDefinition } from './canopyDocument';
+
+// ---------------------------------------------------------------------------
+// Framework primitive documentation (static, never overridden)
+// ---------------------------------------------------------------------------
+export interface PrimitiveDoc {
+  name: string;
+  signature: string;
+  description: string;
+  example: string;
+}
+
+export const PRIMITIVE_DOCS: Record<string, PrimitiveDoc> = {
+  IF: {
+    name: 'IF',
+    signature: 'IF << condition',
+    description: 'Branch on a boolean condition. Children execute if the condition is true.',
+    example: 'IF << $ARGUMENTS is not valid semver\n  └── END Invalid version',
+  },
+  ELSE_IF: {
+    name: 'ELSE_IF',
+    signature: 'ELSE_IF << condition',
+    description: 'Continue an IF chain. Evaluated only if all prior IF/ELSE_IF conditions were false.',
+    example: 'ELSE_IF << file is a pyproject.toml\n  └── UPDATE_PYPROJECT',
+  },
+  ELSE: {
+    name: 'ELSE',
+    signature: 'ELSE',
+    description: 'Final branch of an IF chain. Executes if all prior conditions were false.',
+    example: 'ELSE\n  └── natural language fallback action',
+  },
+  BREAK: {
+    name: 'BREAK',
+    signature: 'BREAK',
+    description: 'Exit the current op and resume the caller\'s next tree node (non-fatal).',
+    example: 'IF << no commits found\n  └── BREAK',
+  },
+  END: {
+    name: 'END',
+    signature: 'END [message]',
+    description: 'Halt the entire skill immediately. Displays an optional message to the user.',
+    example: 'END Version argument is not valid semver — expected MAJOR.MINOR.PATCH',
+  },
+  ASK: {
+    name: 'ASK',
+    signature: 'ASK << question | option1 | option2 [...]',
+    description: 'Prompt the user with a question and a set of options. Skill halts until the user responds.',
+    example: 'ASK << Proceed? | Yes | No',
+  },
+  SHOW_PLAN: {
+    name: 'SHOW_PLAN',
+    signature: 'SHOW_PLAN >> field1 | field2 | ...',
+    description: 'Display a structured plan summary before executing changes. Fields become labeled rows in the output.',
+    example: 'SHOW_PLAN >> current version | new version | files to update | changelog action',
+  },
+  VERIFY_EXPECTED: {
+    name: 'VERIFY_EXPECTED',
+    signature: 'VERIFY_EXPECTED << verify/<file>.md',
+    description: 'Check the current working state against the expected-state checklist in the referenced verify/ file.',
+    example: 'VERIFY_EXPECTED << verify/verify-expected.md',
+  },
+  EXPLORE: {
+    name: 'EXPLORE',
+    signature: 'EXPLORE >> context',
+    description: 'Run the explore subagent declared in ## Agent. Must be the first tree node when ## Agent is present. Output is bound to the context variable.',
+    example: 'EXPLORE >> context',
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Registry
+// ---------------------------------------------------------------------------
+
+export interface ResolvedOp {
+  definition: OpDefinition;
+  source: 'skill-local' | 'project' | 'framework';
+}
+
+export class OpRegistry {
+  private cache = new Map<string, OpDefinition[]>(); // uri.fsPath -> parsed defs
+
+  /** Resolve an op name given the document that references it. Returns undefined if not found. */
+  async resolve(opName: string, fromDocument: vscode.Uri): Promise<ResolvedOp | undefined> {
+    // 1. skill-local ops.md
+    const skillOpsUri = this.siblingOpsUri(fromDocument);
+    if (skillOpsUri) {
+      const defs = await this.loadDefs(skillOpsUri);
+      const def = defs.find(d => d.name === opName);
+      if (def) return { definition: def, source: 'skill-local' };
+    }
+
+    // 2. shared/project/ops.md
+    const projectOpsUri = await this.findSharedOps(fromDocument, 'project');
+    if (projectOpsUri) {
+      const defs = await this.loadDefs(projectOpsUri);
+      const def = defs.find(d => d.name === opName);
+      if (def) return { definition: def, source: 'project' };
+    }
+
+    // 3. shared/framework/ops.md
+    const frameworkOpsUri = await this.findSharedOps(fromDocument, 'framework');
+    if (frameworkOpsUri) {
+      const defs = await this.loadDefs(frameworkOpsUri);
+      const def = defs.find(d => d.name === opName);
+      if (def) return { definition: def, source: 'framework' };
+    }
+
+    return undefined;
+  }
+
+  /** Return all op names visible from a given document (for completion). */
+  async allOpNames(fromDocument: vscode.Uri): Promise<string[]> {
+    const seen = new Set<string>();
+    const names: string[] = [];
+
+    const collect = (defs: OpDefinition[]) => {
+      for (const d of defs) {
+        if (!seen.has(d.name)) {
+          seen.add(d.name);
+          names.push(d.name);
+        }
+      }
+    };
+
+    const skillOpsUri = this.siblingOpsUri(fromDocument);
+    if (skillOpsUri) collect(await this.loadDefs(skillOpsUri));
+
+    const projectOpsUri = await this.findSharedOps(fromDocument, 'project');
+    if (projectOpsUri) collect(await this.loadDefs(projectOpsUri));
+
+    const frameworkOpsUri = await this.findSharedOps(fromDocument, 'framework');
+    if (frameworkOpsUri) collect(await this.loadDefs(frameworkOpsUri));
+
+    return names;
+  }
+
+  /** Load and cache op definitions from an ops.md URI. */
+  async loadDefs(uri: vscode.Uri): Promise<OpDefinition[]> {
+    const key = uri.fsPath;
+    if (this.cache.has(key)) return this.cache.get(key)!;
+    try {
+      const bytes = await vscode.workspace.fs.readFile(uri);
+      const text = Buffer.from(bytes).toString('utf8');
+      const lines = text.split(/\r?\n/);
+      const defs = parseOpDefinitions(lines, uri);
+      this.cache.set(key, defs);
+      return defs;
+    } catch {
+      return [];
+    }
+  }
+
+  /** Invalidate cached defs when a file changes. */
+  invalidate(uri: vscode.Uri): void {
+    this.cache.delete(uri.fsPath);
+  }
+
+  // -------------------------------------------------------------------------
+  // Path helpers
+  // -------------------------------------------------------------------------
+
+  /** For a skill.md, return the sibling ops.md URI. */
+  private siblingOpsUri(docUri: vscode.Uri): vscode.Uri | undefined {
+    const dir = path.dirname(docUri.fsPath);
+    const candidate = path.join(dir, 'ops.md');
+    if (fs.existsSync(candidate)) {
+      return vscode.Uri.file(candidate);
+    }
+    return undefined;
+  }
+
+  /**
+   * Walk up from the document to find .claude/, then resolve:
+   *   .claude/skills/shared/<kind>/ops.md
+   * OR for canopy submodule:
+   *   .claude/canopy/skills/shared/<kind>/ops.md
+   */
+  private async findSharedOps(docUri: vscode.Uri, kind: 'project' | 'framework'): Promise<vscode.Uri | undefined> {
+    const claudeDir = this.findClaudeDir(docUri.fsPath);
+    if (!claudeDir) return undefined;
+
+    const candidates = [
+      path.join(claudeDir, 'skills', 'shared', kind, 'ops.md'),
+      path.join(claudeDir, 'canopy', 'skills', 'shared', kind, 'ops.md'),
+    ];
+
+    for (const c of candidates) {
+      if (fs.existsSync(c)) return vscode.Uri.file(c);
+    }
+    return undefined;
+  }
+
+  /** Walk up directory tree to find the parent .claude/ directory. */
+  private findClaudeDir(startPath: string): string | undefined {
+    let current = path.dirname(startPath);
+    const root = path.parse(current).root;
+    while (current !== root) {
+      const candidate = path.join(current, '.claude');
+      if (fs.existsSync(candidate) && fs.statSync(candidate).isDirectory()) {
+        return candidate;
+      }
+      current = path.dirname(current);
+    }
+    return undefined;
+  }
+}
+
+// Singleton
+export const registry = new OpRegistry();

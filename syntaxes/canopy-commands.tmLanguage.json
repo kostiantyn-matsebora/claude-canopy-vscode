@@ -1,0 +1,78 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Canopy Commands",
+  "scopeName": "text.canopy-commands",
+  "fileTypes": [],
+  "patterns": [
+    { "include": "#section-header" },
+    { "include": "#file-heading" },
+    { "include": "#fenced-code-block" },
+    { "include": "#bold" },
+    { "include": "#italic" },
+    { "include": "#code-inline" },
+    { "include": "#comment-line" },
+    { "include": "#output-label" }
+  ],
+  "repository": {
+    "section-header": {
+      "comment": "# === SECTION_NAME === — the key structural element of commands files",
+      "match": "^(#\\s*)(===)\\s*(.+?)\\s*(===)\\s*$",
+      "captures": {
+        "1": { "name": "punctuation.definition.comment.canopy" },
+        "2": { "name": "punctuation.definition.section.begin.canopy" },
+        "3": { "name": "entity.name.section.commands.canopy markup.heading.section.canopy" },
+        "4": { "name": "punctuation.definition.section.end.canopy" }
+      }
+    },
+    "file-heading": {
+      "comment": "# File Title — H1 style heading at the top of the file",
+      "match": "^(#)(?!==)\\s+(.+)$",
+      "captures": {
+        "1": { "name": "punctuation.definition.heading.canopy" },
+        "2": { "name": "markup.heading.1.canopy" }
+      }
+    },
+    "fenced-code-block": {
+      "comment": "```lang ... ``` code blocks",
+      "begin": "^(```)(\\w*)$",
+      "end": "^(```)$",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.fenced.canopy" },
+        "2": { "name": "variable.language.fenced.canopy" }
+      },
+      "endCaptures": {
+        "1": { "name": "punctuation.definition.fenced.canopy" }
+      },
+      "name": "markup.raw.block.canopy",
+      "contentName": "meta.embedded.block.canopy"
+    },
+    "bold": {
+      "match": "(\\*\\*|__)(.+?)(\\*\\*|__)",
+      "captures": {
+        "2": { "name": "markup.bold.canopy" }
+      }
+    },
+    "italic": {
+      "match": "(?<!\\*)\\*(?!\\*)(.+?)(?<!\\*)\\*(?!\\*)",
+      "captures": {
+        "1": { "name": "markup.italic.canopy" }
+      }
+    },
+    "code-inline": {
+      "match": "`([^`]+)`",
+      "captures": {
+        "1": { "name": "markup.inline.raw.canopy" }
+      }
+    },
+    "comment-line": {
+      "comment": "Prose comment line (not a section header)",
+      "match": "^#(?!\\s*===)\\s*(?!\\s).+$",
+      "name": "comment.block.documentation.canopy"
+    },
+    "output-label": {
+      "comment": "**Output:** or **Captures:** labels",
+      "match": "\\*\\*(Output|Captures|Returns|Input|Note):\\*\\*",
+      "name": "keyword.other.label.canopy"
+    }
+  }
+}

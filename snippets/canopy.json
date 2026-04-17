@@ -1,0 +1,151 @@
+{
+  "New Skill": {
+    "prefix": "skill",
+    "description": "New Canopy skill skeleton",
+    "body": [
+      "---",
+      "name: ${1:skill-name}",
+      "description: ${2:One-line description.}",
+      "argument-hint: \"${3:<required-arg>}\"",
+      "---",
+      "",
+      "${4:Parse \\$ARGUMENTS.}",
+      "",
+      "---",
+      "",
+      "## Tree",
+      "",
+      "* ${1:skill-name}",
+      "  * SHOW_PLAN >> ${5:what will change}",
+      "  * ASK << Proceed? | Yes | No",
+      "  * ${6:OP_NAME << input >> output}",
+      "  * VERIFY_EXPECTED << verify/verify-expected.md",
+      "",
+      "## Rules",
+      "",
+      "- ${7:Add invariants here.}",
+      "",
+      "## Response: ${8:summary | details}"
+    ]
+  },
+  "New Skill with Agent": {
+    "prefix": "skill-explore",
+    "description": "New Canopy skill with explore subagent",
+    "body": [
+      "---",
+      "name: ${1:skill-name}",
+      "description: ${2:One-line description.}",
+      "argument-hint: \"${3:<required-arg>}\"",
+      "---",
+      "",
+      "${4:Parse \\$ARGUMENTS.}",
+      "",
+      "---",
+      "",
+      "## Agent",
+      "",
+      "**explore** — ${5:reads the project root for relevant files.}",
+      "",
+      "---",
+      "",
+      "## Tree",
+      "",
+      "* ${1:skill-name}",
+      "  * EXPLORE >> context",
+      "  * SHOW_PLAN >> ${6:what will change}",
+      "  * ASK << Proceed? | Yes | No",
+      "  * ${7:OP_NAME << context >> output}",
+      "  * VERIFY_EXPECTED << verify/verify-expected.md",
+      "",
+      "## Rules",
+      "",
+      "- ${8:Add invariants here.}",
+      "",
+      "## Response: ${9:summary | details}"
+    ]
+  },
+  "Op Definition": {
+    "prefix": "op",
+    "description": "New op definition for ops.md",
+    "body": [
+      "## ${1:OP_NAME} << ${2:input} >> ${3:output}",
+      "",
+      "${4:Description of what this op does.}"
+    ]
+  },
+  "Op Definition with Tree": {
+    "prefix": "op-tree",
+    "description": "New op definition with tree body",
+    "body": [
+      "## ${1:OP_NAME} << ${2:input} >> ${3:output}",
+      "",
+      "* ${1:OP_NAME} << ${2:input} >> ${3:output}",
+      "  * ${4:OP_STEP_ONE << input}",
+      "  * ${5:OP_STEP_TWO << input}"
+    ]
+  },
+  "IF / ELSE": {
+    "prefix": "if",
+    "description": "IF / ELSE branch",
+    "body": [
+      "* IF << ${1:condition}",
+      "  * ${2:action if true}",
+      "* ELSE",
+      "  * ${3:action if false}"
+    ]
+  },
+  "IF / ELSE_IF / ELSE": {
+    "prefix": "ifelse",
+    "description": "IF / ELSE_IF / ELSE chain",
+    "body": [
+      "* IF << ${1:condition}",
+      "  * ${2:action if true}",
+      "* ELSE_IF << ${3:condition2}",
+      "  * ${4:action if condition2}",
+      "* ELSE",
+      "  * ${5:action otherwise}"
+    ]
+  },
+  "ASK": {
+    "prefix": "ask",
+    "description": "ASK primitive — prompt user with options",
+    "body": [
+      "* ASK << ${1:Question?} | ${2:Yes} | ${3:No}"
+    ]
+  },
+  "SHOW_PLAN": {
+    "prefix": "plan",
+    "description": "SHOW_PLAN primitive — display structured plan",
+    "body": [
+      "* SHOW_PLAN >> ${1:field1} | ${2:field2} | ${3:field3}"
+    ]
+  },
+  "VERIFY_EXPECTED": {
+    "prefix": "verify",
+    "description": "VERIFY_EXPECTED primitive",
+    "body": [
+      "* VERIFY_EXPECTED << verify/${1:verify-expected}.md"
+    ]
+  },
+  "END with message": {
+    "prefix": "end",
+    "description": "END primitive — halt skill with message",
+    "body": [
+      "* END ${1:Reason skill halted.}"
+    ]
+  },
+  "Read resource": {
+    "prefix": "read",
+    "description": "Load a category resource file",
+    "body": [
+      "* Read `${1|schemas,templates,commands,constants,policies,verify|}/${2:file}` for ${3:purpose}"
+    ]
+  },
+  "bind variable": {
+    "prefix": "bind",
+    "description": "Bind a context variable",
+    "body": [
+      "* bind ${1:variable} = ${2:value}"
+    ]
+  }
+}
