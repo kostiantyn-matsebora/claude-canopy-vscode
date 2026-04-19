@@ -97,6 +97,8 @@ This extension is a consumer of the Canopy framework. When `claude-canopy/` chan
 | Tree syntax notation changes ([`docs/FRAMEWORK.md`](https://github.com/kostiantyn-matsebora/claude-canopy/blob/main/docs/FRAMEWORK.md)) | Update `parseTreeLine()` in `canopyDocument.ts` |
 | New section header added (`## Agent`, `## Tree`, etc.) | Update `SECTION_NAMES` in `completionProvider.ts`; update `SECTION_DOCS` in `hoverProvider.ts`; update section parsing in `parseDocument()` |
 | Op lookup chain changes ([`docs/FRAMEWORK.md`](https://github.com/kostiantyn-matsebora/claude-canopy/blob/main/docs/FRAMEWORK.md)) | Update `OpRegistry` resolution order in `opRegistry.ts` |
+| Runtime spec added or renamed (`runtimes/claude.md`, `runtimes/copilot.md`) | No code change needed — `runtimes/` is not a skill category; update `setupCanopy.ts` only if setup wiring changes |
+| Canopy agent restructured (now in Canopy skill format with `## Agent` + `## Tree`) | Validate that diagnostics and completions work correctly against `.claude/agents/canopy.md` — it now uses the full skill anatomy |
 
 When in doubt, treat [`docs/FRAMEWORK.md`](https://github.com/kostiantyn-matsebora/claude-canopy/blob/main/docs/FRAMEWORK.md) as the canonical spec and audit the extension against it.
 
