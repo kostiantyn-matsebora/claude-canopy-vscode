@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "type": "object",
-  "required": ["operation", "platform"],
+  "required": ["operation", "platform", "available_platforms"],
   "properties": {
     "operation": {
       "type": "string",
@@ -23,7 +23,17 @@
     "platform": {
       "type": "string",
       "enum": ["claude", "copilot"],
-      "description": "Active platform: claude if .claude/ exists as base directory, copilot if .github/"
+      "description": "Execution platform: claude if .claude/ is the active base directory, copilot if .github/"
+    },
+    "available_platforms": {
+      "type": "array",
+      "items": { "type": "string", "enum": ["claude", "copilot"] },
+      "description": "Platforms detected in the repo: includes claude if .claude/ exists, copilot if .github/ exists"
+    },
+    "explicit_target_platform": {
+      "type": ["string", "null"],
+      "enum": ["claude", "copilot", null],
+      "description": "Platform explicitly requested by user in their input (e.g. 'create for copilot'), or null if not stated"
     },
     "target_skill": {
       "type": ["string", "null"],

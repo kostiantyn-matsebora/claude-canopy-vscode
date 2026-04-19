@@ -10,7 +10,7 @@ $ARGUMENTS
 
 ## Agent
 
-**explore** — classify the user's intent from $ARGUMENTS and conversation context. Read `constants/operation-detection.md` for trigger phrases. Detect the active platform by checking whether `.claude/` or `.github/` is the base directory. Output contract: `schemas/dispatch-schema.json`. Return: operation (one of the 10 ops or UNKNOWN), platform (claude | copilot), target_skill (kebab-case name if mentioned, else null), extra_context.
+**explore** — classify the user's intent from $ARGUMENTS and conversation context. Read `constants/operation-detection.md` for trigger phrases. Check which platform directories exist: `.claude/` → "claude" available, `.github/` → "copilot" available. Detect the active execution platform (whichever is the current base). Check if the user explicitly named a target platform (e.g. "create for copilot", "scaffold as claude"). Output contract: `schemas/dispatch-schema.json`. Return: operation, platform (execution platform), available_platforms (all detected), explicit_target_platform (from user input or null), target_skill, extra_context.
 
 ---
 

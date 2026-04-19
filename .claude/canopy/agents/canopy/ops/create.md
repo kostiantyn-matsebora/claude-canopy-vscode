@@ -4,7 +4,7 @@ Create a new Canopy skill from a description.
 
 1. If no description given, ask for it.
 2. Derive a kebab-case skill name from the description, or ask if ambiguous.
-3. Check if `.claude/skills/<skill_name>/` already exists — if so, offer MODIFY instead.
+3. Read `policies/platform-targeting.md` and resolve the target platform and skills base path. Check if `<skills_base>/<skill_name>/` already exists — if so, offer MODIFY instead.
 4. Ask: **"Which tree syntax? | Markdown list (`*`) | Box-drawing (tree characters)"**
 5. Analyze the description:
    - Read `policies/category-decision-flowchart.md` to classify each content block

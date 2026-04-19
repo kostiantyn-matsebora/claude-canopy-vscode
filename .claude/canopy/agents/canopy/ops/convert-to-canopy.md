@@ -37,7 +37,7 @@ A "regular skill" is any `.md` skill file that uses prose or numbered `## Steps`
 
 6. Ask: **"Proceed? | Yes | Adjust | No"** — wait for response before touching any file.
 7. Determine target skill name (infer from file name; ask if ambiguous).
-8. If `.claude/skills/<skill_name>/` already exists: Ask **"Directory exists. | Overwrite | Cancel"**
+8. Read `policies/platform-targeting.md` and resolve the target platform and skills base path. If `<skills_base>/<skill_name>/` already exists: Ask **"Directory exists. | Overwrite | Cancel"**
 9. Create the Canopy skill directory and write all files:
    - Copy the original `SKILL.md` to `SKILL.classic.md` before overwriting it (preserve the pre-conversion source)
    - `skill.md` in Canopy format — see `policies/skill-structure-rules.md` for composition rules

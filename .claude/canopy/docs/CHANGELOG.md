@@ -7,6 +7,23 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.9.0] — 2026-04-19
+
+### Added
+
+- `runtimes/claude.md` — Claude Code runtime spec: base paths (`.claude/`), native explore subagent execution, ambient rules via globs, agent and skill invocation forms
+- `runtimes/copilot.md` — GitHub Copilot runtime spec: base paths (`.github/`), inline sequential file-reading fallback when native subagent is unavailable, `copilot-instructions.md` rules wiring, explicit agent invocation form
+- `agents/canopy/schemas/dispatch-schema.json` — output contract for the canopy agent's own intent-classification subagent; fields: `operation`, `platform` (`claude` | `copilot`), `target_skill`, `extra_context`
+
+### Changed
+
+- `agents/canopy.md` — restructured from free-form prose to Canopy skill format (frontmatter + `## Agent` + `## Tree` + `## Rules` + `## Response:`); `## Agent` explore subagent now classifies intent **and** detects platform; `## Tree` replaces LLM-inferred dispatch with an explicit `IF/ELSE_IF` chain over `context.operation` — deterministic routing to one of 10 ops; falls back to `ASK` when intent is ambiguous
+- `docs/README.md` — added "Skills that run on Claude Code and GitHub Copilot" to Why Canopy; updated How It Works to describe platform-aware execution and self-hosting agent design; updated Under the Hood diagram with Stage 2 (detect platform + load runtime), Stage 3 (explore with native vs inline fallback), and runtime specs legend
+- `docs/FRAMEWORK.md` — added Runtime Model section (interpreter model rationale, feature delta table, runtime spec file list); updated directory layout to show `runtimes/` and both schema files
+- `CLAUDE.md` — updated Key Files to document `runtimes/`, `dispatch-schema.json`, and the new canopy agent structure
+
+---
+
 ## [0.8.1] — 2026-04-16
 
 ### Changed
