@@ -14,6 +14,7 @@
 - Scripts, shell commands, or code fences with executable content
 - Inline examples or templates
 - Phase-by-phase prose when a `## Tree` is possible
+- Hardcoded platform-specific paths (`.claude/` or `.github/`) in tree nodes or `Read` references — all category file references must be relative to the skill directory (e.g. `policies/rules.md`, not `.claude/skills/my-skill/policies/rules.md`)
 
 ## Structural requirements
 

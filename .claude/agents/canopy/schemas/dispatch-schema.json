@@ -1,0 +1,47 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["operation", "platform", "available_platforms"],
+  "properties": {
+    "operation": {
+      "type": "string",
+      "enum": [
+        "CREATE",
+        "MODIFY",
+        "SCAFFOLD",
+        "CONVERT_TO_CANOPY",
+        "VALIDATE",
+        "IMPROVE",
+        "ADVISE",
+        "REFACTOR_SKILLS",
+        "CONVERT_TO_REGULAR",
+        "HELP",
+        "UNKNOWN"
+      ],
+      "description": "The canopy operation to execute, classified from user input against constants/operation-detection.md"
+    },
+    "platform": {
+      "type": "string",
+      "enum": ["claude", "copilot"],
+      "description": "Execution platform: claude if .claude/ is the active base directory, copilot if .github/"
+    },
+    "available_platforms": {
+      "type": "array",
+      "items": { "type": "string", "enum": ["claude", "copilot"] },
+      "description": "Platforms detected in the repo: includes claude if .claude/ exists, copilot if .github/ exists"
+    },
+    "explicit_target_platform": {
+      "type": ["string", "null"],
+      "enum": ["claude", "copilot", null],
+      "description": "Platform explicitly requested by user in their input (e.g. 'create for copilot'), or null if not stated"
+    },
+    "target_skill": {
+      "type": ["string", "null"],
+      "description": "Kebab-case skill name extracted from user input, or null if not mentioned"
+    },
+    "extra_context": {
+      "type": "string",
+      "description": "Any additional context from user input relevant to the operation"
+    }
+  }
+}

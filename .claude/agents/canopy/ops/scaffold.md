@@ -3,7 +3,7 @@
 Generate a blank skill skeleton with all directories and placeholder files.
 
 1. If no skill name given, ask for it. Validate it is kebab-case; refuse if not.
-2. Check if `.claude/skills/<skill_name>/` already exists — if so, `END Skill already exists.`
+2. Read `policies/platform-targeting.md` and resolve the target platform and skills base path. Check if `<skills_base>/<skill_name>/` already exists — if so, `END Skill already exists.`
 3. Ask: **"Which tree syntax? | Markdown list (`*`) | Box-drawing (tree characters)"**
 4. Show plan: skill name | files to create | directories to create.
 
@@ -13,13 +13,14 @@ Generate a blank skill skeleton with all directories and placeholder files.
    op: SCAFFOLD
    skill: <name>
    tree-syntax: <markdown-list|box-drawing>
-   target-dir: .claude/skills/<name>/
+   target-dir: <skills_base>/<name>/
+   platform: <claude|copilot>
    ```
 
    If re-invoked after this block is visible in context, skip steps 1–4 and apply the listed changes directly.
 
 5. Ask: **"Proceed? | Yes | No"**
-6. Create `<skill_name>/` under the skills directory and write:
+6. Create `<skill_name>/` under `<skills_base>/` (resolved in step 2) and write:
 
    `skill.md` (markdown list variant):
    ```markdown

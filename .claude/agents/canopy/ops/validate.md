@@ -28,6 +28,7 @@ Evaluate a Canopy skill for framework errors, warnings, and optimization opportu
 - `VERIFY_EXPECTED` referenced but `verify/verify-expected.md` absent
 - Op calls in tree are not `ALL_CAPS`
 - `## Rules` or `## Response:` section missing
+- `skill.md` tree nodes or `Read` references contain hardcoded platform paths (`.claude/` or `.github/`) — skills must be platform-agnostic; all category file references must be relative to the skill directory
 
 **Warnings:**
 - `## Agent` section contains boilerplate ("do not inline-read", "return JSON only") → remove; it's implicit
