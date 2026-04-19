@@ -2,6 +2,22 @@
 
 > **Canopy framework context:** read [`CLAUDE.md`](https://github.com/kostiantyn-matsebora/claude-canopy/blob/main/CLAUDE.md) in the `claude-canopy` repo before working on this extension. It covers the framework spec, skill anatomy, tree notation, op lookup order, and category resource directories.
 
+## Canopy Integration
+
+Canopy is embedded in this repo at `.claude/canopy/` as a **git subtree**. The `canopy` agent and bundled skills are wired into `.claude/agents/` and `.claude/skills/` via setup. On a fresh clone, run setup to create the junctions/symlinks:
+
+```bash
+pwsh .claude/canopy/setup.ps1    # Windows
+bash .claude/canopy/setup.sh     # Linux / macOS
+```
+
+To pull a newer version of the framework:
+
+```bash
+git subtree pull --prefix=.claude/canopy \
+  https://github.com/kostiantyn-matsebora/claude-canopy master --squash
+```
+
 ## This Repository
 
 `claude-canopy-vscode` is a VS Code extension that provides language support for Canopy skills. It is a sibling repo of `claude-canopy/` in the parent workspace.

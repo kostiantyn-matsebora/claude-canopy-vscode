@@ -1,0 +1,61 @@
+{
+  "skill_dir": ".claude/skills/<skill-name>",
+  "skill_md_lines": 150,
+  "existing_resources": ["schemas/explore-schema.json", "policies/writing-rules.md", "constants/category-dirs.md"],
+  "inline_blocks": [
+    {
+      "type": "json|yaml|table|script|code",
+      "lines": "25-35",
+      "purpose": "agent output schema / template / constants / commands",
+      "suggested_file": "schemas/explore-schema.json"
+    }
+  ],
+  "prose_sections": [
+    {
+      "heading": "## Phase 2",
+      "lines": "40-55",
+      "note": "narrative paragraph — can compress to step list"
+    }
+  ],
+  "agent_boilerplate": [
+    {
+      "lines": "20-28",
+      "note": "boilerplate to trim — e.g. 'do not inline-read', 'return JSON only matching schema'"
+    }
+  ],
+  "inline_step_chains": [
+    {
+      "step": 3,
+      "lines": "45-45",
+      "note": "multi-clause step joined by ; or —"
+    }
+  ],
+  "collapsible_bullets": [
+    {
+      "step": 5,
+      "lines": "60-65",
+      "note": "mechanical sub-bullets under Read commands/ collapsible by category rule"
+    }
+  ],
+  "named_op_candidates": [
+    {
+      "lines": "80-84",
+      "pattern": "deploy / verify pods / secret read",
+      "suggested_op": "MY_DEPLOY <dir>"
+    }
+  ],
+  "tree_candidates": [
+    {
+      "section": "## Steps",
+      "lines": "30-90",
+      "note": "linear pipeline with IF branches — convertible to ## Tree format"
+    }
+  ],
+  "ops_candidates": [
+    {
+      "branch": "if unhealthy after 5min",
+      "lines": "85-90",
+      "note": "conditional branch extractable to skill-local ops.md"
+    }
+  ]
+}
