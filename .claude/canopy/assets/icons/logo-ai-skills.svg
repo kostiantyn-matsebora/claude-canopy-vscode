@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="48 12 170 12" fill="none">
+  <style>
+    svg { color: #0969da; }
+    @media (prefers-color-scheme: dark) {
+      svg { color: #58a6ff; }
+    }
+  </style>
+  <!-- Deterministic -->
+  <circle cx="52" cy="18" r="1.2" fill="currentColor"/>
+  <text x="56" y="20" font-size="6" fill="currentColor" font-family="Arial, sans-serif" font-weight="bold">Deterministic</text>
+
+  <!-- Reusable -->
+  <circle cx="102" cy="18" r="1.2" fill="currentColor"/>
+  <text x="106" y="20" font-size="6" fill="currentColor" font-family="Arial, sans-serif" font-weight="bold">Reusable</text>
+
+  <!-- Readable -->
+  <circle cx="137" cy="18" r="1.2" fill="currentColor"/>
+  <text x="141" y="20" font-size="6" fill="currentColor" font-family="Arial, sans-serif" font-weight="bold">Readable</text>
+
+  <!-- Organized -->
+  <circle cx="172" cy="18" r="1.2" fill="currentColor"/>
+  <text x="176" y="20" font-size="6" fill="currentColor" font-family="Arial, sans-serif" font-weight="bold">Organized</text>
+</svg>
