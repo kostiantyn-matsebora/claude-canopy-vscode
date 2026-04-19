@@ -29,12 +29,20 @@ misunderstood. When it works, you're not entirely sure why it did.
   where it went wrong. No re-reading prose. Use `/canopy-debug <skill>` to replay any skill with
   live phase banners and per-node tracing — pin the failing node, fix its op definition, move on.
 
+* **Skills that run on Claude Code and GitHub Copilot.** Write a skill once; the Canopy interpreter
+  detects your platform at execution time and adapts — native subagents on Claude Code, inline
+  fallback on Copilot. The same `skill.md` works on both without modification.
+
 * **No framework to learn to get started.** Tell `canopy` what you need. It scaffolds, validates,
   and converts skills for you. No learning curve.
 
 ## How it works
 
-> The tree is the source of truth. Natural language is just one rendering of it.
+> The tree is the source of truth. The platform is just a detail.
+
+Every Canopy skill is a `skill.md` file — platform-agnostic by design. When a skill runs, the `canopy` agent detects whether you're on Claude Code or GitHub Copilot, loads the matching runtime spec, then executes the tree using platform-appropriate primitives. The same skill file works on both platforms without modification.
+
+The `canopy` agent itself is a Canopy skill: its `## Agent` section classifies your intent and detects the platform; its `## Tree` routes to the correct operation via an explicit `IF/ELSE_IF` chain — no LLM-inferred dispatch.
 
 Here's a complete skill — frontmatter, execution tree, and all:
 
@@ -231,14 +239,22 @@ For detailed directory layout and structure (standalone vs. submodule), see [FRA
 │  └────────────────────────────────────────────────────────────────────┘    │
 │                            │                                               │
 │                            ▼                                               │
-│  Stage 2: Explore (optional)                                               │
+│  Stage 2: Detect platform + load runtime                                   │
+│  ┌─ canopy agent (## Tree, first steps) ─────────────────────────────┐    │
+│  │  detect platform: .claude/ -> Claude Code | .github/ -> Copilot   │    │
+│  │  load runtimes/claude.md  or  runtimes/copilot.md                 │    │
+│  └────────────────────────────────────────────────────────────────────┘    │
+│                            │                                               │
+│                            ▼                                               │
+│  Stage 3: Explore (optional)                                               │
 │  ┌─ ## Agent: explore ────────────────────────────────────────────────┐    │
-│  │  run explore subagent first (if Agent section exists)              │    │
+│  │  Claude Code: run native explore subagent                          │    │
+│  │  Copilot:     inline sequential file reading (fallback)            │    │
 │  │  capture schemas/explore-schema.json output into context           │    │
 │  └────────────────────────────────────────────────────────────────────┘    │
 │                            │                                               │
 │                            ▼                                               │
-│  Stage 3: Plan and confirmation gate                                       │
+│  Stage 4: Plan and confirmation gate                                       │
 │  ┌─ ## Tree entry steps ──────────────────────────────────────────────┐    │
 │  │  SHOW_PLAN >> fields                                               │    │
 │  │  ASK << Proceed? | Yes | No                                        │    │
@@ -246,7 +262,7 @@ For detailed directory layout and structure (standalone vs. submodule), see [FRA
 │  └────────────────────────────────────────────────────────────────────┘    │
 │                            │ Yes                                           │
 │                            ▼                                               │
-│  Stage 4: Execute workflow actions (iterative loop)                        │
+│  Stage 5: Execute workflow actions (iterative loop)                        │
 │  ┌─ ## Tree action steps ─────────────────────────────────────────────┐    │
 │  │  run op calls + natural-language nodes top-to-bottom               │    │
 │  │  evaluate IF / ELSE_IF / ELSE branches                             │    │
@@ -254,7 +270,7 @@ For detailed directory layout and structure (standalone vs. submodule), see [FRA
 │  └────────────────────────────────────────────────────────────────────┘    │
 │                            │                                               │
 │                            ▼                                               │
-│  Stage 5: Verify expected outcomes                                         │
+│  Stage 6: Verify expected outcomes                                         │
 │  ┌─ VERIFY_EXPECTED ──────────────────────────────────────────────────┐    │
 │  │  compare resulting state against verify checklist                  │    │
 │  └────────────────────────────────────────────────────────────────────┘    │
@@ -265,7 +281,7 @@ For detailed directory layout and structure (standalone vs. submodule), see [FRA
 │  └────────────────────────────────────────────────────────────────────┘    │
 │                            │                                               │
 │                            ▼                                               │
-│  Stage 6: Respond                                                          │
+│  Stage 7: Respond                                                          │
 │  ┌─ ## Response ──────────────────────────────────────────────────────┐    │
 │  │  Declares output format: Summary / Changes / Notes                 │    │
 │  └────────────────────────────────────────────────────────────────────┘    │
@@ -278,6 +294,10 @@ Op lookup (ALL_CAPS node -> definition):          Category resources (loaded per
    IF, ELSE, ASK, SHOW_PLAN, VERIFY...            commands/  -> run named shell section
                                                    constants/ -> load named values
                                                    verify/    -> post-run checklist
+
+Runtime specs (loaded at Stage 2):
+  runtimes/claude.md   -> .claude/ paths, native subagents, rules globs
+  runtimes/copilot.md  -> .github/ paths, inline subagent fallback, copilot-instructions.md
 ```
 
 ---

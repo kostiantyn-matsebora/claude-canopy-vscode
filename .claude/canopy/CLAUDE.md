@@ -65,12 +65,16 @@ Reference pattern in skill.md: `Read \`<category>/<file>\` for <brief descriptio
 - `rules/skill-resources.md` — ambient rules auto-applied to all skill files via `globs`
 - `skills/shared/framework/ops.md` — immutable framework primitives
 - `skills/shared/project/ops.md` — stub for project-wide ops (replace in consuming projects)
-- `agents/canopy.md` — bundled agent: CREATE, MODIFY, SCAFFOLD, CONVERT_TO_CANOPY, VALIDATE, CONVERT_TO_REGULAR, IMPROVE, ADVISE, REFACTOR_SKILLS, HELP
+- `agents/canopy.md` — bundled agent (Canopy skill format): detects platform, loads runtime, dispatches deterministically to one of 10 ops via `IF/ELSE_IF` tree
 - `agents/canopy/ops/` — per-operation procedure files (one per operation)
 - `agents/canopy/constants/` — lookup tables: category dirs, control flow notation, operation detection, dispatch map
 - `agents/canopy/policies/` — decomposed rule files (skill-structure, writing, op-naming, subagent, debug, preservation, category decision)
+- `agents/canopy/schemas/explore-schema.json` — output contract for skill-analysis explore subagents (used by ops)
+- `agents/canopy/schemas/dispatch-schema.json` — output contract for the canopy agent's own intent-classification subagent
 - `agents/canopy/verify/` — expected-state checklists for `VERIFY_EXPECTED` per operation
 - `agents/canopy/templates/` — `skill.md` and `ops.md` skeletons used by SCAFFOLD
+- `runtimes/claude.md` — Claude Code runtime spec (base paths, subagent execution, ambient rules, invocation)
+- `runtimes/copilot.md` — GitHub Copilot runtime spec (base paths, inline subagent fallback, invocation)
 
 ## Setup
 
@@ -101,3 +105,10 @@ Commit messages follow Conventional Commits (`feat:`, `fix:`, `docs:`).
 ## skill.md Constraints
 
 `skill.md` must contain **only** orchestration — no tables, JSON/YAML blocks, scripts, inline examples, or templates. Structured content belongs in category subdirectories. See `agents/canopy/policies/skill-structure-rules.md` and `agents/canopy/policies/writing-rules.md` for the full rule set.
+
+## Platform Compatibility
+
+Canopy must remain fully compatible with **both** Claude Code and **GitHub Copilot**.
+
+- Every change to skills, ops, agents, rules, or setup scripts must be verified against both platforms before the work is considered done.
+- If a construct works on one platform but not the other, it must be reworked until it passes on both, or the incompatibility must be explicitly documented with a rationale.

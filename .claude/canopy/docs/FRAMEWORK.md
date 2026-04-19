@@ -13,19 +13,9 @@ also update the relevant policy files in `agents/canopy/policies/` to stay in sy
 
 ### Agent Format
 
-Agents live at `.claude/agents/<name>.md` and use Claude Code's native agent frontmatter:
+The `canopy` agent is itself written in **Canopy skill format** (frontmatter + `## Agent` + `## Tree` + `## Rules` + `## Response:`). Its `## Tree` provides deterministic op dispatch via an explicit `IF/ELSE_IF` chain — no LLM-inferred routing.
 
-```markdown
----
-name: agent-name
-description: When to invoke this agent (used for routing in the subagent picker)
-tools: Read, Write, Edit, Glob, Grep, Bash
----
-
-System prompt content...
-```
-
-Agent resource files follow the same category subdirectory conventions as skills:
+Agents live at `.claude/agents/<name>.md`. Agent resource files follow the same category subdirectory conventions as skills:
 
 | Directory | Content |
 |-----------|---------|
@@ -35,6 +25,24 @@ Agent resource files follow the same category subdirectory conventions as skills
 
 The setup scripts create symlinks (Linux/macOS) or junctions (Windows) in `.claude/agents/`
 for each bundled agent and its resource directories, mirroring the skill symlink pattern.
+
+---
+
+## Runtime Model
+
+Canopy uses an **interpreter** model for cross-platform support. `skill.md` is always the single source of truth — no generated artifacts.
+
+At execution time the canopy agent:
+1. Detects the active platform (Claude Code or GitHub Copilot)
+2. Loads the matching runtime spec from `runtimes/`
+3. Executes the skill tree using platform-appropriate primitives
+
+| File | Platform |
+|------|----------|
+| `runtimes/claude.md` | Claude Code — native subagents, `.claude/` paths, rules globs |
+| `runtimes/copilot.md` | GitHub Copilot — inline subagent fallback, `.github/` paths |
+
+Platform-agnostic constructs (`ASK`, `IF/ELSE_IF`, `SHOW_PLAN`, `VERIFY_EXPECTED`) behave identically on both platforms. The runtime spec only defines what differs.
 
 ---
 
@@ -51,11 +59,15 @@ for each bundled agent and its resource directories, mirroring the skill symlink
 │       ├── ops/                    # Per-operation procedure files
 │       ├── policies/               # Rule files (skill-structure, writing, op-naming, …)
 │       ├── schemas/
-│       │   └── explore-schema.json
+│       │   ├── explore-schema.json   # Output contract for skill-analysis subagents
+│       │   └── dispatch-schema.json  # Output contract for canopy's own intent subagent
 │       ├── templates/
 │       │   ├── skill.md
 │       │   └── ops.md
 │       └── verify/                 # Expected-state checklists per operation
+├── runtimes/
+│   ├── claude.md                   # Claude Code runtime spec
+│   └── copilot.md                  # GitHub Copilot runtime spec
 ├── rules/
 │   └── skill-resources.md          # Ambient rules — auto-applied to all skill files
 └── skills/

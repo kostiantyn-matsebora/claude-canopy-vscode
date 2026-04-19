@@ -1,0 +1,37 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["operation", "platform"],
+  "properties": {
+    "operation": {
+      "type": "string",
+      "enum": [
+        "CREATE",
+        "MODIFY",
+        "SCAFFOLD",
+        "CONVERT_TO_CANOPY",
+        "VALIDATE",
+        "IMPROVE",
+        "ADVISE",
+        "REFACTOR_SKILLS",
+        "CONVERT_TO_REGULAR",
+        "HELP",
+        "UNKNOWN"
+      ],
+      "description": "The canopy operation to execute, classified from user input against constants/operation-detection.md"
+    },
+    "platform": {
+      "type": "string",
+      "enum": ["claude", "copilot"],
+      "description": "Active platform: claude if .claude/ exists as base directory, copilot if .github/"
+    },
+    "target_skill": {
+      "type": ["string", "null"],
+      "description": "Kebab-case skill name extracted from user input, or null if not mentioned"
+    },
+    "extra_context": {
+      "type": "string",
+      "description": "Any additional context from user input relevant to the operation"
+    }
+  }
+}
