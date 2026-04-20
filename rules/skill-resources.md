@@ -34,7 +34,7 @@ When a step or tree node contains an ALL_CAPS identifier:
 2. Fall back to `.claude/skills/shared/project/ops.md` (project-wide ops)
 3. Fall back to `.claude/skills/shared/framework/ops.md` (framework primitives)
 
-`IF`, `ELSE_IF`, `ELSE`, `BREAK`, `END`, `ASK`, `SHOW_PLAN`, `VERIFY_EXPECTED` are primitives — always in `shared/framework/ops.md`.
+`IF`, `ELSE_IF`, `ELSE`, `SWITCH`, `CASE`, `DEFAULT`, `FOR_EACH`, `BREAK`, `END`, `ASK`, `SHOW_PLAN`, `VERIFY_EXPECTED` are primitives — always in `shared/framework/ops.md`.
 
 ## Tree format
 

@@ -13,28 +13,32 @@ misunderstood. When it works, you're not entirely sure why it did.
 ---
 ## Why Canopy?
 
-* **Skills that run the same way twice.** Your skill always runs the same way. Not because you wrote
-  better prose, but because the tree is explicit. The model follows what you defined.
-
-* **Operations you write once and reuse everywhere.** Define `DEPLOY`, `VERIFY`, or `ROLLBACK` once in `ops.md`. Every
-  skill that needs it shares the same definition. Update one place; all skills stay in sync.
-
-* **Execution you can read before it runs.** The tree shows exactly what will happen—and in what order—
-  before any action touches your project.
-
-* **Resources you can navigate without reading prose.** Schemas, templates, commands, constants, and checklists live in
-  organized directories. No hunting through prose. Find what you need. Reuse instantly.
-
-* **Failures you can trace to a single node.** When a skill misbehaves, the tree tells you exactly
-  where it went wrong. No re-reading prose. Use `/canopy-debug <skill>` to replay any skill with
-  live phase banners and per-node tracing — pin the failing node, fix its op definition, move on.
-
-* **Skills that run on Claude Code and GitHub Copilot.** Write a skill once; the Canopy interpreter
-  detects your platform at execution time and adapts — native subagents on Claude Code, inline
-  fallback on Copilot. The same `skill.md` works on both without modification.
-
-* **No framework to learn to get started.** Tell `canopy` what you need. It scaffolds, validates,
-  and converts skills for you. No learning curve.
+```
+Canopy
+├── DETERMINISTIC
+│   ├── skills run identically every time
+│   └── the tree is explicit — no interpretation, no drift
+│
+├── REUSABLE OPS
+│   ├── define DEPLOY, VERIFY, ROLLBACK once in ops.md
+│   └── one change keeps every skill that uses them in sync
+│
+├── TRANSPARENT
+│   ├── the tree shows execution order before anything runs
+│   └── when it fails, the failing node is obvious — no re-reading prose
+│
+├── ORGANIZED RESOURCES
+│   ├── schemas · templates · commands · constants · policies · verify
+│   └── find what you need instantly; no hunting through paragraphs
+│
+├── CROSS-PLATFORM
+│   ├── write once; runs on Claude Code and GitHub Copilot unchanged
+│   └── the interpreter adapts at runtime — same skill.md, zero changes
+│
+└── ZERO LEARNING CURVE
+    ├── /canopy scaffolds, validates, improves, and converts for you
+    └── no syntax to memorize before you ship your first skill
+```
 
 ## How it works
 
@@ -90,6 +94,8 @@ pyproject.toml, and other version-bearing files; lists all files needing updates
 ## Examples and Resources
 
 **Examples:** [claude-canopy-examples](https://github.com/kostiantyn-matsebora/claude-canopy-examples) — a working project to learn from.
+
+**Cheatsheet:** [CHEATSHEET.md](CHEATSHEET.md) — one-page reference: skill anatomy, all primitives with examples, op syntax, category directories, canopy agent operations, and debug mode.
 
 **Workflow:** [FRAMEWORK.md](FRAMEWORK.md#workflow-diagram) explains the full execution pipeline.
 
@@ -187,37 +193,33 @@ git subtree pull --prefix=.claude/canopy \
 
 The `canopy` agent handles the full skill lifecycle.
 
-**Claude Code** — use the `/canopy` slash command (shortest form):
+**Claude Code:**
 
 ```
-/canopy create a skill that bumps semantic versions across project files
+/canopy improve bump-version
+/canopy create a skill that bumps semantic versions
 /canopy validate the bump-version skill
-```
-
-Or the explicit form if the slash command is unavailable:
-
-```
-Follow .claude/agents/canopy.md and create a skill that bumps semantic versions
 ```
 
 **GitHub Copilot:**
 
 ```
+Follow .github/agents/canopy.md and improve bump-version
 Follow .github/agents/canopy.md and create a skill that bumps semantic versions
 ```
 
-| Operation | What to say |
-|-----------|-------------|
-| **Create** | "Create a canopy skill that bumps semantic versions across project files" |
-| **Modify** | "Add a dry-run option to the deploy-service skill" |
-| **Scaffold** | "Scaffold a blank skill called api-docs" |
-| **Convert to Canopy** | "Convert my old deploy.md skill to canopy format" |
-| **Validate** | "Validate the bump-version skill" |
-| **Improve** | "Improve the deploy-service skill" |
-| **Advise** | "How should I add a verify step to the review-api skill?" |
-| **Refactor skills** | "Refactor skills — extract shared ops" |
-| **Convert to regular** | "Convert the review-file skill back to a plain skill" |
-| **Help** | "What can the canopy agent do?" |
+| Operation | Example |
+|-----------|---------|
+| **Create** | `/canopy create a skill that bumps semantic versions` |
+| **Modify** | `/canopy add a dry-run option to the deploy-service skill` |
+| **Scaffold** | `/canopy scaffold a blank skill called api-docs` |
+| **Convert to Canopy** | `/canopy convert my deploy.md skill to canopy format` |
+| **Validate** | `/canopy validate the bump-version skill` |
+| **Improve** | `/canopy improve the deploy-service skill` |
+| **Advise** | `/canopy how should I add a verify step to the review-api skill?` |
+| **Refactor skills** | `/canopy refactor skills — extract shared ops` |
+| **Convert to regular** | `/canopy convert the review-file skill back to a plain skill` |
+| **Help** | `/canopy help` |
 
 For **Create** and **Scaffold**, the agent asks your preferred tree syntax - **markdown list** (`*` nested bullets) or **box-drawing** (fenced tree characters) - before writing anything.
 

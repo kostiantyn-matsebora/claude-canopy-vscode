@@ -24,7 +24,7 @@ Canopy is a declarative framework for writing Claude Code skills as **syntax tre
 When a tree node has an `ALL_CAPS` identifier, look up in this order:
 1. `<skill>/ops.md` — skill-local
 2. `shared/project/ops.md` — project-wide
-3. `shared/framework/ops.md` — framework primitives (`IF`, `ELSE_IF`, `ELSE`, `BREAK`, `END`, `ASK`, `SHOW_PLAN`, `VERIFY_EXPECTED`)
+3. `shared/framework/ops.md` — framework primitives (`IF`, `ELSE_IF`, `ELSE`, `SWITCH`, `CASE`, `DEFAULT`, `FOR_EACH`, `BREAK`, `END`, `ASK`, `SHOW_PLAN`, `VERIFY_EXPECTED`)
 
 Primitives are never overridden.
 
