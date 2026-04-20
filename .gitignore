@@ -1,3 +1,12 @@
-node_modules/
-out/
-*.vsix
+# Git ignore for claude-canopy
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+
+# Editor dirs
+.idea/
+.vscode/
+
+# Local Claude settings
+.claude/settings.local.json

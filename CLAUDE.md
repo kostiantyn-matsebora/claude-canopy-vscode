@@ -1,89 +1,116 @@
-# CLAUDE.md — claude-canopy-vscode
+# CLAUDE.md
 
-> **Canopy framework context:** read [`CLAUDE.md`](https://github.com/kostiantyn-matsebora/claude-canopy/blob/main/CLAUDE.md) in the `claude-canopy` repo before working on this extension. It covers the framework spec, skill anatomy, tree notation, op lookup order, and category resource directories.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## This Repository
+## Workspace Layout
 
-`claude-canopy-vscode` is a VS Code extension that provides language support for Canopy skills. It is a sibling repo of `claude-canopy/` in the parent workspace.
+This workspace contains two repositories managed as a VS Code multi-root workspace (`canopy.code-workspace`):
 
-- **Package name:** `canopy-skills` — publisher `canopy` (must be registered on marketplace.visualstudio.com, not GitHub)
-- **Current version:** `0.3.0`
-- **Remote:** private GitHub at `https://github.com/kostiantyn-matsebora/claude-canopy-vscode` — SSH does not work here, use HTTPS
+- **`claude-canopy/`** — the Canopy framework itself (rules, skills, setup scripts, docs)
+- **`claude-canopy-examples/`** — an example project that uses Canopy as a git submodule at `.claude/canopy/`
 
-## Build & Dev
+## What Canopy Is
+
+Canopy is a declarative framework for writing Claude Code skills as **syntax trees of named operations**. Skills are `skill.md` files with four sections:
+
+1. **Frontmatter** — `name`, `description`, `argument-hint`
+2. **`## Agent`** (optional) — declares an `**explore**` subagent; output contract is always `schemas/explore-schema.json`
+3. **`## Tree`** — sequential execution pipeline with `IF`/`ELSE_IF`/`ELSE` branching (two equivalent syntaxes: markdown list `*` or box-drawing fenced block)
+4. **`## Rules`** — skill-wide invariants
+5. **`## Response:`** — output format declaration
+
+## Op Lookup Order
+
+When a tree node has an `ALL_CAPS` identifier, look up in this order:
+1. `<skill>/ops.md` — skill-local
+2. `shared/project/ops.md` — project-wide
+3. `shared/framework/ops.md` — framework primitives (`IF`, `ELSE_IF`, `ELSE`, `BREAK`, `END`, `ASK`, `SHOW_PLAN`, `VERIFY_EXPECTED`)
+
+Primitives are never overridden.
+
+## Tree Notation
+
+`<<` = input, `>>` = output/displayed fields, `|` = separator between options or fields.
+
+```
+skill-name
+├── OP_NAME << input >> output
+├── ASK << Proceed? | Yes | No
+├── IF << condition
+│   └── branch-op or natural language
+└── ELSE
+    └── other action
+```
+
+## Category Resource Directories
+
+Each skill directory may contain subdirectories; behavior is determined by directory name:
+
+| Directory | Behavior |
+|-----------|----------|
+| `schemas/` | Structure definitions: subagent output contracts, input/config file shapes, report template skeletons |
+| `templates/` | Fillable output documents with `<token>` placeholders — substituted from context, written to target path |
+| `commands/` | `.ps1`/`.sh` scripts with `# === Section Name ===` headers — execute named section, capture output |
+| `constants/` | Read-only lookup data: mapping tables, enum-like value lists, fixed configuration values |
+| `checklists/` | Evaluation criteria lists (`- [ ] ...`) — iterated by ops to assess compliance or correctness |
+| `policies/` | Behavioural constraints: what the skill must/must not do, consent requirements, output protocols |
+| `verify/` | Expected-state checklists consumed exclusively by `VERIFY_EXPECTED` |
+
+Reference pattern in skill.md: `Read \`<category>/<file>\` for <brief description>.` — load at point of use, not front-loaded.
+
+## Key Files in `claude-canopy/`
+
+- `FRAMEWORK.md` — canonical framework specification (single source of truth)
+- `AUTHORING.md` — manual skill authoring reference (anatomy, tree syntax, ops, category resources)
+- `rules/skill-resources.md` — ambient rules auto-applied to all skill files via `globs`
+- `skills/shared/framework/ops.md` — immutable framework primitives
+- `skills/shared/project/ops.md` — stub for project-wide ops (replace in consuming projects)
+- `agents/canopy.md` — bundled agent (Canopy skill format): detects platform, loads runtime, dispatches deterministically to one of 10 ops via `IF/ELSE_IF` tree
+- `agents/canopy/ops/` — per-operation procedure files (one per operation)
+- `agents/canopy/constants/` — lookup tables: category dirs, control flow notation, operation detection, dispatch map
+- `agents/canopy/policies/` — decomposed rule files (skill-structure, writing, op-naming, subagent, debug, preservation, category decision)
+- `agents/canopy/schemas/explore-schema.json` — output contract for skill-analysis explore subagents (used by ops)
+- `agents/canopy/schemas/dispatch-schema.json` — output contract for the canopy agent's own intent-classification subagent
+- `agents/canopy/verify/` — expected-state checklists for `VERIFY_EXPECTED` per operation
+- `agents/canopy/templates/` — `skill.md` and `ops.md` skeletons used by SCAFFOLD
+- `runtimes/claude.md` — Claude Code runtime spec (base paths, subagent execution, ambient rules, invocation)
+- `runtimes/copilot.md` — GitHub Copilot runtime spec (base paths, inline subagent fallback, invocation)
+
+## Setup
+
+Canopy supports three distribution methods (submodule, subtree, installer). In all cases, once Canopy is at `.claude/canopy/`, run:
 
 ```bash
-npm run compile      # tsc — output goes to out/
-npm run package      # produces .vsix via @vscode/vsce
+bash .claude/canopy/setup.sh   # Linux/macOS
+pwsh .claude/canopy/setup.ps1  # Windows
 ```
 
-Dev loop: open in VS Code, press `F5` — launches Extension Development Host with the extension loaded.
+Setup is idempotent. It creates:
+- `.claude/rules/skill-resources.md` — wired globs covering both project and canopy skills
+- `.claude/skills/shared/project/ops.md` — project-wide ops stub
+- `.claude/skills/shared/ops.md` — redirect stub
+- Symlinks in `.claude/skills/` for each bundled canopy skill (VS Code doesn't scan submodules)
+- Symlinks/junctions in `.claude/agents/` for each bundled agent `.md` and its resource directory
 
-## Source Layout
+## Contributing Rules
 
-```
-src/
-  extension.ts                  — activate(): registers all providers and commands
-  canopyDocument.ts             — document model: parseDocument(), TreeNode, ReadRef, extractReadRefs()
-  opRegistry.ts                 — OpRegistry singleton: resolves op names through skill-local → project → framework chain
-  providers/
-    completionProvider.ts       — op name + primitive completions; tree node prefix insertion
-    hoverProvider.ts            — hover docs for primitives and custom ops
-    definitionProvider.ts       — go-to-definition for ALL_CAPS op names
-    diagnosticsProvider.ts      — semantic validation (frontmatter, tree syntax, primitive signatures, resource refs, op conformance)
-  commands/
-    setupCanopy.ts              — addAsSubmodule, addAsCopy (both support Claude + GitHub Copilot targets)
-    newResource.ts              — 7 scaffold commands (newSkill, newVerifyFile, newTemplate, newConstantsFile, newPolicyFile, newCommandsFile, newSchema)
-    canopyAgent.ts              — 10 Canopy agent operation commands
-```
+When modifying any of these, keep all in sync:
+- `FRAMEWORK.md`
+- `rules/skill-resources.md`
+- `skills/shared/framework/ops.md`
+- `agents/canopy/policies/` — update the relevant policy file(s)
 
-## Language IDs
+Every framework change must also be verified against documentation. After any change, check that `runtimes/claude.md`, `runtimes/copilot.md`, and `AUTHORING.md` still accurately describe the current behavior — invocation instructions, subagent execution, base paths, and any other runtime-specific details. Update any stale content before the work is considered done.
 
-All providers register against `{ language: 'canopy' }` only. Resource file languages have syntax highlighting only (no IntelliSense).
+Commit messages follow Conventional Commits (`feat:`, `fix:`, `docs:`).
 
-| ID | Filename patterns | Purpose |
-|----|-------------------|---------|
-| `canopy` | `**/skill.md`, `**/ops.md` | Full IntelliSense + diagnostics |
-| `canopy-verify` | `**/verify/*.md`, `**/checklists/*.md` | Checkbox item highlighting |
-| `canopy-template` | `**/templates/*.md`, `**/templates/*.yaml` | `<token>` placeholder highlighting |
-| `canopy-resource` | `**/constants/*.md`, `**/policies/*.md`, `**/schemas/*.md` | Table + numbered-rule highlighting |
-| `canopy-commands` | `**/commands/*.ps1`, `**/commands/*.sh` | `# === Section Name ===` highlighting |
+## skill.md Constraints
 
-Patterns cover both `.claude/` and `.github/` targets. `schemas/*.json` intentionally left as JSON.
+`skill.md` must contain **only** orchestration — no tables, JSON/YAML blocks, scripts, inline examples, or templates. Structured content belongs in category subdirectories. See `agents/canopy/policies/skill-structure-rules.md` and `agents/canopy/policies/writing-rules.md` for the full rule set.
 
-## Key Invariants
+## Platform Compatibility
 
-- `canopyDocument.ts` is the single source of truth for parsing — all providers call `parseDocument()`, never re-implement parsing
-- Op name extraction in tree nodes looks only at text **before** any `<<` or `>>` — content inside binding expressions is never treated as op references
-- `OpRegistry` is a singleton (`registry`) shared across all providers; invalidate its cache when `ops.md` changes (wired in `extension.ts`)
-- Diagnostics run on `onDidOpenTextDocument` and `onDidChangeTextDocument` for `languageId === 'canopy'` only
+Canopy must remain fully compatible with **both** Claude Code and **GitHub Copilot**.
 
-## Settings
-
-| Key | Type | Default | Purpose |
-|-----|------|---------|---------|
-| `canopy.frameworkUrl` | string | `https://github.com/kostiantyn-matsebora/claude-canopy` | Framework repo URL for setup commands |
-| `canopy.validate.enabled` | boolean | `true` | Toggle all validation |
-| `canopy.validate.unknownOps` | enum | `"warning"` | Severity for unresolved op names |
-| `canopy.validate.opConformance` | boolean | `true` | Hints for `<<`/`>>` mismatch vs op signature |
-
-## Keeping in Sync with claude-canopy
-
-This extension is a consumer of the Canopy framework. When `claude-canopy/` changes, the extension must be updated to reflect those changes. Key sync points:
-
-| What changes in `claude-canopy/` | What to update here |
-|---|---|
-| New framework primitive added to [`skills/shared/framework/ops.md`](https://github.com/kostiantyn-matsebora/claude-canopy/blob/main/skills/shared/framework/ops.md) | Add to `RESERVED_PRIMITIVES` in `diagnosticsProvider.ts`; add `PRIMITIVE_DOCS` entry in `opRegistry.ts`; add `case` in `checkPrimitiveSignatures()` |
-| Primitive signature changes (`<<`/`>>` requirements) | Update matching `case` in `checkPrimitiveSignatures()` and `PRIMITIVE_DOCS` |
-| New category resource directory added ([`agents/canopy/constants/category-dirs.md`](https://github.com/kostiantyn-matsebora/claude-canopy/blob/main/agents/canopy/constants/category-dirs.md)) | Add to `VALID_CATEGORIES` in `diagnosticsProvider.ts`; add to `CATEGORY_DIRS` in `completionProvider.ts`; register new language ID + grammar + filename patterns in `package.json` |
-| Category directory renamed or removed | Update all four locations above |
-| Frontmatter fields change ([`docs/FRAMEWORK.md`](https://github.com/kostiantyn-matsebora/claude-canopy/blob/main/docs/FRAMEWORK.md)) | Update `FRONTMATTER_REQUIRED`, `FRONTMATTER_ALLOWED` in `diagnosticsProvider.ts`; update `FRONTMATTER_KEYS` in `completionProvider.ts`; update `FRONTMATTER_DOCS` in `hoverProvider.ts` |
-| Tree syntax notation changes ([`docs/FRAMEWORK.md`](https://github.com/kostiantyn-matsebora/claude-canopy/blob/main/docs/FRAMEWORK.md)) | Update `parseTreeLine()` in `canopyDocument.ts` |
-| New section header added (`## Agent`, `## Tree`, etc.) | Update `SECTION_NAMES` in `completionProvider.ts`; update `SECTION_DOCS` in `hoverProvider.ts`; update section parsing in `parseDocument()` |
-| Op lookup chain changes ([`docs/FRAMEWORK.md`](https://github.com/kostiantyn-matsebora/claude-canopy/blob/main/docs/FRAMEWORK.md)) | Update `OpRegistry` resolution order in `opRegistry.ts` |
-
-When in doubt, treat [`docs/FRAMEWORK.md`](https://github.com/kostiantyn-matsebora/claude-canopy/blob/main/docs/FRAMEWORK.md) as the canonical spec and audit the extension against it.
-
-## Changelog Location
-
-`docs/CHANGELOG.md` — update alongside any feature work. Current version section is `[0.3.0]`.
+- Every change to skills, ops, agents, rules, or setup scripts must be verified against both platforms before the work is considered done.
+- If a construct works on one platform but not the other, it must be reworked until it passes on both, or the incompatibility must be explicitly documented with a rationale.
