@@ -100,6 +100,8 @@ When modifying any of these, keep all in sync:
 - `skills/shared/framework/ops.md`
 - `agents/canopy/policies/` — update the relevant policy file(s)
 
+Every framework change must also be verified against documentation. After any change, check that `runtimes/claude.md`, `runtimes/copilot.md`, and `AUTHORING.md` still accurately describe the current behavior — invocation instructions, subagent execution, base paths, and any other runtime-specific details. Update any stale content before the work is considered done.
+
 Commit messages follow Conventional Commits (`feat:`, `fix:`, `docs:`).
 
 ## skill.md Constraints

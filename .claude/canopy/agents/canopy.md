@@ -18,6 +18,8 @@ $ARGUMENTS
 
 * canopy
   * EXPLORE >> context
+  * IF << context.operation requires an explicit skill name (IMPROVE, MODIFY, VALIDATE, SCAFFOLD, CONVERT_TO_CANOPY, CONVERT_TO_REGULAR) AND context.target_skill is null
+    * ASK << Which skill should I {context.operation}? Please name it explicitly.
   * IF << context.platform == "claude"
     * Read `runtimes/claude.md` for platform execution rules
   * ELSE
@@ -48,6 +50,7 @@ $ARGUMENTS
 ## Rules
 
 - Never overwrite existing files without confirmation
+- For ops that target a specific skill (IMPROVE, MODIFY, VALIDATE, SCAFFOLD, CONVERT_TO_CANOPY, CONVERT_TO_REGULAR): if the skill name is not stated explicitly, ASK before proceeding — never infer from natural language descriptions or loop over multiple skills
 - Always show a plan before making any changes
 - Preserve the skill's existing tree syntax style (markdown list vs box-drawing) unless the user asks to switch
 - Do not change a skill's logic or intent during CONVERT_TO_CANOPY, MODIFY, or VALIDATE

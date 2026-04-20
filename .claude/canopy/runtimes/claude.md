@@ -26,7 +26,7 @@ Rules in `.claude/rules/*.md` with a `globs` frontmatter field auto-apply to all
 
 ## Invocation
 
-- Agent: `@canopy` — auto-resolved from `.claude/agents/canopy.md`; or explicit: `Follow .claude/agents/canopy.md and <request>`
+- Agent: `Follow .claude/agents/canopy.md and <request>`
 - Skills: `/skill-name` — resolved from `.claude/skills/<name>/skill.md`
 
 ## Op Lookup
