@@ -13,28 +13,32 @@ misunderstood. When it works, you're not entirely sure why it did.
 ---
 ## Why Canopy?
 
-* **Skills that run the same way twice.** Your skill always runs the same way. Not because you wrote
-  better prose, but because the tree is explicit. The model follows what you defined.
-
-* **Operations you write once and reuse everywhere.** Define `DEPLOY`, `VERIFY`, or `ROLLBACK` once in `ops.md`. Every
-  skill that needs it shares the same definition. Update one place; all skills stay in sync.
-
-* **Execution you can read before it runs.** The tree shows exactly what will happen—and in what order—
-  before any action touches your project.
-
-* **Resources you can navigate without reading prose.** Schemas, templates, commands, constants, and checklists live in
-  organized directories. No hunting through prose. Find what you need. Reuse instantly.
-
-* **Failures you can trace to a single node.** When a skill misbehaves, the tree tells you exactly
-  where it went wrong. No re-reading prose. Use `/canopy-debug <skill>` to replay any skill with
-  live phase banners and per-node tracing — pin the failing node, fix its op definition, move on.
-
-* **Skills that run on Claude Code and GitHub Copilot.** Write a skill once; the Canopy interpreter
-  detects your platform at execution time and adapts — native subagents on Claude Code, inline
-  fallback on Copilot. The same `skill.md` works on both without modification.
-
-* **No framework to learn to get started.** Tell `canopy` what you need. It scaffolds, validates,
-  and converts skills for you. No learning curve.
+```
+Canopy
+├── DETERMINISTIC
+│   ├── skills run identically every time
+│   └── the tree is explicit — no interpretation, no drift
+│
+├── REUSABLE OPS
+│   ├── define DEPLOY, VERIFY, ROLLBACK once in ops.md
+│   └── one change keeps every skill that uses them in sync
+│
+├── TRANSPARENT
+│   ├── the tree shows execution order before anything runs
+│   └── when it fails, the failing node is obvious — no re-reading prose
+│
+├── ORGANIZED RESOURCES
+│   ├── schemas · templates · commands · constants · policies · verify
+│   └── find what you need instantly; no hunting through paragraphs
+│
+├── CROSS-PLATFORM
+│   ├── write once; runs on Claude Code and GitHub Copilot unchanged
+│   └── the interpreter adapts at runtime — same skill.md, zero changes
+│
+└── ZERO LEARNING CURVE
+    ├── /canopy scaffolds, validates, improves, and converts for you
+    └── no syntax to memorize before you ship your first skill
+```
 
 ## How it works
 
