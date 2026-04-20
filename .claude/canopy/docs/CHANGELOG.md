@@ -7,6 +7,64 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.12.0] — 2026-04-20
+
+### Added
+
+- `skills/shared/framework/ops.md` — new `FOR_EACH << item in collection` primitive for iterating over collections; body executes once per element; empty collection skips body entirely; `BREAK` inside exits the loop early; `BREAK` outside a loop exits the current op (dual role clarified)
+
+### Changed
+
+- `docs/FRAMEWORK.md` — added `FOR_EACH` to node types table, Control Flow Primitives section, and Op Registries table; primitives sentence updated
+- `docs/AUTHORING.md` — added `FOR_EACH` and updated `BREAK` in Framework Primitives table
+- `agents/canopy/constants/control-flow-notation.md` — added migration entries for `FOR_EACH` (replace prose loops and numbered-step-per-item patterns)
+- `agents/canopy/ops/validate.md` — `FOR_EACH` added to error check for framework primitives defined in skill/project ops
+- `agents/canopy.md` — primitives list updated
+- `skills/canopy-debug/ops.md` — `FOR_EACH` added to never-simulated primitives list
+- `rules/skill-resources.md`, `setup.sh`, `setup.ps1`, `CLAUDE.md` — primitives lists updated
+
+---
+
+## [0.11.0] — 2026-04-20
+
+### Added
+
+- `skills/shared/framework/ops.md` — three new control-flow primitives: `SWITCH << expression`, `CASE << value`, `DEFAULT`; `SWITCH` evaluates an expression once and executes the first matching `CASE`; `DEFAULT` fires when no `CASE` matched; use in place of long `IF/ELSE_IF` chains that branch on a single value
+
+### Changed
+
+- `docs/FRAMEWORK.md` — added `SWITCH/CASE/DEFAULT` to Control Flow Primitives section and Op Registries table; updated primitives list in Op Lookup Order
+- `docs/AUTHORING.md` — added `SWITCH`, `CASE`, `DEFAULT` to Framework Primitives table
+- `agents/canopy/constants/control-flow-notation.md` — added migration entries for `SWITCH/CASE` (replace repeated `ELSE_IF` chains matching one value)
+- `agents/canopy/ops/validate.md` — `SWITCH`, `CASE`, `DEFAULT` added to error check for framework primitives defined in skill/project ops
+- `agents/canopy.md` — primitives list updated
+- `skills/canopy-debug/ops.md` — `SWITCH`, `CASE`, `DEFAULT` added to never-simulated primitives list
+- `rules/skill-resources.md`, `setup.sh`, `setup.ps1`, `CLAUDE.md` — primitives lists updated
+
+---
+
+## [0.10.0] — 2026-04-20
+
+### Added
+
+- `skills/canopy/skill.md` — new bundled `canopy` skill; detects active platform and delegates to `.claude/agents/canopy.md` or `.github/agents/canopy.md`; enables `/canopy <request>` as the primary invocation shorthand on Claude Code
+- `agents/canopy/policies/platform-targeting.md` — platform targeting policy for write ops (CREATE, SCAFFOLD, CONVERT_TO_CANOPY): maps execution platform and explicit user target to the correct skills base path; enforces no hardcoded `.claude/` or `.github/` paths in generated skill content
+
+### Changed
+
+- `agents/canopy.md` — `dispatch-schema.json` explore output extended with `available_platforms` (all detected platform dirs) and `explicit_target_platform` (from user input or null); added rule: always load platform runtime spec before executing any op procedure
+- `agents/canopy/schemas/dispatch-schema.json` — added `available_platforms` (array) and `explicit_target_platform` (string or null) fields to the dispatch output contract
+- `agents/canopy/ops/create.md`, `scaffold.md`, `convert-to-canopy.md` — platform-aware skill path resolution via `policies/platform-targeting.md`
+- `agents/canopy/ops/validate.md` — added cross-platform content check: flags hardcoded `.claude/` or `.github/` paths in skill files
+- `agents/canopy/policies/skill-structure-rules.md` — added cross-platform content rule: `skill.md` must not contain hardcoded platform paths
+- `agents/canopy/policies/subagent-rules.md` — documented platform-specific subagent execution: native Explore subagent on Claude Code; inline sequential file-reading fallback on Copilot
+- `agents/canopy/verify/create-expected.md`, `scaffold-expected.md` — verify target-platform path rather than hardcoded `.claude/` path
+- `runtimes/claude.md` — invocation updated to `/canopy <request>` via the bundled `canopy` skill
+- `docs/README.md` — invocation section rewritten: `/canopy <request>` as primary form for Claude Code; `Follow .github/agents/canopy.md and <request>` for Copilot; operations table updated with concrete `/canopy` examples
+- `CLAUDE.md` — Contributing Rules: added documentation verification requirement — every framework change must be verified against `runtimes/`, `AUTHORING.md` for staleness before the work is considered done
+
+---
+
 ## [0.9.0] — 2026-04-19
 
 ### Added

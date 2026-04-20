@@ -91,6 +91,8 @@ pyproject.toml, and other version-bearing files; lists all files needing updates
 
 **Examples:** [claude-canopy-examples](https://github.com/kostiantyn-matsebora/claude-canopy-examples) — a working project to learn from.
 
+**Cheatsheet:** [CHEATSHEET.md](CHEATSHEET.md) — one-page reference: skill anatomy, all primitives with examples, op syntax, category directories, canopy agent operations, and debug mode.
+
 **Workflow:** [FRAMEWORK.md](FRAMEWORK.md#workflow-diagram) explains the full execution pipeline.
 
 
@@ -187,37 +189,33 @@ git subtree pull --prefix=.claude/canopy \
 
 The `canopy` agent handles the full skill lifecycle.
 
-**Claude Code** — use the `/canopy` slash command (shortest form):
+**Claude Code:**
 
 ```
-/canopy create a skill that bumps semantic versions across project files
+/canopy improve bump-version
+/canopy create a skill that bumps semantic versions
 /canopy validate the bump-version skill
-```
-
-Or the explicit form if the slash command is unavailable:
-
-```
-Follow .claude/agents/canopy.md and create a skill that bumps semantic versions
 ```
 
 **GitHub Copilot:**
 
 ```
+Follow .github/agents/canopy.md and improve bump-version
 Follow .github/agents/canopy.md and create a skill that bumps semantic versions
 ```
 
-| Operation | What to say |
-|-----------|-------------|
-| **Create** | "Create a canopy skill that bumps semantic versions across project files" |
-| **Modify** | "Add a dry-run option to the deploy-service skill" |
-| **Scaffold** | "Scaffold a blank skill called api-docs" |
-| **Convert to Canopy** | "Convert my old deploy.md skill to canopy format" |
-| **Validate** | "Validate the bump-version skill" |
-| **Improve** | "Improve the deploy-service skill" |
-| **Advise** | "How should I add a verify step to the review-api skill?" |
-| **Refactor skills** | "Refactor skills — extract shared ops" |
-| **Convert to regular** | "Convert the review-file skill back to a plain skill" |
-| **Help** | "What can the canopy agent do?" |
+| Operation | Example |
+|-----------|---------|
+| **Create** | `/canopy create a skill that bumps semantic versions` |
+| **Modify** | `/canopy add a dry-run option to the deploy-service skill` |
+| **Scaffold** | `/canopy scaffold a blank skill called api-docs` |
+| **Convert to Canopy** | `/canopy convert my deploy.md skill to canopy format` |
+| **Validate** | `/canopy validate the bump-version skill` |
+| **Improve** | `/canopy improve the deploy-service skill` |
+| **Advise** | `/canopy how should I add a verify step to the review-api skill?` |
+| **Refactor skills** | `/canopy refactor skills — extract shared ops` |
+| **Convert to regular** | `/canopy convert the review-file skill back to a plain skill` |
+| **Help** | `/canopy help` |
 
 For **Create** and **Scaffold**, the agent asks your preferred tree syntax - **markdown list** (`*` nested bullets) or **box-drawing** (fenced tree characters) - before writing anything.
 

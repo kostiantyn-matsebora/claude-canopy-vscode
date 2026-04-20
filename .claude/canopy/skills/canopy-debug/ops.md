@@ -93,7 +93,7 @@ Iterate over nodes from start_index. Behavior depends on the current Claude Code
 
 Read `policies/debug-output.md` for simulation format and mode behavior rules.
 
-Framework primitives never simulated regardless of mode: IF, ELSE_IF, ELSE, BREAK, END, SHOW_PLAN, VERIFY_EXPECTED, EXPLORE.
+Framework primitives never simulated regardless of mode: IF, ELSE_IF, ELSE, SWITCH, CASE, DEFAULT, FOR_EACH, BREAK, END, SHOW_PLAN, VERIFY_EXPECTED, EXPLORE.
 
 * TRACE_EXECUTE_NODES << node_list | start_index | target_skill | skill_args
   * bind in_plan_mode = true if Claude Code plan mode is currently active, false otherwise

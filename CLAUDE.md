@@ -24,7 +24,7 @@ git subtree pull --prefix=.claude/canopy \
 
 - **Package name:** `canopy-skills` — publisher `canopy` (must be registered on marketplace.visualstudio.com, not GitHub)
 - **Current version:** `0.3.0`
-- **Remote:** private GitHub at `https://github.com/kostiantyn-matsebora/claude-canopy-vscode` — SSH does not work here, use HTTPS
+- **Remote:** `https://github.com/kostiantyn-matsebora/claude-canopy-vscode`
 
 ## Build & Dev
 

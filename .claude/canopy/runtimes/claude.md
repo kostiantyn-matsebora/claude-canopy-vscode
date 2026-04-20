@@ -26,7 +26,7 @@ Rules in `.claude/rules/*.md` with a `globs` frontmatter field auto-apply to all
 
 ## Invocation
 
-- Agent: `Follow .claude/agents/canopy.md and <request>`
+- Agent: `/canopy <request>` — delegates to `.claude/agents/canopy.md` via the bundled `canopy` skill
 - Skills: `/skill-name` — resolved from `.claude/skills/<name>/skill.md`
 
 ## Op Lookup

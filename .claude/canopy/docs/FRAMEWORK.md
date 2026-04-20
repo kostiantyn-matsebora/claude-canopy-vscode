@@ -169,6 +169,7 @@ The tree is a **sequential pipeline** with branching. Execution is:
 | `IF` | `IF << condition` | Branch — execute children if true |
 | `ELSE_IF` | `ELSE_IF << condition` | Continue chain — execute if prior false |
 | `ELSE` | `ELSE` | Close chain — execute if all prior false |
+| `FOR_EACH` | `FOR_EACH << item in collection` | Iterate — execute body once per element |
 
 **Tree syntax — two equivalent formats:**
 
@@ -220,6 +221,37 @@ Continues an `IF` or `ELSE_IF` chain. Only evaluated if all prior conditions wer
 ### `ELSE`
 Closes an `IF` or `ELSE_IF` chain. Executed only if all prior conditions were false.
 
+### `FOR_EACH << item in collection`
+```
+FOR_EACH << item in collection
+├── body-step-1
+├── body-step-2
+[└── IF << exit condition
+    └── BREAK]
+```
+Binds `item` to each element of `collection` and executes the body once per element.
+Empty collection skips the body entirely. `BREAK` inside the body exits the loop early.
+
+### `SWITCH << expression`
+```
+SWITCH << expression
+├── CASE << value1
+│   └── branch1
+[├── CASE << value2
+│   └── branch2]
+[└── DEFAULT
+    └── default-branch]
+```
+Evaluates `expression` once; executes the first `CASE` whose value matches; skips the rest.
+`DEFAULT` executes only if no `CASE` matched.
+Use when branching on a single expression against multiple discrete values.
+
+### `CASE << value`
+A branch within a `SWITCH` block. Executed when the `SWITCH` expression equals `value`.
+
+### `DEFAULT`
+Closes a `SWITCH` block. Executed only if no `CASE` matched.
+
 ### `ASK << question | option1 | option2 [| ...]`
 Present a question with options. Execution halts until the user responds.
 
@@ -239,7 +271,7 @@ When a tree node contains an `ALL_CAPS` identifier:
 2. **`shared/project/ops.md`** — project-wide ops
 3. **`shared/framework/ops.md`** — framework primitives (fallback)
 
-Primitives (`IF`, `ELSE_IF`, `ELSE`, `ASK`, `SHOW_PLAN`, `VERIFY_EXPECTED`, `BREAK`, `END`) always
+Primitives (`IF`, `ELSE_IF`, `ELSE`, `SWITCH`, `CASE`, `DEFAULT`, `FOR_EACH`, `ASK`, `SHOW_PLAN`, `VERIFY_EXPECTED`, `BREAK`, `END`) always
 resolve to `shared/framework/ops.md` and are never overridden.
 
 ---
@@ -295,7 +327,11 @@ Control-flow and interaction ops available in every skill, in every project.
 | `IF` | `<< condition` | Branch on condition |
 | `ELSE_IF` | `<< condition` | Continue IF chain |
 | `ELSE` | — | Close IF chain |
-| `BREAK` | — | Exit current op, resume caller |
+| `SWITCH` | `<< expression` | Match expression against CASE values |
+| `CASE` | `<< value` | Branch within SWITCH; execute if expression equals value |
+| `DEFAULT` | — | Close SWITCH block; execute if no CASE matched |
+| `FOR_EACH` | `<< item in collection` | Iterate body over every element in collection |
+| `BREAK` | — | Exit current loop or op, resume caller |
 | `END` | `[message]` | Halt skill execution |
 | `ASK` | `<question> << option1 \| ...` | Prompt user; halt until response |
 | `SHOW_PLAN` | `>> field1 \| ...` | Present pre-execution plan |

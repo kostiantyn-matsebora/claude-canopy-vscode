@@ -20,7 +20,7 @@ Evaluate a Canopy skill for framework errors, warnings, and optimization opportu
 - `## Tree` section is missing (skill has only prose or `## Steps`)
 - `EXPLORE` is not the first tree node when `## Agent` is present
 - `schemas/explore-schema.json` missing when `## Agent` declares `**explore**`
-- A framework primitive (`IF`, `ELSE_IF`, `ELSE`, `BREAK`, `END`, `ASK`, `SHOW_PLAN`, `VERIFY_EXPECTED`) is defined in skill-local or project ops
+- A framework primitive (`IF`, `ELSE_IF`, `ELSE`, `SWITCH`, `CASE`, `DEFAULT`, `FOR_EACH`, `BREAK`, `END`, `ASK`, `SHOW_PLAN`, `VERIFY_EXPECTED`) is defined in skill-local or project ops
 - Tree node uses `→` for output capture instead of `>>`
 - Inline branch notation `IF << X → action` instead of `IF << X` with nested child node
 - `Ask: "..."` prose pattern instead of `ASK << question | options`

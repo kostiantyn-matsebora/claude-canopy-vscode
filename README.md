@@ -1,6 +1,6 @@
 # Canopy Skills — VS Code Extension
 
-Language support for [Canopy](https://github.com/kostiantyn-matsebora/claude-canopy): syntax highlighting, IntelliSense, semantic diagnostics, go-to-definition, scaffold commands, and AI agent integration for Canopy skill files.
+Supports **[Canopy](https://github.com/kostiantyn-matsebora/claude-canopy) framework v0.12.0** — language support for Canopy skill files: syntax highlighting, IntelliSense, semantic diagnostics, go-to-definition, scaffold commands, and AI agent integration.
 
 ---
 

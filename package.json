@@ -3,6 +3,7 @@
   "displayName": "Canopy Skills",
   "description": "Write Claude Code AI skills as executable code, not prose — syntax highlighting, IntelliSense, semantic diagnostics, and go-to-definition for Canopy skills: skill.md, ops.md, schemas, templates, commands, constants, policies, checklists, and verify files.",
   "version": "0.3.0",
+  "canopyVersion": "0.12.0",
   "icon": "images/icon.png",
   "publisher": "canopy",
   "license": "MIT",
@@ -134,6 +135,11 @@
     ],
     "commands": [
       {
+        "command": "canopy.showVersion",
+        "title": "Show Version",
+        "category": "Canopy"
+      },
+      {
         "command": "canopy.addAsSubmodule",
         "title": "Add as submodule",
         "category": "Canopy"
@@ -263,6 +269,7 @@
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
+    "sync-canopy-version": "node scripts/sync-canopy-version.js",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "icon": "node scripts/generate-icon.js",

@@ -4,6 +4,8 @@ This document covers writing Canopy skills by hand. For the recommended approach
 the `canopy` agent generate, scaffold, or convert skills for you — see the
 [Usage section](README.md#usage) in the README.
 
+For a quick one-page reference covering primitives, op syntax, category directories, and canopy agent operations, see [CHEATSHEET.md](CHEATSHEET.md).
+
 ---
 
 ## Skill Anatomy
@@ -180,7 +182,11 @@ Always resolved from `shared/framework/ops.md`. Never define these in skill or p
 | `IF` | `<< condition` | Branch — execute children if true |
 | `ELSE_IF` | `<< condition` | Continue IF chain |
 | `ELSE` | — | Close IF chain |
-| `BREAK` | — | Exit current op; return to caller's next node |
+| `SWITCH` | `<< expression` | Match expression against CASE values |
+| `CASE` | `<< value` | Branch within SWITCH; execute if expression equals value |
+| `DEFAULT` | — | Close SWITCH block; execute if no CASE matched |
+| `FOR_EACH` | `<< item in collection` | Iterate body over every element in collection |
+| `BREAK` | — | Exit current loop or op; return to caller's next node |
 | `END` | `[message]` | Halt skill execution immediately |
 | `ASK` | `<< question \| opt1 \| opt2` | Prompt user; halt until response |
 | `SHOW_PLAN` | `>> field1 \| field2` | Present pre-execution plan |

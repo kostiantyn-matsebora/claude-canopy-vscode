@@ -80,6 +80,12 @@ export function activate(context: vscode.ExtensionContext): void {
 
   // --- Setup commands ---
   context.subscriptions.push(
+    vscode.commands.registerCommand('canopy.showVersion', () => {
+      const pkg = context.extension.packageJSON;
+      vscode.window.showInformationMessage(
+        `Canopy Skills v${pkg.version} — Canopy framework v${pkg.canopyVersion ?? 'unknown'}`
+      );
+    }),
     vscode.commands.registerCommand('canopy.addAsSubmodule', addAsSubmodule),
     vscode.commands.registerCommand('canopy.addAsCopy', addAsCopy),
   );
