@@ -13,12 +13,19 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-    env:
-      TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
     steps:
+      - name: Resolve tag
+        id: tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "value=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
+          ref: ${{ steps.tag.outputs.value }}
 
       - uses: actions/setup-node@v4
         with:
@@ -30,9 +37,10 @@ jobs:
       - name: Verify tag matches package.json version
         run: |
           PKG=$(node -p "require('./package.json').version")
-          VER=${TAG#v}
+          VER="${{ steps.tag.outputs.value }}"
+          VER="${VER#v}"
           if [ "$PKG" != "$VER" ]; then
-            echo "ERROR: package.json version ($PKG) != tag ($TAG)"
+            echo "ERROR: package.json version ($PKG) != tag ${{ steps.tag.outputs.value }}"
             exit 1
           fi
 
@@ -42,8 +50,8 @@ jobs:
 
       - name: Create GitHub Release
         run: |
-          gh release create "$TAG" *.vsix \
-            --title "Canopy Skills $TAG" \
+          gh release create "${{ steps.tag.outputs.value }}" *.vsix \
+            --title "Canopy Skills ${{ steps.tag.outputs.value }}" \
             --generate-notes
         env:
           GH_TOKEN: ${{ github.token }}
