@@ -5,7 +5,8 @@ import { parseDocument, isPrimitive, extractReadRefs } from '../canopyDocument';
 import { registry } from '../opRegistry';
 
 const RESERVED_PRIMITIVES = new Set([
-  'IF', 'ELSE_IF', 'ELSE', 'BREAK', 'END', 'ASK', 'SHOW_PLAN', 'VERIFY_EXPECTED', 'EXPLORE'
+  'IF', 'ELSE_IF', 'ELSE', 'SWITCH', 'CASE', 'DEFAULT', 'FOR_EACH',
+  'BREAK', 'END', 'ASK', 'SHOW_PLAN', 'VERIFY_EXPECTED', 'EXPLORE'
 ]);
 
 const FRONTMATTER_REQUIRED = ['name', 'description'];
@@ -259,11 +260,24 @@ export class CanopyDiagnosticsProvider {
 
         case 'ELSE':
         case 'BREAK':
+        case 'DEFAULT':
           if (node.hasInput || node.hasOutput) {
             diagnostics.push(new vscode.Diagnostic(
               range,
               `'${node.opName}' takes no operators — remove '<<' / '>>' from this node.`,
               vscode.DiagnosticSeverity.Warning
+            ));
+          }
+          break;
+
+        case 'SWITCH':
+        case 'CASE':
+        case 'FOR_EACH':
+          if (!node.hasInput) {
+            diagnostics.push(new vscode.Diagnostic(
+              range,
+              `'${node.opName}' requires an input: '${node.opName} << ${node.opName === 'FOR_EACH' ? 'item in collection' : node.opName === 'SWITCH' ? 'expression' : 'value'}'.`,
+              vscode.DiagnosticSeverity.Error
             ));
           }
           break;

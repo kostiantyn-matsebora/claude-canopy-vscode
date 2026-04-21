@@ -276,6 +276,68 @@ describe('diagnostics — primitive signatures: EXPLORE', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Primitive signatures: FOR_EACH / SWITCH / CASE / DEFAULT
+// ---------------------------------------------------------------------------
+
+describe('diagnostics — primitive signatures: FOR_EACH', () => {
+  it('errors when FOR_EACH has no << input', async () => {
+    await provider.validate(skill('## Tree\n\n* FOR_EACH\n'));
+    expect(hasMsg("'FOR_EACH' requires an input")).toBe(true);
+  });
+
+  it('no error when FOR_EACH has << input', async () => {
+    await provider.validate(skill('## Tree\n\n* FOR_EACH << item in list\n'));
+    expect(msgs().filter(m => m.includes('FOR_EACH'))).toHaveLength(0);
+  });
+});
+
+describe('diagnostics — primitive signatures: SWITCH', () => {
+  it('errors when SWITCH has no << input', async () => {
+    await provider.validate(skill('## Tree\n\n* SWITCH\n'));
+    expect(hasMsg("'SWITCH' requires an input")).toBe(true);
+  });
+
+  it('no error when SWITCH has << input', async () => {
+    await provider.validate(skill('## Tree\n\n* SWITCH << bump_type\n'));
+    expect(msgs().filter(m => m.includes('SWITCH'))).toHaveLength(0);
+  });
+});
+
+describe('diagnostics — primitive signatures: CASE', () => {
+  it('errors when CASE has no << input', async () => {
+    await provider.validate(skill('## Tree\n\n* CASE\n'));
+    expect(hasMsg("'CASE' requires an input")).toBe(true);
+  });
+
+  it('no error when CASE has << input', async () => {
+    await provider.validate(skill('## Tree\n\n* CASE << major\n'));
+    expect(msgs().filter(m => m.includes('CASE'))).toHaveLength(0);
+  });
+});
+
+describe('diagnostics — primitive signatures: DEFAULT', () => {
+  it('warns when DEFAULT has operators', async () => {
+    await provider.validate(skill('## Tree\n\n* DEFAULT << x\n'));
+    expect(hasMsg("'DEFAULT' takes no operators")).toBe(true);
+  });
+
+  it('no warning when DEFAULT has no operators', async () => {
+    await provider.validate(skill('## Tree\n\n* DEFAULT\n'));
+    expect(msgs().filter(m => m.includes('DEFAULT'))).toHaveLength(0);
+  });
+});
+
+describe('diagnostics — ops.md redefining new primitives', () => {
+  it.each(['FOR_EACH', 'SWITCH', 'CASE', 'DEFAULT'])(
+    'errors when %s is redefined in ops.md',
+    async (prim) => {
+      await provider.validate(ops(`## ${prim}\n\n* ${prim}\n  * some body\n`));
+      expect(hasMsg('framework primitive')).toBe(true);
+    }
+  );
+});
+
+// ---------------------------------------------------------------------------
 // Resource reference validation
 // ---------------------------------------------------------------------------
 

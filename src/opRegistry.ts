@@ -76,6 +76,30 @@ export const PRIMITIVE_DOCS: Record<string, PrimitiveDoc> = {
     description: 'Run the explore subagent declared in ## Agent. Must be the first tree node when ## Agent is present. Output is bound to the context variable.',
     example: 'EXPLORE >> context',
   },
+  FOR_EACH: {
+    name: 'FOR_EACH',
+    signature: 'FOR_EACH << item in collection',
+    description: 'Iterate over a collection. The body executes once per element. An empty collection skips the body entirely. BREAK inside exits the loop early.',
+    example: 'FOR_EACH << change in context.changes_detected\n  └── APPLY_CHANGE << change',
+  },
+  SWITCH: {
+    name: 'SWITCH',
+    signature: 'SWITCH << expression',
+    description: 'Evaluate an expression once and execute the first matching CASE block. Use DEFAULT as the fallback when no CASE matches. Replaces long IF/ELSE_IF chains that branch on a single value.',
+    example: 'SWITCH << bump_type\n  CASE << major\n    └── ...\n  DEFAULT\n    └── ...',
+  },
+  CASE: {
+    name: 'CASE',
+    signature: 'CASE << value',
+    description: 'A branch inside a SWITCH block. Executes when the SWITCH expression matches this value.',
+    example: 'CASE << minor\n  └── Increment minor segment',
+  },
+  DEFAULT: {
+    name: 'DEFAULT',
+    signature: 'DEFAULT',
+    description: 'Fallback branch inside a SWITCH block. Executes when no CASE matched.',
+    example: 'DEFAULT\n  └── Set bump_type to "patch"',
+  },
 };
 
 // ---------------------------------------------------------------------------

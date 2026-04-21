@@ -5,7 +5,11 @@
       "Bash(xargs ls *)",
       "Read(//c/Users/kmats/Projects/__Personal/canopy/**)",
       "Bash(npm install *)",
-      "Bash(npm test *)"
+      "Bash(npm test *)",
+      "Bash(git subtree *)",
+      "Read(//c/Users/KostiantynMatsebora/Projects/canopy/claude-canopy/**)",
+      "Bash(ls -la agents/canopy/ops/)",
+      "Bash(ls -la agents/canopy/policies/)"
     ]
   }
 }

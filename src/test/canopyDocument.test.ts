@@ -34,7 +34,7 @@ function treeDoc(treeContent: string) {
 // ---------------------------------------------------------------------------
 
 describe('isPrimitive', () => {
-  it.each(['IF', 'ELSE_IF', 'ELSE', 'BREAK', 'END', 'ASK', 'SHOW_PLAN', 'VERIFY_EXPECTED', 'EXPLORE'])(
+  it.each(['IF', 'ELSE_IF', 'ELSE', 'SWITCH', 'CASE', 'DEFAULT', 'FOR_EACH', 'BREAK', 'END', 'ASK', 'SHOW_PLAN', 'VERIFY_EXPECTED', 'EXPLORE'])(
     'returns true for %s',
     (name) => { expect(isPrimitive(name)).toBe(true); },
   );

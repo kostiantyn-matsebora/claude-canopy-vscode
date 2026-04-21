@@ -60,7 +60,8 @@ export interface ParsedSkillDocument {
 }
 
 const PRIMITIVES = new Set([
-  'IF', 'ELSE_IF', 'ELSE', 'BREAK', 'END', 'ASK', 'SHOW_PLAN', 'VERIFY_EXPECTED', 'EXPLORE'
+  'IF', 'ELSE_IF', 'ELSE', 'SWITCH', 'CASE', 'DEFAULT', 'FOR_EACH',
+  'BREAK', 'END', 'ASK', 'SHOW_PLAN', 'VERIFY_EXPECTED', 'EXPLORE'
 ]);
 
 const OP_PATTERN = /\b([A-Z][A-Z0-9_]{1,})\b/g;
