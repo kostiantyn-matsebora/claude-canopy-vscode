@@ -12,6 +12,10 @@ argument-hint: ""
   * Read `package.json` to get `current_version`
   * Run `git branch --show-current` to get `current_branch`
   * Run `gh release view --latest --json tagName --jq .tagName` to get `latest_release_tag`; strip leading `v` to get `latest_release_version`. If no release exists, set `latest_release_version` to "none".
+  * Run `git status --porcelain` to detect uncommitted changes; set `working_tree_dirty` to true if any output is returned
+  * IF << working_tree_dirty is true
+    * Report: Uncommitted changes detected. Commit or stash them first, then re-run `/release`.
+    * END
   * IF << current_version equals latest_release_version
     * Report: Version `current_version` is already the latest GitHub release. Run `/bump-version` to increment the version, then re-run `/release`.
     * END
@@ -40,5 +44,6 @@ argument-hint: ""
 - Do not push or create PR if ASK returns "No"
 - Do not create a PR if one already exists for the current branch targeting master
 - Do not use `--follow-tags` in either path — no local tag exists; CI creates the tag on push to master
+- Always check for uncommitted changes before pushing — a dirty working tree means work would be excluded from the release
 
 ## Response: Summary / Version / Next step
