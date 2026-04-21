@@ -104,6 +104,14 @@ Every framework change must also be verified against documentation. After any ch
 
 Commit messages follow Conventional Commits (`feat:`, `fix:`, `docs:`).
 
+## Versioning
+
+When bumping the framework version, update **both**:
+1. `.canopy-version` — single line containing the new version string (e.g. `0.13.0`)
+2. `docs/CHANGELOG.md` — prepend a new `## [X.Y.Z] — YYYY-MM-DD` entry
+
+Both files must be kept in sync. `.canopy-version` is the machine-readable source of truth consumed by consumer repos (e.g. via `git ls-remote` + subtree workflows).
+
 ## skill.md Constraints
 
 `skill.md` must contain **only** orchestration — no tables, JSON/YAML blocks, scripts, inline examples, or templates. Structured content belongs in category subdirectories. See `agents/canopy/policies/skill-structure-rules.md` and `agents/canopy/policies/writing-rules.md` for the full rule set.

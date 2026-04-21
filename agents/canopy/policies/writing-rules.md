@@ -43,6 +43,18 @@ Standard reference line: `Read \`<category>/<file>\` for <brief description>.`
 Used at the point in the steps where the content is needed — not all at the top.
 Load only what's needed for the current branch or action.
 
+## Tree nodes → ops
+
+Tree nodes must be short and scannable. A node that contains a long or complex prose sentence — one that cannot be read at a glance — must be extracted to a named op in `ops.md`. The tree should read like a table of contents: short op calls and brief natural-language steps, not verbose inline descriptions.
+
+## Static and parameterised content → constants or templates
+
+Tree nodes must not contain inline static or parameterised content. Any such content must be extracted to a resource file and referenced by name:
+- Fixed content (no placeholders) → `constants/`
+- Parameterised content (contains `<token>` slots) → `templates/`
+
+This applies to all node types — `Report:`, natural language steps, op descriptions, or any other node that embeds literal content inline.
+
 ## Behavior details in resource files
 
 Mechanical behavior (e.g. "patch if path exists, put if new") belongs as a section comment in the resource file itself, not repeated in `skill.md` steps.
