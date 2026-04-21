@@ -21,7 +21,7 @@ argument-hint: ""
     * Report: no_changes
     * END
   * DETERMINE_BUMP_TYPE << context.changes_summary >> bump_type | new_version
-  * SHOW_PLAN >> current_version | new_version | bump_type | changelog_summary
+  * SHOW_PLAN >> current_version | new_version | bump_type | changelog_summary | readme_changes
   * ASK << Proceed? | Yes | Adjust | No
   * IF << context.version_already_bumped is false
     * Run `npm version <bump_type> --no-git-tag-version` to update `version` in `package.json`
@@ -29,7 +29,8 @@ argument-hint: ""
       * Run `npm run sync-canopy-version` to sync the embedded Canopy framework version
   * IF << docs/CHANGELOG.md does not already contain an entry for `new_version`
     * Prepend new changelog entry to `docs/CHANGELOG.md` following the existing format
-  * Run `git add package.json docs/CHANGELOG.md`
+  * UPDATE_README << context.changes_summary
+  * Run `git add package.json docs/CHANGELOG.md README.md`
   * Run `git commit -m "chore: release v<new_version>"`
   * VERIFY_EXPECTED << verify/bump-expected.md
   * Report: Summary / Old version / New version / Changelog entry

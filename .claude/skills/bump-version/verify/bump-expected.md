@@ -7,3 +7,4 @@
 - [ ] New version is strictly greater than the previous version (correct semver increment)
 - [ ] A git commit with message `chore: release v<new_version>` exists at HEAD
 - [ ] No local git tag for the new version exists (`git tag --list "v<new_version>"` returns empty)
+- [ ] `README.md` updated if changes include a Canopy framework version bump or new primitives/features (Canopy framework version reference and/or features section reflects the release); unchanged if no README-relevant changes

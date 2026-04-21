@@ -53,6 +53,26 @@ src/
     canopyAgent.ts              — 10 Canopy agent operation commands
 ```
 
+## Memory Server
+
+An MCP `memory` server is configured for this project (`.claude/settings.json`). It stores a knowledge graph of the extension architecture so source files don't need to be fully re-read each session.
+
+**Before reading a source file**, call `search_nodes` with the filename or concept (e.g. `"diagnosticsProvider"`, `"canopy-primitives"`).
+**After modifying a source file**, call `add_observations` on the relevant entity to keep the graph current.
+
+Key entities in the graph:
+
+| Entity | What it tracks |
+|--------|---------------|
+| `diagnosticsProvider.ts` | `RESERVED_PRIMITIVES`, `VALID_CATEGORIES`, `FRONTMATTER_REQUIRED/ALLOWED`, `checkPrimitiveSignatures()` coverage |
+| `completionProvider.ts` | `CATEGORY_DIRS`, `FRONTMATTER_KEYS`, `SECTION_NAMES` |
+| `opRegistry.ts` | `PRIMITIVE_DOCS` map, `OpRegistry` class, resolution chain |
+| `canopyDocument.ts` | `parseDocument()`, `TreeNode`, `isPrimitive()`, `extractReadRefs()` |
+| `extension.ts` | provider registrations, `ensureCanopyLanguage()`, `CANOPY_FILE_RE` |
+| `canopy-primitives` | current full primitive list (synced to framework version) |
+| `canopy-categories` | current valid category dirs |
+| `sync-points` | what to update in the extension when the framework changes |
+
 ## Language IDs
 
 All providers register against `{ language: 'canopy' }` only. Resource file languages have syntax highlighting only (no IntelliSense).
