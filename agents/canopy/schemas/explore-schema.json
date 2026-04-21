@@ -1,7 +1,7 @@
 {
   "skill_dir": ".claude/skills/<skill-name>",
   "skill_md_lines": 150,
-  "existing_resources": ["schemas/explore-schema.json", "policies/writing-rules.md", "constants/category-dirs.md"],
+  "existing_resources": ["schemas/explore-schema.json", "policies/authoring-rules.md", "constants/category-dirs.md"],
   "inline_blocks": [
     {
       "type": "json|yaml|table|script|code",

@@ -57,7 +57,7 @@ Platform-agnostic constructs (`ASK`, `IF/ELSE_IF`, `SHOW_PLAN`, `VERIFY_EXPECTED
 │   └── canopy/                     # Agent resource files
 │       ├── constants/              # Lookup tables and dispatch maps
 │       ├── ops/                    # Per-operation procedure files
-│       ├── policies/               # Rule files (skill-structure, writing, op-naming, …)
+│       ├── policies/               # Rule files (authoring-rules, category-decision-flowchart, …)
 │       ├── schemas/
 │       │   ├── explore-schema.json   # Output contract for skill-analysis subagents
 │       │   └── dispatch-schema.json  # Output contract for canopy's own intent subagent
@@ -116,7 +116,7 @@ SHOW_PLAN >> files | Vault changes | API calls
 
 ## Skill Anatomy
 
-See [README.md](README.md) for the full skill anatomy reference.
+See [README.md](README.md) for the full skill anatomy reference. For the `## Agent` section's three canonical shapes (minimal / sub-task bullets / op reference) and content rules, see [AUTHORING.md — `## Agent`](AUTHORING.md#-agent).
 
 ---
 

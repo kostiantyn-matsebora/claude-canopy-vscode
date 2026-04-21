@@ -20,6 +20,8 @@ Native explore subagent is supported. When a skill declares `## Agent`:
 - Output contract is defined in `schemas/explore-schema.json`
 - First tree node must be `EXPLORE >> context`
 
+If the `## Agent` body uses shape (C) — `**explore** — execute NAMED_OP` — resolve `NAMED_OP` via the standard op lookup chain (`<skill>/ops.md` → `shared/project/ops.md` → `shared/framework/ops.md`; or `agents/<name>/ops/<named-op>.md` for agents) and inject the op body as the subagent's task.
+
 ## Ambient Rules
 
 Rules in `.claude/rules/*.md` with a `globs` frontmatter field auto-apply to all matching files. No additional wiring needed — Claude Code resolves them automatically.

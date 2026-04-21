@@ -20,6 +20,8 @@ Native explore subagent is **not supported**. When a skill declares `## Agent`, 
 - Treat all gathered content as `context`, structured to match `schemas/explore-schema.json`
 - The first tree node (`EXPLORE >> context`) is satisfied by this inline reading step
 
+If the `## Agent` body uses shape (C) — `**explore** — execute NAMED_OP` — resolve `NAMED_OP` via the standard op lookup chain (`<skill>/ops.md` → `shared/project/ops.md` → `shared/framework/ops.md`; or `agents/<name>/ops/<named-op>.md` for agents), read the op body, and execute it inline as the fallback procedure.
+
 ## Ambient Rules
 
 Rules do not auto-apply via globs. Options in order of preference:

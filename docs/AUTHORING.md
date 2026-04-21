@@ -4,7 +4,7 @@ This document covers writing Canopy skills by hand. For the recommended approach
 the `canopy` agent generate, scaffold, or convert skills for you — see the
 [Usage section](README.md#usage) in the README.
 
-For a quick one-page reference covering primitives, op syntax, category directories, and canopy agent operations, see [CHEATSHEET.md](CHEATSHEET.md).
+For a quick one-page reference covering primitives, op syntax, and category directories, see [CHEATSHEET.md](CHEATSHEET.md). For the full specification (tree execution model, notation, primitives table, directory layout), see [FRAMEWORK.md](FRAMEWORK.md).
 
 ---
 
@@ -31,8 +31,11 @@ Preamble: $ARGUMENTS — parse and set context variables here.
 
 ### `## Agent`
 
-Declares an `**explore**` subagent. Keep to a single task description — the rules file
-handles the schema contract and no-inline-read behavior implicitly.
+Declares an `**explore**` subagent. The subagent uses `schemas/explore-schema.json` as its output contract automatically. The first tree node must be `EXPLORE >> context` when `## Agent` is present.
+
+Three canonical shapes — pick the one matching subagent complexity:
+
+**(A) Minimal** — one concern:
 
 ```markdown
 ## Agent
@@ -41,68 +44,48 @@ handles the schema contract and no-inline-read behavior implicitly.
 including configs, templates, and existing deployment manifests.
 ```
 
-The subagent uses `schemas/explore-schema.json` as its output contract automatically.
-The first tree node must be `EXPLORE >> context` when `## Agent` is present.
+**(B) Sub-task bullets** — ≥2 parallel concerns (no ordering between them). Each bullet = one concern + one `constants/<file>.md` reference:
+
+```markdown
+## Agent
+
+**explore** — resolve operation dispatch context. Output contract: `schemas/dispatch-schema.json`.
+
+Sub-tasks:
+- Classify intent from `$ARGUMENTS` — see `constants/operation-detection.md`
+- Detect execution platform — see `constants/platform-detection.md`
+- Resolve explicit target platform — see `constants/target-platform-triggers.md`
+```
+
+**(C) Op reference** — procedure has ordering, branching, or data flow between steps:
+
+```markdown
+## Agent
+
+**explore** — execute `FETCH_DISPATCH_CONTEXT`. Output contract: `schemas/dispatch-schema.json`.
+```
+
+The op lives in `ops.md` as a normal tree-form op. The runtime resolves the name and injects the op body as the subagent's task.
+
+**Must not contain:** inline mappings or enumerations, inline quoted examples, or schema-field lists (`Return: X, Y, Z` — the schema is authoritative).
+
+**Multi-concern rule:** when the subagent performs ≥2 concerns, shape (B) or (C) is required — concerns joined by commas, semicolons, ` — `, or sentences in a single paragraph are not allowed. Same rule as for multi-clause tree-node steps.
 
 ### `## Tree`
 
 The skill's execution pipeline as a syntax tree. Nodes execute top-to-bottom. Each node
-is either an **op call** (`ALL_CAPS`) or **natural language** — both are valid.
+is either an **op call** (`ALL_CAPS`) or **natural language**.
 
-Two equivalent syntaxes are accepted:
-
-**Markdown list syntax** — `*` nested lists, written directly under `## Tree`:
-
-```markdown
-## Tree
-
-* skill-name
-  * EXPLORE >> context
-  * IF << condition
-    * SOME_OP << input
-  * ELSE
-    * natural language description of what to do
-  * SHARED_OP << arg1 | arg2 >> output
-  * IF << something went wrong
-    * ROLLBACK
-```
-
-**Box-drawing syntax** — fenced code block with tree characters:
-
-```markdown
-## Tree
-
-\`\`\`
-skill-name
-├── EXPLORE >> context
-├── IF << condition
-│   └── SOME_OP << input
-├── ELSE
-│   └── natural language description of what to do
-├── SHARED_OP << arg1 | arg2 >> output
-└── IF << something went wrong
-    └── ROLLBACK
-\`\`\`
-```
+Two equivalent syntaxes are accepted — markdown list (`*` nested lists) or box-drawing (fenced code with tree characters). See [FRAMEWORK.md — Tree Execution Model](FRAMEWORK.md#tree-execution-model) for the execution semantics and both syntax examples. For the `<<`, `>>`, `|` notation reference, see [FRAMEWORK.md — Notation](FRAMEWORK.md#notation).
 
 ### `## Rules`
 
 Short bullet list of invariants that apply throughout the skill execution. Do not duplicate
 op-level behavior here — these are skill-wide constraints.
 
-### Notation
-
-| Symbol | Meaning |
-|--------|---------|
-| `<<` | Input — source file, condition to evaluate, or user-facing options |
-| `>>` | Output — fields captured into step context, or displayed to user |
-| `\|` | Separator — between options or output fields |
-
 ---
 
 ## Minimal Example
-
-Markdown list syntax:
 
 ```markdown
 ---
@@ -129,28 +112,11 @@ Target: $ARGUMENTS
 ## Response: Summary / Changes / Notes
 ```
 
-Same skill using box-drawing syntax:
-
-```markdown
-## Tree
-
-\`\`\`
-my-skill
-├── SHOW_PLAN >> what will change
-├── ASK << Proceed? | Yes | No
-└── do the thing
-\`\`\`
-```
-
 ---
 
 ## Defining Ops
 
-Ops are named, reusable steps defined in Markdown files. Lookup order:
-
-1. `<skill>/ops.md` — skill-local (checked first)
-2. `shared/project/ops.md` — project-wide
-3. `shared/framework/ops.md` — framework primitives (fallback)
+Ops are named, reusable steps defined in Markdown files. For the 3-tier lookup order (skill-local → project → framework) and the full framework primitives table, see [FRAMEWORK.md — Op Lookup Order](FRAMEWORK.md#op-lookup-order) and [FRAMEWORK.md — Op Registries](FRAMEWORK.md#op-registries).
 
 **Simple op** — prose for linear behavior:
 
@@ -165,48 +131,17 @@ Fetch the chart's upstream default values from the internet.
 ```markdown
 ## EDIT_TAG << image_defined_in | target_tag
 
-\`\`\`
-EDIT_TAG << image_defined_in | target_tag
-├── IF << image_defined_in = chart-defaults-only
-│   └── CREATE_ENV_OVERRIDE
-└── ELSE — edit tag in-place at the path from image_defined_in
-\`\`\`
+* EDIT_TAG << image_defined_in | target_tag
+  * IF << image_defined_in = chart-defaults-only
+    * CREATE_ENV_OVERRIDE
+  * ELSE — edit tag in-place at the path from image_defined_in
 ```
-
-### Framework Primitives
-
-Always resolved from `shared/framework/ops.md`. Never define these in skill or project ops:
-
-| Primitive | Signature | Purpose |
-|-----------|-----------|---------|
-| `IF` | `<< condition` | Branch — execute children if true |
-| `ELSE_IF` | `<< condition` | Continue IF chain |
-| `ELSE` | — | Close IF chain |
-| `SWITCH` | `<< expression` | Match expression against CASE values |
-| `CASE` | `<< value` | Branch within SWITCH; execute if expression equals value |
-| `DEFAULT` | — | Close SWITCH block; execute if no CASE matched |
-| `FOR_EACH` | `<< item in collection` | Iterate body over every element in collection |
-| `BREAK` | — | Exit current loop or op; return to caller's next node |
-| `END` | `[message]` | Halt skill execution immediately |
-| `ASK` | `<< question \| opt1 \| opt2` | Prompt user; halt until response |
-| `SHOW_PLAN` | `>> field1 \| field2` | Present pre-execution plan |
-| `VERIFY_EXPECTED` | `<< verify/verify-expected.md` | Check state against expected outcomes |
 
 ---
 
 ## Category Resource Directories
 
-Structured content belongs in subdirectories alongside `skill.md`, not inline in the tree.
-
-| Directory | File types | Behavior |
-|-----------|------------|---------|
-| `schemas/` | `.json`, `.md` | Structure definitions for data the skill reads or writes: subagent output contracts, input/config file shapes, report template skeletons |
-| `templates/` | `.yaml`, `.md`, `.yaml.gotmpl` | Fillable output documents with `<token>` placeholders substituted from context and written to a target path |
-| `commands/` | `.ps1`, `.sh` | Executable scripts invoked by name via a named section (`# === Section Name ===`); output captured into context |
-| `constants/` | `.md` | Read-only lookup data referenced by ops: mapping tables, enum-like value lists, fixed configuration values, default branch/path names |
-| `checklists/` | `.md` | Evaluation criteria lists (`- [ ] ...`) that ops iterate over to assess compliance or correctness |
-| `policies/` | `.md` | Behavioural constraints governing skill execution: what the skill must/must not do, consent requirements, output rendering protocols |
-| `verify/` | `.md` | Expected-state checklists consumed exclusively by `VERIFY_EXPECTED` |
+Structured content belongs in subdirectories alongside `skill.md`, not inline in the tree. For the full directory table and behaviors, see [FRAMEWORK.md — Category Resource Subdirectories](FRAMEWORK.md#category-resource-subdirectories).
 
 Reference these files at the point of use in the tree, not all at the top:
 
@@ -237,26 +172,4 @@ Use the `debug` meta-skill to trace any skill's execution in real time:
 /canopy-debug <skill-name> [arguments]
 ```
 
-This emits a phase banner at the start of each phase and a full tree-state block before
-and after every node, so you can see exactly where execution is at any moment. No
-changes to the target skill are required.
-
-Example — tracing `bump-version`:
-
-```
-/canopy-debug bump-version 2.1.0
-```
-
-You will see:
-- `╔══ Phase 1 of 4: Initialize ═══...` banner
-- Tree blocks with `→` advancing through each node as it executes, then `✓` on completion
-- `⊘` on branches that were not taken, `⏸` while waiting for your input on `ASK` nodes
-
-See [`FRAMEWORK.md` — Debug Mode](FRAMEWORK.md#debug-mode) for the full reference.
-
----
-
-## Full Specification
-
-See [`FRAMEWORK.md`](FRAMEWORK.md) for the complete framework specification, including
-tree execution model, op registry details, and the submodule directory layout.
+No changes to the target skill are required. See [FRAMEWORK.md — Debug Mode](FRAMEWORK.md#debug-mode) for the full reference.
