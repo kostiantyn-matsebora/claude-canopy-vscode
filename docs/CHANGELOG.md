@@ -2,6 +2,14 @@
 
 All notable changes to the Canopy Skills extension are documented here.
 
+## [0.4.3] — 2026-04-21
+
+### Changed
+- Canopy framework version bumped to `0.15.0` — policy consolidation (5 policy files merged into `authoring-rules.md`), apply-block protocol extracted to `constants/apply-block-protocol.md`, validate-checks catalog extracted to `constants/validate-checks.md`, new `## Agent` body shape rules (three canonical shapes: A minimal / B sub-task bullets / C op reference) with VALIDATE checks for inline mappings / quoted examples / schema-field-list violations, runtime specs updated to resolve shape (C) op references
+
+### Fixed
+- `Setup Canopy` command now emits `skill-resources.md` with the `checklists/` category row and the `SWITCH`, `CASE`, `DEFAULT`, `FOR_EACH` primitives (previously missing from both `.claude` and `.github` template variants)
+
 ## [0.4.2] — 2026-04-21
 
 ### Fixed
