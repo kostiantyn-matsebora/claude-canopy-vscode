@@ -2,6 +2,19 @@
 
 All notable changes to the Canopy Skills extension are documented here.
 
+## [0.4.0] — 2026-04-21
+
+### Added
+- **`FOR_EACH`, `SWITCH`, `CASE`, `DEFAULT` primitives** — all four new Canopy framework primitives are now recognised across diagnostics, IntelliSense completions, hover docs, and op conformance checks (synced from `claude-canopy` v0.13.0)
+  - `FOR_EACH << item in collection` — requires `<<` input; iterates a collection; `BREAK` inside exits the loop
+  - `SWITCH << expression` — requires `<<` input; evaluates once and dispatches to the first matching `CASE`
+  - `CASE << value` — requires `<<` input; branch inside a `SWITCH` block
+  - `DEFAULT` — no operators; fallback branch when no `CASE` matched
+  - ops.md redefinition of any of these is now flagged as an error
+
+### Changed
+- Canopy framework version bumped to `0.13.0` (adds authoring-quality rules to canopy agent: validate/improve/create now enforce ops.md compliance, iterative VALIDATE loop in improve, extract-long-prose-to-ops and extract-commands-to-scripts rules)
+
 ## [0.3.0] — 2026-04-17
 
 ### Added
