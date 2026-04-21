@@ -33,10 +33,12 @@ Create a new Canopy skill from a description.
 8. Ask: **"Proceed? | Yes | Adjust plan | No"** — if adjusting, accept clarifications and re-show plan.
 9. Generate and write files:
    - `skill.md` — frontmatter inferred from description; Tree, Rules, Response sections
-   - `ops.md` — only for ops not already covered by shared
+   - `ops.md` — only for ops not already covered by shared; nodes must comply with the same `policies/writing-rules.md` and `policies/skill-structure-rules.md` constraints as `skill.md` tree nodes
    - Category subdir files — only for content not already in shared
 10. After writing, run VALIDATE inline. Report any issues.
 11. Verify result against `verify/create-expected.md`.
 12. Report: **Summary / Files created / Shared references used / Next steps**
 
 **skill.md must contain only orchestration** — see `policies/skill-structure-rules.md`.
+
+**Tree nodes must be short and scannable** — long or complex prose nodes must be extracted to named ops in `ops.md`; complex command invocations must be extracted to `commands/` scripts.

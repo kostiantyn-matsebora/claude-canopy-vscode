@@ -12,6 +12,7 @@
 - Tables
 - JSON, YAML, or any structured data blocks
 - Scripts, shell commands, or code fences with executable content
+- Complex inline command invocations (multi-flag or multi-argument shell commands) — extract to a `commands/` script and invoke it from the tree
 - Inline examples or templates
 - Phase-by-phase prose when a `## Tree` is possible
 - Hardcoded platform-specific paths (`.claude/` or `.github/`) in tree nodes or `Read` references — all category file references must be relative to the skill directory (e.g. `policies/rules.md`, not `.claude/skills/my-skill/policies/rules.md`)

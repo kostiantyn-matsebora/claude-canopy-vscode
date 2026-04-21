@@ -6,6 +6,18 @@ Replace narrative paragraphs with numbered or bulleted steps.
 Each step: one action, one outcome, optionally one `Read <category>/<file>` reference.
 No multi-sentence explanations inside a step.
 
+## Tree nodes → ops
+
+Tree nodes must be short and scannable. A node that contains a long or complex prose sentence — one that cannot be read at a glance — must be extracted to a named op in `ops.md`. The tree should read like a table of contents: short op calls and brief natural-language steps, not verbose inline descriptions.
+
+## Static and parameterised content → constants or templates
+
+Tree nodes must not contain inline static or parameterised content. Any such content must be extracted to a resource file and referenced by name:
+- Fixed content (no placeholders) → `constants/`
+- Parameterised content (contains `<token>` slots) → `templates/`
+
+This applies to all node types — `Report:`, natural language steps, op descriptions, or any other node that embeds literal content inline.
+
 ## Phase structure
 
 Prefer `## Tree` over `## Phase N` sections.

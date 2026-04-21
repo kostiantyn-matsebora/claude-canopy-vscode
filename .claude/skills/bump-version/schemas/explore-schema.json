@@ -1,0 +1,50 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["current_version", "last_changelog_version", "version_already_bumped", "has_update_context", "changes_source", "changes_summary"],
+  "properties": {
+    "current_version": {
+      "type": "string",
+      "description": "version field from package.json"
+    },
+    "last_changelog_version": {
+      "type": "string",
+      "description": "Version from the most recent ## [X.Y.Z] heading in docs/CHANGELOG.md"
+    },
+    "last_changelog_date": {
+      "type": "string",
+      "description": "Date from the most recent changelog heading (YYYY-MM-DD)"
+    },
+    "version_already_bumped": {
+      "type": "boolean",
+      "description": "True if current_version in package.json differs from last_changelog_version — indicates a partial run where package.json was bumped but the changelog/commit step did not complete"
+    },
+    "has_update_context": {
+      "type": "boolean",
+      "description": "True if an update skill result is available in conversation context"
+    },
+    "changes_source": {
+      "type": "string",
+      "enum": ["update_context", "git_diff"],
+      "description": "Where changes_summary was derived from"
+    },
+    "changes_summary": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["category", "description"],
+        "properties": {
+          "category": {
+            "type": "string",
+            "enum": ["Added", "Changed", "Fixed"],
+            "description": "Changelog group this item belongs to"
+          },
+          "description": {
+            "type": "string",
+            "description": "Human-readable description of the change"
+          }
+        }
+      }
+    }
+  }
+}

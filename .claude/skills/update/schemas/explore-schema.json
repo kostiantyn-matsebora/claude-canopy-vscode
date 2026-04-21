@@ -1,0 +1,97 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["tracked_version", "current_version", "upstream_version_available", "working_tree_dirty", "needs_update", "changes_detected", "extension_changes_detected", "extension_changes_summary"],
+  "properties": {
+    "tracked_version": {
+      "type": "string",
+      "description": "canopyVersion read from package.json — the version the extension was last synced against"
+    },
+    "current_version": {
+      "type": "string",
+      "description": "Current canopy version derived from git log of .claude/canopy/ (tag or short SHA)"
+    },
+    "upstream_version_available": {
+      "type": "boolean",
+      "description": "True if the upstream canopy SHA (from git ls-remote) differs from the current subtree head — a newer version is available to pull"
+    },
+    "working_tree_dirty": {
+      "type": "boolean",
+      "description": "True if git status --porcelain reports any modified tracked files"
+    },
+    "subtree_updated": {
+      "type": "boolean",
+      "description": "Alias for upstream_version_available — kept for backwards compatibility"
+    },
+    "canopy_version": {
+      "type": "string",
+      "description": "Alias for current_version — kept for backwards compatibility"
+    },
+    "last_update_commit": {
+      "type": "string",
+      "description": "Git commit SHA of the last canopy subtree merge"
+    },
+    "needs_update": {
+      "type": "boolean",
+      "description": "True if any extension files are out of sync with the current canopy framework"
+    },
+    "extension_changes_detected": {
+      "type": "boolean",
+      "description": "True if uncommitted or recently committed extension source changes exist in src/ since the last changelog entry"
+    },
+    "extension_changes_summary": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["file", "description"],
+        "properties": {
+          "file": {
+            "type": "string",
+            "description": "Extension source file path that has changes"
+          },
+          "description": {
+            "type": "string",
+            "description": "Human-readable summary of what changed in this file"
+          }
+        }
+      },
+      "description": "Extension-only changes detected independently of the canopy subtree update"
+    },
+    "changes_detected": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["type", "description", "framework_file", "extension_files"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "NEW_PRIMITIVE",
+              "PRIMITIVE_SIGNATURE",
+              "NEW_CATEGORY",
+              "CATEGORY_RENAMED",
+              "CATEGORY_REMOVED",
+              "FRONTMATTER_CHANGE",
+              "TREE_SYNTAX",
+              "SECTION_HEADER",
+              "OP_LOOKUP_CHAIN"
+            ]
+          },
+          "description": {
+            "type": "string",
+            "description": "Human-readable description of what changed and what needs updating"
+          },
+          "framework_file": {
+            "type": "string",
+            "description": "Path to the canopy framework file that changed"
+          },
+          "extension_files": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Extension source file paths that need updating for this change"
+          }
+        }
+      }
+    }
+  }
+}
