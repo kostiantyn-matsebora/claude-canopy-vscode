@@ -2,6 +2,11 @@
 
 All notable changes to the Canopy Skills extension are documented here.
 
+## [0.4.1] — 2026-04-21
+
+### Changed
+- Canopy framework version bumped to `0.14.0` — VALIDATE now explicitly checks every tree node (including `Report:`, natural language steps, and op descriptions) for inline static content (→ `constants/`) and inline parameterised content (→ `templates/`); procedural note added to iterate every node for content-class rules rather than relying on a holistic scan
+
 ## [0.4.0] — 2026-04-21
 
 ### Added
