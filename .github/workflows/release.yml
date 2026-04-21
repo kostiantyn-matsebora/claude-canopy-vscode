@@ -7,6 +7,11 @@ on:
       tag:
         description: 'Tag to release (e.g. v0.4.1)'
         required: true
+  workflow_call:
+    inputs:
+      tag:
+        type: string
+        required: true
 
 jobs:
   release:
@@ -17,7 +22,7 @@ jobs:
       - name: Resolve tag
         id: tag
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || [ "${{ github.event_name }}" = "workflow_call" ]; then
             echo "value=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
           else
             echo "value=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"

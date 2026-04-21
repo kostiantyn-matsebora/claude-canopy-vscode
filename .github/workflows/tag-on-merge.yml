@@ -9,6 +9,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    outputs:
+      tag: ${{ steps.create_tag.outputs.tag }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -39,10 +41,11 @@ jobs:
           git push https://x-access-token:${{ secrets.PAT }}@github.com/${{ github.repository }} "$TAG"
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
 
-      - name: Dispatch release workflow
-        if: steps.create_tag.outputs.tag != ''
-        run: |
-          gh workflow run release.yml --ref "${{ steps.create_tag.outputs.tag }}" \
-            --field tag="${{ steps.create_tag.outputs.tag }}"
-        env:
-          GH_TOKEN: ${{ secrets.PAT }}
+  release:
+    needs: tag
+    if: needs.tag.outputs.tag != ''
+    uses: ./.github/workflows/release.yml
+    with:
+      tag: ${{ needs.tag.outputs.tag }}
+    permissions:
+      contents: write
