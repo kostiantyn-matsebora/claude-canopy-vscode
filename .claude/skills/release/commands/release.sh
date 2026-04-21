@@ -2,7 +2,7 @@
 
 # === Get Latest Release ===
 # Output: latest_release_version stripped of leading 'v'; "none" if no release exists
-tag=$(gh release view --latest --json tagName --jq .tagName 2>/dev/null)
+tag=$(gh release list --limit 1 --json tagName --jq '.[0].tagName' 2>/dev/null)
 if [ -z "$tag" ]; then
   echo "none"
 else
