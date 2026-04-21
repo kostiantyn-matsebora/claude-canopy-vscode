@@ -16,8 +16,12 @@ Evaluate a Canopy skill for framework errors, warnings, and optimization opportu
    - **Warning** — likely wrong; should be fixed
    - **Optimization** — reduces token/context load; recommended
 
+   For content-class rules (inline static/parameterised content, complex commands), iterate every tree node in order and apply each check explicitly — do not rely on a holistic scan.
+
 **Errors (framework violations):**
 - `skill.md` contains inline JSON, YAML, tables, scripts, or code blocks → must extract to category files
+- Any tree node (including `Report:`, natural language steps, op descriptions) contains inline fixed text → must extract to `constants/`
+- Any tree node (including `Report:`, natural language steps, op descriptions) contains inline parameterised text with `<token>` slots → must extract to `templates/`
 - `## Tree` section is missing (skill has only prose or `## Steps`)
 - `EXPLORE` is not the first tree node when `## Agent` is present
 - `schemas/explore-schema.json` missing when `## Agent` declares `**explore**`

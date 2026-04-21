@@ -7,6 +7,14 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.14.0] — 2026-04-21
+
+### Changed
+
+- `agents/canopy/ops/validate.md` — two new Errors added: inline fixed text in any tree node (including `Report:`, natural language steps, op descriptions) must be extracted to `constants/`; inline parameterised text with `<token>` slots must be extracted to `templates/`; procedural note added: for content-class rules, iterate every tree node in order and apply each check explicitly — do not rely on a holistic scan
+
+---
+
 ## [0.13.0] — 2026-04-20
 
 ### Changed
