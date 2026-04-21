@@ -26,10 +26,14 @@ Operation → file mapping (case-insensitive, `_` and `-` interchangeable):
 ## Tree
 
 * canopy-help
+  * IF << .claude/agents/canopy.md exists
+    * Set `agent_base` = `.claude/agents/canopy/ops`
+  * ELSE
+    * Set `agent_base` = `.github/agents/canopy/ops`
   * IF << op_file is empty
-    * Read `.github/agents/canopy/ops/help.md` and emit its content verbatim
+    * Read `<agent_base>/help.md` and emit its content verbatim
   * ELSE_IF << op_file is a recognised operation file
-    * Read `.github/agents/canopy/ops/<op_file>` and emit its content verbatim
+    * Read `<agent_base>/<op_file>` and emit its content verbatim
   * ELSE
     * Emit: `Unknown operation "$ARGUMENTS". Run without arguments for the full operations list.`
 

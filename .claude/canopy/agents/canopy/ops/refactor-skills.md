@@ -40,15 +40,7 @@ Analyse all available Canopy skills, identify ops and resources duplicated acros
 
    If no extraction candidates are found, report that and stop.
 
-   Then emit a fenced `apply` block:
-
-   ```apply
-   op: REFACTOR_SKILLS
-   changes:
-     - <source-file> | <action> | <detail>
-   ```
-
-   If re-invoked after this block is visible in context, skip steps 1–5 and apply the listed changes directly.
+   Then emit an apply block per `constants/apply-block-protocol.md` with fields: `op: REFACTOR_SKILLS` | `changes`.
 
 6. Ask: **"Proceed? | Yes | Adjust | No"** — wait for response before touching any file.
 

@@ -21,18 +21,7 @@ Align an existing Canopy skill with the current Canopy framework rules — fix s
    |---------|-------------|-------------|--------|--------|--------|
    | `<description>` | `<current location>` | `<target location>` | move / extract / fix / replace with shared ref / create / delete | VALIDATE / shared / audit | `<decision-rule rationale>` |
 
-   Then list: new files to create | files to delete | shared references to introduce.
-
-   Then emit a fenced `apply` block — a self-contained summary of all planned changes:
-
-   ```apply
-   op: IMPROVE
-   skill: <name>
-   changes:
-     - <file-path> | <action> | <detail>
-   ```
-
-   If re-invoked after this block is visible in context (e.g. the user replied "yes" in a follow-up message), skip steps 1–6 and apply the listed changes directly from the `apply` block.
+   Then list: new files to create | files to delete | shared references to introduce. Then emit an apply block per `constants/apply-block-protocol.md` with fields: `op: IMPROVE` | `skill: <name>` | `changes`.
 
 7. Ask: **"Proceed? | Yes | Adjust | No"** — wait for response before touching any file.
 8. Apply all changes:

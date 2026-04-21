@@ -118,6 +118,7 @@ When a skill step says `Read <category>/<file>`, the directory determines behavi
 | `templates/` | `.yaml`, `.md`, `.yaml.gotmpl` | Substitute all `<token>` placeholders from step context; write to target path stated in step |
 | `commands/` | `.ps1`, `.sh` | Execute the section identified with `for <operation>`; capture named output values stated in step |
 | `constants/` | `.md` | Load all named values into step context; reference by name in subsequent steps |
+| `checklists/` | `.md` | Iterate `- [ ]` items as evaluation criteria during the relevant op |
 | `policies/` | `.md` | Apply as active rules for the duration of the skill |
 | `verify/` | `.md` | Use as expected-state checklist during the verification phase |
 

@@ -7,6 +7,46 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.15.0] — 2026-04-21
+
+### Added
+
+- `agents/canopy/policies/authoring-rules.md` — consolidated policy file merging five prior files (`skill-structure-rules.md`, `writing-rules.md`, `op-naming-rules.md`, `subagent-rules.md`, `debug-rules.md`). VALIDATE now loads one policy file instead of four.
+- `agents/canopy/constants/validate-checks.md` — extracted the Error/Warning/Optimization check catalog out of `ops/validate.md` (was ~30 inline lines). `validate.md` shrinks from 61 → 15 lines.
+- `agents/canopy/constants/apply-block-protocol.md` — single definition of the fenced `apply` block format and re-invocation rule. 7 ops (CREATE, MODIFY, IMPROVE, SCAFFOLD, REFACTOR_SKILLS, CONVERT_TO_CANOPY, CONVERT_TO_REGULAR) now reference the protocol instead of each repeating ~10 lines of boilerplate.
+- `agents/canopy/constants/platform-detection.md` — `.claude/` → `claude`, `.github/` → `copilot` mapping; previously inlined in `agents/canopy.md` `## Agent` body.
+- `agents/canopy/constants/target-platform-triggers.md` — trigger-phrase lookup ("for copilot", "as claude", etc.); previously inlined.
+- `agents/canopy/ops/fetch-dispatch-context.md` — tree-form op implementing the canopy agent's dispatch context resolution (intent classification, platform detection, target-platform resolution, skill extraction, extra context).
+- `agents/canopy/policies/authoring-rules.md` — new "`## Agent` body shape" section with three canonical shapes (A: minimal / B: sub-task bullets / C: op reference), must-not list, and multi-concern MUST rule.
+- `agents/canopy/constants/validate-checks.md` — two new Errors (inline mapping/enumeration in `## Agent`, inline quoted examples in `## Agent`) and two new Warnings (schema-field lists in `## Agent`, multi-concern prose in `## Agent`).
+
+### Changed
+
+- `agents/canopy.md` — `## Agent` body reduced from ~6-line prose paragraph (inlining mapping, examples, and schema-field list) to a single shape (C) line: `**explore** — execute FETCH_DISPATCH_CONTEXT. Output contract: schemas/dispatch-schema.json.`
+- `agents/canopy/ops/validate.md` — reads `policies/authoring-rules.md` (single file) instead of four separate policy files; reads `constants/validate-checks.md` for the check catalog.
+- `agents/canopy/ops/create.md`, `convert-to-canopy.md` — references updated from `skill-structure-rules.md` / `writing-rules.md` to `authoring-rules.md`.
+- `agents/canopy/ops/create.md`, `modify.md`, `improve.md`, `scaffold.md`, `refactor-skills.md`, `convert-to-canopy.md`, `convert-to-regular.md` — apply-block boilerplate replaced with single-line reference to `constants/apply-block-protocol.md`.
+- `agents/canopy/constants/operations-dispatch.md` — absolute `.github/agents/canopy/ops/…` paths replaced with paths relative to the agent directory (`ops/…`). Fixes Claude Code dispatch — previously only worked on Copilot.
+- `agents/canopy/policies/authoring-rules.md` "Subagent contract" — runtime fallback behavior removed (was duplicated with `runtimes/copilot.md`); replaced with cross-reference to runtime specs.
+- `agents/canopy/schemas/explore-schema.json` — example `existing_resources` entry updated from `policies/writing-rules.md` to `policies/authoring-rules.md`.
+- `runtimes/claude.md`, `runtimes/copilot.md` — added op-resolution rule for `## Agent` shape (C): `**explore** — execute NAMED_OP` is resolved via the standard op lookup chain and the op body is injected as the subagent's task (or inlined on Copilot).
+- `agents/canopy/ops/scaffold.md` — scaffolded `skill.md` template now includes an optional commented-out `## Agent` stanza with pointer to `policies/authoring-rules.md` for shape selection.
+- `docs/AUTHORING.md` — trimmed from 262 → ~170 lines by replacing duplicated tables/sections (notation, framework primitives, category directories, op lookup order) with links to the corresponding FRAMEWORK.md anchors; `## Agent` subsection rewritten with three canonical shapes.
+- `docs/FRAMEWORK.md` — Skill Anatomy section cross-references AUTHORING.md's three `## Agent` shapes; directory-layout comment updated to reflect new policy filenames.
+- `docs/CHEATSHEET.md` — added `## Agent body shapes` quick-reference table.
+- `docs/CONTRIBUTING.md` — sync-required file list references `authoring-rules.md` instead of the deleted `optimization-rules.md`.
+- `CLAUDE.md` — `agents/canopy/policies/` description updated to list current policy filenames.
+- `skills/canopy-help/SKILL.md` — added platform detection branch; previously hardcoded only `.github/` paths so was Copilot-only.
+- `setup.sh`, `setup.ps1` — generated `skill-resources.md` now includes `checklists/` row in the category table (was missing).
+- VS Code extension `src/commands/setupCanopy.ts` — `SKILL_RESOURCES_COPY` and `SKILL_RESOURCES_COPILOT` templates now include `checklists/` in the category table and `SWITCH`, `CASE`, `DEFAULT`, `FOR_EACH` in the primitives list.
+
+### Removed
+
+- `agents/canopy/policies/skill-structure-rules.md`, `writing-rules.md`, `op-naming-rules.md`, `subagent-rules.md`, `debug-rules.md` — consolidated into `authoring-rules.md`.
+- `agents/canopy/policies/optimization-rules.md` — was a dead index file pointing at the files now merged into `authoring-rules.md`.
+
+---
+
 ## [0.14.0] — 2026-04-21
 
 ### Changed

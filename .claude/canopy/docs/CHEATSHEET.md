@@ -10,6 +10,16 @@ Quick reference. Full spec: [FRAMEWORK.md](FRAMEWORK.md) · Authoring guide: [AU
 
 Use `/canopy scaffold <skill-name>` to generate a blank skill, or see [AUTHORING.md — Skill Anatomy](AUTHORING.md#skill-anatomy) for the full annotated template.
 
+### `## Agent` body shapes
+
+| Shape | Use when | Looks like |
+|-------|----------|-----------|
+| (A) Minimal | 1 concern | `**explore** — <task>. Output contract: \`schemas/explore-schema.json\`.` |
+| (B) Sub-task bullets | ≥2 parallel concerns | Task line + bullets, each = one concern + one `constants/<file>.md` |
+| (C) Op reference | Procedure has ordering / data flow / reuse | `**explore** — execute NAMED_OP. Output contract: …` |
+
+**Must not contain:** inline mappings/enumerations, inline quoted examples, schema-field lists (`Return: X, Y, Z`).
+
 ---
 
 ## Notation
