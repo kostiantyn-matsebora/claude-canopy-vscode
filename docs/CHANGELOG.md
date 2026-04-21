@@ -2,6 +2,13 @@
 
 All notable changes to the Canopy Skills extension are documented here.
 
+## [0.4.2] — 2026-04-21
+
+### Fixed
+- Auto-assign `canopy` language for `skill.md` and `ops.md` files inside `.claude/` and `.github/` directories when another extension wins the initial language detection race — status bar now always shows "Canopy Skill" for these files
+- Release workflow now dispatches directly from `tag-on-merge` instead of relying on GitHub's push-tag cascade, which does not reliably fire for workflow-created tags
+- Job-level env expression replaced with a `resolve-tag` step in `release.yml` to fix `workflow_dispatch` trigger not being recognised
+
 ## [0.4.1] — 2026-04-21
 
 ### Changed

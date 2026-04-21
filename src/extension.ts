@@ -17,6 +17,23 @@ import {
 
 const CANOPY_LANG = 'canopy';
 
+const CANOPY_FILE_RE = [
+  /[/\\]\.claude[/\\].*[/\\]skill\.md$/,
+  /[/\\]\.claude[/\\].*[/\\]ops\.md$/,
+  /[/\\]\.github[/\\].*[/\\]skill\.md$/,
+  /[/\\]\.github[/\\].*[/\\]ops\.md$/,
+];
+
+function isCanopyFile(fsPath: string): boolean {
+  return CANOPY_FILE_RE.some(p => p.test(fsPath));
+}
+
+async function ensureCanopyLanguage(doc: vscode.TextDocument): Promise<void> {
+  if (doc.languageId !== CANOPY_LANG && isCanopyFile(doc.uri.fsPath)) {
+    await vscode.languages.setTextDocumentLanguage(doc, CANOPY_LANG);
+  }
+}
+
 export function activate(context: vscode.ExtensionContext): void {
   const diagnostics = new CanopyDiagnosticsProvider();
 
@@ -73,6 +90,12 @@ export function activate(context: vscode.ExtensionContext): void {
         registry.invalidate(doc.uri);
       }
     })
+  );
+
+  // --- Enforce canopy language for files that another extension may have claimed ---
+  vscode.workspace.textDocuments.forEach(ensureCanopyLanguage);
+  context.subscriptions.push(
+    vscode.workspace.onDidOpenTextDocument(ensureCanopyLanguage)
   );
 
   // --- Run diagnostics on all currently open canopy documents ---
