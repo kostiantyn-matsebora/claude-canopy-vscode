@@ -2,14 +2,23 @@ name: Release
 on:
   push:
     tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to release (e.g. v0.4.1)'
+        required: true
 
 jobs:
   release:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    env:
+      TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
 
       - uses: actions/setup-node@v4
         with:
@@ -21,8 +30,8 @@ jobs:
       - name: Verify tag matches package.json version
         run: |
           PKG=$(node -p "require('./package.json').version")
-          TAG=${GITHUB_REF_NAME#v}
-          if [ "$PKG" != "$TAG" ]; then
+          VER=${TAG#v}
+          if [ "$PKG" != "$VER" ]; then
             echo "ERROR: package.json version ($PKG) != tag ($TAG)"
             exit 1
           fi
@@ -33,8 +42,8 @@ jobs:
 
       - name: Create GitHub Release
         run: |
-          gh release create "$GITHUB_REF_NAME" *.vsix \
-            --title "Canopy Skills $GITHUB_REF_NAME" \
+          gh release create "$TAG" *.vsix \
+            --title "Canopy Skills $TAG" \
             --generate-notes
         env:
           GH_TOKEN: ${{ github.token }}
