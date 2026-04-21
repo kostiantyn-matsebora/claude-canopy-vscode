@@ -7,6 +7,18 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.13.0] — 2026-04-20
+
+### Changed
+
+- `agents/canopy/ops/validate.md` — added scope line: all checks apply to tree nodes in both `skill.md` and `ops.md` equally; new Error for complex inline command invocations (must extract to `commands/`); new Warning for long prose nodes (must extract to named op)
+- `agents/canopy/ops/improve.md` — step 9 changed to iterative: repeat VALIDATE + fix loop until no Errors or Warnings remain (previously stopped after one pass, leaving residual violations)
+- `agents/canopy/ops/create.md` — `ops.md` quality spec added: nodes must comply with same writing-rules and skill-structure-rules as `skill.md`; footer added reinforcing short nodes and commands-extraction requirement
+- `agents/canopy/policies/writing-rules.md` — two new sections: "Tree nodes → ops" (long prose must be extracted); "Static and parameterised content → constants or templates" (applies to all node types)
+- `agents/canopy/policies/skill-structure-rules.md` — added to must-NOT-contain list: complex inline command invocations must be extracted to `commands/` scripts
+
+---
+
 ## [0.12.0] — 2026-04-20
 
 ### Added

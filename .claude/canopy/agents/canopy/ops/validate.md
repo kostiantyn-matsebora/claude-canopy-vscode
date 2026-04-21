@@ -10,6 +10,7 @@ Evaluate a Canopy skill for framework errors, warnings, and optimization opportu
    Read `policies/debug-rules.md` for debug-awareness constraints.
    Read `constants/control-flow-notation.md` for ad-hoc control flow patterns to detect.
    Read `constants/category-dirs.md` and `policies/category-decision-flowchart.md` for category classification.
+   All checks derived from these policies apply to tree nodes in **both** `skill.md` and `ops.md` equally — not just to `skill.md`.
 4. Evaluate the skill. Classify each finding:
    - **Error** — violates a framework rule; must be fixed
    - **Warning** — likely wrong; should be fixed
@@ -29,8 +30,10 @@ Evaluate a Canopy skill for framework errors, warnings, and optimization opportu
 - Op calls in tree are not `ALL_CAPS`
 - `## Rules` or `## Response:` section missing
 - `skill.md` tree nodes or `Read` references contain hardcoded platform paths (`.claude/` or `.github/`) — skills must be platform-agnostic; all category file references must be relative to the skill directory
+- Tree node contains a complex inline command invocation (multi-flag or multi-argument shell command) → must extract to a `commands/` script
 
 **Warnings:**
+- Tree node is a long or complex prose sentence that cannot be read at a glance → extract to a named op in `ops.md`
 - `## Agent` section contains boilerplate ("do not inline-read", "return JSON only") → remove; it's implicit
 - Tree nodes with multiple clauses joined by `;` or ` — ` → split into step hierarchy
 - Conditional prose in steps (`if X: do Y`) instead of `IF` tree node

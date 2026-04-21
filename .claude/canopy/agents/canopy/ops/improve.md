@@ -44,7 +44,7 @@ Align an existing Canopy skill with the current Canopy framework rules — fix s
    - If the skill makes changes to files but has no `VERIFY_EXPECTED` node, include a row in the decision table: `— | — | verify/verify-expected.md | create` with reason "skill makes changes but has no verification step"; add `VERIFY_EXPECTED << verify/verify-expected.md` as the last node inside the success branch and create `verify/verify-expected.md` with an appropriate expected-state checklist
    - Preserve existing tree syntax (do not switch `*` ↔ box-drawing unless asked)
    - Do not change skill logic or intent
-9. Run VALIDATE inline on the result. If new issues appear, fix them before reporting.
+9. Run VALIDATE inline on all modified files. Fix every remaining Error and Warning — not just newly introduced ones, but any violation still present after the changes. Repeat until VALIDATE reports no Errors or Warnings on any file.
 10. Verify result against `verify/improve-expected.md`.
 11. Report: **Summary / Issues fixed / Shared references introduced / Files changed / Files created / Files deleted**
 
