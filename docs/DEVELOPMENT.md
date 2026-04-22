@@ -39,7 +39,7 @@ npm run package
 Option A — VS Code command line:
 
 ```bash
-code --install-extension canopy-skills-0.3.0.vsix
+code --install-extension canopy-skills-<version>.vsix
 ```
 
 Option B — VS Code UI:
@@ -221,7 +221,7 @@ All tree line parsing is in `parseTreeLine()` in `canopyDocument.ts`. This funct
 
 ## Release workflow
 
-Releases are tag-based. CI runs on every push to `main`; a GitHub Release with the `.vsix` attached is created automatically on `v*` tag push.
+Releases are tag-based. CI runs on every push to `master`; a GitHub Release with the `.vsix` attached is created automatically on `v*` tag push.
 
 ```bash
 # 1. Bump version in package.json + create local tag
@@ -233,7 +233,7 @@ npm run sync-canopy-version
 # 3. Update CHANGELOG.md
 
 # 4. Push branch and tag — triggers .github/workflows/release.yml
-git push origin main --follow-tags
+git push origin master --follow-tags
 ```
 
 The release workflow verifies that the tag matches `package.json version` before packaging. Pushing the same tag twice is rejected by git — duplicate releases are not possible.

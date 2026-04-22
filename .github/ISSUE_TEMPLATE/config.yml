@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Canopy framework
+    url: https://github.com/kostiantyn-matsebora/claude-canopy/issues
+    about: Issues with the Canopy framework itself (not the VS Code extension) belong in the framework repo.

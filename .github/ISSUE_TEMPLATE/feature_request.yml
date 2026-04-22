@@ -1,0 +1,28 @@
+name: Feature request
+description: Suggest a new completion, diagnostic, command, language-support improvement, or other enhancement.
+title: "feat: "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem to solve
+      description: What's currently missing or friction-inducing when authoring Canopy skills in VS Code?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed change
+    validations:
+      required: true
+  - type: textarea
+    id: example
+    attributes:
+      label: Example
+      description: Show a skill snippet, mock completion, or diagnostic message that illustrates the improvement.
+  - type: textarea
+    id: notes
+    attributes:
+      label: Additional notes

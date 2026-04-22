@@ -1,0 +1,75 @@
+name: Bug report
+description: Report a broken feature, false-positive diagnostic, or unexpected extension behavior.
+title: "bug: "
+labels:
+  - bug
+body:
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - syntax highlighting
+        - IntelliSense / completions
+        - diagnostics / validation
+        - hover / go-to-definition
+        - scaffold commands (New Skill / Template / Policy / ...)
+        - setup commands (Add as submodule / Add as copy)
+        - agent commands (Canopy Agent: *)
+        - packaging / install
+        - other
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. ...
+        2. ...
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: input
+    id: extension_version
+    attributes:
+      label: Extension version
+      placeholder: e.g. 0.7.0 (see Extensions panel → Canopy Skills)
+    validations:
+      required: true
+  - type: input
+    id: vscode_version
+    attributes:
+      label: VS Code version
+      placeholder: e.g. 1.95.0 (Help → About)
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      placeholder: e.g. Windows 11, macOS 14, Ubuntu 22.04
+    validations:
+      required: true
+  - type: input
+    id: canopy_version
+    attributes:
+      label: Canopy framework version (if applicable)
+      placeholder: e.g. 0.15.0 — from .claude/canopy/.canopy-version
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Sample skill file, screenshot, relevant log output, etc.
