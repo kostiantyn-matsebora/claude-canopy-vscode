@@ -1,16 +1,23 @@
-# Canopy installer for Windows — downloads a release and wires Claude Code.
+# Canopy installer for Windows — downloads a release and wires Claude Code or GitHub Copilot.
 # Usage:
-#   pwsh install.ps1              # install latest release
-#   pwsh install.ps1 v1.0.0       # install specific version
-#   irm <url>/install.ps1 | iex   # install latest via web pipe
+#   pwsh install.ps1                              # install latest release, wire Claude Code
+#   pwsh install.ps1 -Target copilot              # install latest release, wire GitHub Copilot
+#   pwsh install.ps1 v1.0.0                       # install specific version (Claude)
+#   pwsh install.ps1 v1.0.0 -Target copilot       # install specific version (Copilot)
+#   irm <url>/install.ps1 | iex                   # install latest via web pipe
 
-param([string]$Version = "")
+param(
+    [string]$Version = "",
+    [ValidateSet('claude','copilot')]
+    [string]$Target = 'claude'
+)
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-$Repo       = "kostiantyn-matsebora/claude-canopy"
-$CanopyDir  = ".claude/canopy"
+$Repo        = "kostiantyn-matsebora/claude-canopy"
+$Base        = if ($Target -eq 'copilot') { ".github" } else { ".claude" }
+$CanopyDir   = Join-Path $Base "canopy"
 $VersionFile = ".canopy-version"
 
 function Write-Info  { param($Msg) Write-Host "  info     $Msg" -ForegroundColor Green }
@@ -25,6 +32,7 @@ if (-not $Version) {
 
 Write-Host "Canopy installer"
 Write-Host "----------------"
+Write-Info "Target:  $Target ($Base/)"
 Write-Info "Version: $Version"
 
 $TarballUrl = "https://github.com/$Repo/archive/refs/tags/$Version.tar.gz"
@@ -49,4 +57,4 @@ try {
 }
 
 Write-Host ""
-pwsh "$CanopyDir/setup.ps1"
+pwsh "$CanopyDir/setup.ps1" -Target $Target

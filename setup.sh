@@ -1,49 +1,78 @@
 #!/usr/bin/env bash
 # Canopy setup script
-# Run from your project root after placing Canopy at .claude/canopy/ via any method:
-#   git submodule add <url> .claude/canopy
-#   git subtree add --prefix=.claude/canopy <url> main --squash
-#   bash install.sh [version]
+# Run from your project root after placing Canopy at <base>/canopy/ via any method:
+#   git submodule add <url> <base>/canopy
+#   git subtree add --prefix=<base>/canopy <url> main --squash
+#   bash install.sh [version] [--target claude|copilot]
 #
-# Creates the wiring files that Claude Code needs to see both canopy internals
-# and your own skills. Safe to re-run — existing files are never overwritten.
+# Creates the wiring files that Claude Code or GitHub Copilot needs to see both
+# canopy internals and your own skills. Safe to re-run — existing files are never
+# overwritten.
+#
+# Usage:
+#   bash setup.sh                          # wire Claude Code (default)
+#   bash setup.sh --target copilot         # wire GitHub Copilot
 
 set -euo pipefail
 
-CANOPY_DIR=".claude/canopy"
-RULES_FILE=".claude/rules/skill-resources.md"
-PROJECT_OPS=".claude/skills/shared/project/ops.md"
-SHARED_OPS=".claude/skills/shared/ops.md"
+TARGET="claude"
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --target)      TARGET="${2:-}"; shift 2 ;;
+    --target=*)    TARGET="${1#*=}"; shift ;;
+    -h|--help)     sed -n '2,16p' "$0"; exit 0 ;;
+    *)             echo "Unexpected argument: $1" >&2; exit 1 ;;
+  esac
+done
+
+if [[ "$TARGET" != "claude" && "$TARGET" != "copilot" ]]; then
+  echo "Invalid --target: $TARGET (expected claude|copilot)" >&2
+  exit 1
+fi
+
+if [[ "$TARGET" == "copilot" ]]; then BASE=".github"; else BASE=".claude"; fi
+CANOPY_DIR="$BASE/canopy"
+SKILLS_DIR="$BASE/skills"
+AGENTS_DIR="$BASE/agents"
+PROJECT_OPS="$BASE/skills/shared/project/ops.md"
+SHARED_OPS="$BASE/skills/shared/ops.md"
+RULES_FILE=".claude/rules/skill-resources.md"     # Claude only
+COPILOT_INST=".github/copilot-instructions.md"    # Copilot only
+COPILOT_MARK="<!-- canopy:skill-resources:start -->"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
 RESET='\033[0m'
 
-created() { echo -e "  ${GREEN}created${RESET}  $1"; }
-skipped() { echo -e "  ${YELLOW}exists${RESET}   $1  (skipped)"; }
-error()   { echo -e "  ${RED}error${RESET}    $1"; exit 1; }
+created()  { echo -e "  ${GREEN}created${RESET}  $1"; }
+appended() { echo -e "  ${GREEN}appended${RESET} $1"; }
+skipped()  { echo -e "  ${YELLOW}exists${RESET}   $1  (skipped)"; }
+error()    { echo -e "  ${RED}error${RESET}    $1"; exit 1; }
 
 echo "Canopy setup"
 echo "------------"
+echo "  target   $TARGET ($BASE/)"
 
 # Verify Canopy is present
 if [[ ! -f "$CANOPY_DIR/docs/FRAMEWORK.md" ]]; then
   error "$CANOPY_DIR not found. Place Canopy there first: submodule, subtree, or bash install.sh"
 fi
 
-# Create directories
-mkdir -p ".claude/rules"
-mkdir -p ".claude/skills/shared/project"
-mkdir -p ".claude/agents"
+# Create base directories
+mkdir -p "$BASE/skills/shared/project"
+mkdir -p "$AGENTS_DIR"
+if [[ "$TARGET" == "claude" ]]; then
+  mkdir -p ".claude/rules"
+fi
 
 # ── Symlinks for bundled canopy skills ────────────────────────────────────────
 # VS Code does not scan inside git submodules for skill discovery.
-# Create symlinks in .claude/skills/ so each bundled skill is visible.
+# Create symlinks in <base>/skills/ so each bundled skill is visible.
 for skill_dir in "$CANOPY_DIR/skills"/*/; do
   skill_name="$(basename "$skill_dir")"
   [[ "$skill_name" == "shared" ]] && continue
-  link_path=".claude/skills/$skill_name"
+  link_path="$SKILLS_DIR/$skill_name"
   if [[ -e "$link_path" || -L "$link_path" ]]; then
     skipped "$link_path"
   else
@@ -53,14 +82,14 @@ for skill_dir in "$CANOPY_DIR/skills"/*/; do
 done
 
 # ── Symlinks for bundled canopy agents ────────────────────────────────────────
-# Claude Code looks for agents in .claude/agents/ — symlink each bundled agent
-# file and its resource directory so they are visible outside the submodule.
+# Claude Code / Copilot looks for agents in <base>/agents/ — symlink each bundled
+# agent file and its resource directory so they are visible outside the submodule.
 if [[ -d "$CANOPY_DIR/agents" ]]; then
   # Agent .md files
   for agent_file in "$CANOPY_DIR/agents"/*.md; do
     [[ -f "$agent_file" ]] || continue
     agent_name="$(basename "$agent_file")"
-    link_path=".claude/agents/$agent_name"
+    link_path="$AGENTS_DIR/$agent_name"
     if [[ -e "$link_path" || -L "$link_path" ]]; then
       skipped "$link_path"
     else
@@ -72,7 +101,7 @@ if [[ -d "$CANOPY_DIR/agents" ]]; then
   for agent_dir in "$CANOPY_DIR/agents"/*/; do
     [[ -d "$agent_dir" ]] || continue
     dir_name="$(basename "$agent_dir")"
-    link_path=".claude/agents/$dir_name"
+    link_path="$AGENTS_DIR/$dir_name"
     if [[ -e "$link_path" || -L "$link_path" ]]; then
       skipped "$link_path"
     else
@@ -82,11 +111,15 @@ if [[ -d "$CANOPY_DIR/agents" ]]; then
   done
 fi
 
-# ── .claude/rules/skill-resources.md ─────────────────────────────────────────
-if [[ -f "$RULES_FILE" ]]; then
-  skipped "$RULES_FILE"
-else
-  cat > "$RULES_FILE" << 'EOF'
+# ── Ambient skill-resource rules ─────────────────────────────────────────────
+# Claude: write .claude/rules/skill-resources.md (with globs frontmatter)
+# Copilot: append a marker-delimited section to .github/copilot-instructions.md
+#          (Copilot has no glob-based ambient rules — see runtimes/copilot.md)
+if [[ "$TARGET" == "claude" ]]; then
+  if [[ -f "$RULES_FILE" ]]; then
+    skipped "$RULES_FILE"
+  else
+    cat > "$RULES_FILE" << 'EOF'
 ---
 globs: [".claude/skills/**", ".claude/canopy/skills/**"]
 ---
@@ -136,10 +169,68 @@ When a skill has a `## Agent` section declaring `**explore**`:
 - Do NOT inline-read files yourself
 - Use `schemas/explore-schema.json` as the output contract; return JSON only
 EOF
-  created "$RULES_FILE"
+    created "$RULES_FILE"
+  fi
+else
+  # Copilot: append under a marker if not already present
+  if [[ -f "$COPILOT_INST" ]] && grep -q -- "$COPILOT_MARK" "$COPILOT_INST"; then
+    skipped "$COPILOT_INST"
+  else
+    existed=0
+    [[ -f "$COPILOT_INST" ]] && existed=1
+    cat >> "$COPILOT_INST" << 'EOF'
+
+<!-- canopy:skill-resources:start -->
+## Canopy Skill Resources
+
+This section is generated by `setup.sh`/`setup.ps1` when Canopy is at `.github/canopy/`.
+It covers both your project skills and canopy's bundled skills.
+
+### Category behavior
+
+When a skill step says `Read <category>/<file>`, the directory determines behavior:
+
+| Category | File types | Behavior |
+|----------|------------|----------|
+| `schemas/` | `.json`, `.md` | Use as subagent output contract or input parameter definition |
+| `templates/` | `.yaml`, `.md`, `.yaml.gotmpl` | Substitute all `<token>` placeholders from step context; write to target path stated in step |
+| `commands/` | `.ps1`, `.sh` | Execute the section identified with `for <operation>`; capture named output values stated in step |
+| `constants/` | `.md` | Load all named values into step context; reference by name in subsequent steps |
+| `checklists/` | `.md` | Iterate `- [ ]` items as evaluation criteria during the relevant op |
+| `policies/` | `.md` | Apply as active rules for the duration of the skill |
+| `verify/` | `.md` | Use as expected-state checklist during the verification phase |
+
+### Named operations
+
+When a step or tree node contains an ALL_CAPS identifier:
+1. Look up in `<skill>/ops.md` first (skill-local ops)
+2. Fall back to `.github/skills/shared/project/ops.md` (project-wide ops)
+3. Fall back to `.github/canopy/skills/shared/framework/ops.md` (framework primitives)
+
+`IF`, `ELSE_IF`, `ELSE`, `SWITCH`, `CASE`, `DEFAULT`, `FOR_EACH`, `BREAK`, `END`, `ASK`, `SHOW_PLAN`, `VERIFY_EXPECTED` are primitives — always in `shared/framework/ops.md`.
+
+### Tree format
+
+When a skill has `## Tree` instead of `## Steps`: execute the tree top-to-bottom as a sequential pipeline.
+
+Each node is either an op call (`OP_NAME << inputs >> outputs`) or natural language — both are valid.
+`IF` nodes branch on condition; both branches may be op calls or natural language.
+Op definitions in `<skill>/ops.md`, `shared/project/ops.md`, and `shared/framework/ops.md` may also use tree notation internally.
+
+### Explore subagent (inline fallback)
+
+When a skill has a `## Agent` section declaring `**explore**`:
+- Native subagents are not supported on Copilot
+- Read the files described in the `## Agent` body sequentially at the start of execution, before the first tree node
+- Treat all gathered content as `context`, structured to match `schemas/explore-schema.json`
+- The first tree node (`EXPLORE >> context`) is satisfied by this inline reading step
+<!-- canopy:skill-resources:end -->
+EOF
+    if [[ "$existed" == "1" ]]; then appended "$COPILOT_INST"; else created "$COPILOT_INST"; fi
+  fi
 fi
 
-# ── .claude/skills/shared/project/ops.md ─────────────────────────────────────
+# ── <base>/skills/shared/project/ops.md ──────────────────────────────────────
 if [[ -f "$PROJECT_OPS" ]]; then
   skipped "$PROJECT_OPS"
 else
@@ -187,29 +278,29 @@ EOF
   created "$PROJECT_OPS"
 fi
 
-# ── .claude/skills/shared/ops.md ─────────────────────────────────────────────
+# ── <base>/skills/shared/ops.md ──────────────────────────────────────────────
 if [[ -f "$SHARED_OPS" ]]; then
   skipped "$SHARED_OPS"
 else
-  cat > "$SHARED_OPS" << 'EOF'
+  cat > "$SHARED_OPS" << EOF
 # Shared Ops — Redirected
 
-This file has been split. Use the files below directly or rely on the three-level lookup order in `skill-resources.md`.
+This file has been split. Use the files below directly or rely on the three-level lookup order.
 
-- **Framework primitives** (IF, ASK, SHOW_PLAN, …) → `.claude/canopy/skills/shared/framework/ops.md`
-- **Project-wide ops** (project-specific patterns) → `.claude/skills/shared/project/ops.md`
+- **Framework primitives** (IF, ASK, SHOW_PLAN, …) → \`$BASE/canopy/skills/shared/framework/ops.md\`
+- **Project-wide ops** (project-specific patterns) → \`$BASE/skills/shared/project/ops.md\`
 EOF
   created "$SHARED_OPS"
 fi
 
 echo ""
-echo "Done. Your project is wired for Canopy."
+echo "Done. Your project is wired for Canopy ($TARGET)."
 echo ""
 echo "Next steps:"
-echo "  1. Add your skills under .claude/skills/<skill-name>/"
-echo "  2. Add your agents under .claude/agents/"
+echo "  1. Add your skills under $SKILLS_DIR/<skill-name>/"
+echo "  2. Add your agents under $AGENTS_DIR/"
 echo "  3. Add project-wide ops to $PROJECT_OPS"
 echo "  4. Update Canopy later:"
-echo "       submodule:  git submodule update --remote .claude/canopy"
-echo "       subtree:    git subtree pull --prefix=.claude/canopy <url> main --squash"
-echo "       vendored:   bash install.sh [version]"
+echo "       submodule:  git submodule update --remote $CANOPY_DIR"
+echo "       subtree:    git subtree pull --prefix=$CANOPY_DIR <url> main --squash"
+echo "       vendored:   bash install.sh [version] --target $TARGET"
