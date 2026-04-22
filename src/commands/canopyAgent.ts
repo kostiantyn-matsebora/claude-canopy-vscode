@@ -3,18 +3,24 @@
  *  - Claude target  (runtimes/claude.md):   `/canopy <request>` — sent via the `claude` CLI
  *  - Copilot target (runtimes/copilot.md):  `Follow .github/agents/canopy.md and <request>` — opened in VS Code Chat
  *
- * Target detection mirrors setupCanopy: whichever base dir (.claude/ vs .github/) has
- * `skills/shared/framework/ops.md`. Claude wins if both are present.
+ * Project selection:
+ *  - Walk up from the active editor file to the nearest ancestor containing
+ *    `<base>/canopy/skills/shared/framework/ops.md` (.claude wins over .github).
+ *  - If no active editor or no match, scan workspace folders. 0 → error, 1 → silent,
+ *    N → QuickPick.
+ *  - Terminals are cached per project root so each project gets its own terminal.
  */
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import { AiTarget, targetBaseDir } from './setupCanopy';
 
-let agentTerminal: vscode.Terminal | undefined;
+const FRAMEWORK_MARKER = path.join('skills', 'shared', 'framework', 'ops.md');
+
+const terminals = new Map<string, vscode.Terminal>();
 
 // ---------------------------------------------------------------------------
-// Pure helpers (testable — no vscode APIs)
+// Pure helpers (testable — no vscode APIs, no `fs`)
 // ---------------------------------------------------------------------------
 
 /**
@@ -35,90 +41,197 @@ export function buildClaudeCliCommand(request: string): string {
   return `claude "${prompt}"`;
 }
 
-// ---------------------------------------------------------------------------
-// Runtime wiring
-// ---------------------------------------------------------------------------
-
-function getTerminal(cwd: string | undefined): vscode.Terminal {
-  if (agentTerminal && agentTerminal.exitStatus === undefined) {
-    return agentTerminal;
-  }
-  agentTerminal = vscode.window.createTerminal({ name: 'Canopy Agent', cwd });
-  return agentTerminal;
-}
-
-function workspaceRoot(): string | undefined {
-  const folders = vscode.workspace.workspaceFolders;
-  if (!folders || folders.length === 0) return undefined;
-  if (folders.length === 1) return folders[0].uri.fsPath;
-  const active = vscode.window.activeTextEditor?.document.uri.fsPath;
-  if (active) {
-    const match = folders.find(f => active.startsWith(f.uri.fsPath));
-    if (match) return match.uri.fsPath;
-  }
-  return folders[0].uri.fsPath;
-}
-
-/** Returns which AI target has Canopy installed (framework ops.md present), or undefined if neither. */
-function detectInstall(root: string): AiTarget | undefined {
-  const marker = path.join('skills', 'shared', 'framework', 'ops.md');
-  if (fs.existsSync(path.join(targetBaseDir(root, 'claude'), marker))) return 'claude';
-  if (fs.existsSync(path.join(targetBaseDir(root, 'copilot'), marker))) return 'copilot';
+/** Target at `root` if it is a canopy project, else undefined. Claude wins on ties. */
+export function projectTargetAt(
+  root: string,
+  exists: (p: string) => boolean,
+): AiTarget | undefined {
+  if (exists(path.join(targetBaseDir(root, 'claude'), FRAMEWORK_MARKER))) return 'claude';
+  if (exists(path.join(targetBaseDir(root, 'copilot'), FRAMEWORK_MARKER))) return 'copilot';
   return undefined;
 }
 
-async function run(request: string): Promise<void> {
-  const cwd = workspaceRoot();
-  const target: AiTarget = (cwd ? detectInstall(cwd) : undefined) ?? 'claude';
+/** Walk up from `dir` (a directory) looking for a canopy project. */
+export function findProjectUpward(
+  dir: string,
+  exists: (p: string) => boolean,
+): { root: string; target: AiTarget } | undefined {
+  let current = dir;
+  // Guard against infinite loops on malformed paths.
+  for (let i = 0; i < 64; i++) {
+    const target = projectTargetAt(current, exists);
+    if (target) return { root: current, target };
+    const parent = path.dirname(current);
+    if (parent === current) return undefined;
+    current = parent;
+  }
+  return undefined;
+}
 
-  if (target === 'copilot') {
+/**
+ * Resolve candidate canopy projects for a dispatch call.
+ * - If `hintPath` (a file path) is inside a project, return exactly that one.
+ * - Otherwise return every workspace folder that is itself a project (0, 1, or N).
+ */
+export function resolveProjectFromPaths(
+  hintPath: string | undefined,
+  folders: string[],
+  exists: (p: string) => boolean,
+): Array<{ root: string; target: AiTarget }> {
+  if (hintPath) {
+    const found = findProjectUpward(path.dirname(hintPath), exists);
+    if (found) return [found];
+  }
+  const out: Array<{ root: string; target: AiTarget }> = [];
+  const seen = new Set<string>();
+  for (const folder of folders) {
+    if (seen.has(folder)) continue;
+    const target = projectTargetAt(folder, exists);
+    if (target) {
+      out.push({ root: folder, target });
+      seen.add(folder);
+    }
+  }
+  return out;
+}
+
+/**
+ * If `activeFilePath` lives under the project's skills tree, return the skill name.
+ * Covers `<base>/skills/<name>/...` and `<base>/canopy/skills/<name>/...`.
+ * Excludes `shared`.
+ */
+export function detectCurrentSkill(
+  activeFilePath: string | undefined,
+  projectRoot: string,
+  target: AiTarget,
+): string | undefined {
+  if (!activeFilePath) return undefined;
+  const base = targetBaseDir(projectRoot, target);
+  const roots = [
+    path.join(base, 'skills'),
+    path.join(base, 'canopy', 'skills'),
+  ];
+  for (const skillsRoot of roots) {
+    const prefix = skillsRoot + path.sep;
+    if (!activeFilePath.startsWith(prefix)) continue;
+    const rel = activeFilePath.slice(prefix.length);
+    const first = rel.split(/[\\/]/, 1)[0];
+    if (first && first !== 'shared') return first;
+  }
+  return undefined;
+}
+
+// ---------------------------------------------------------------------------
+// Runtime wiring (vscode + fs)
+// ---------------------------------------------------------------------------
+
+function getTerminalFor(root: string): vscode.Terminal {
+  const existing = terminals.get(root);
+  if (existing && existing.exitStatus === undefined) return existing;
+  const term = vscode.window.createTerminal({
+    name: `Canopy Agent (${path.basename(root)})`,
+    cwd: root,
+  });
+  terminals.set(root, term);
+  return term;
+}
+
+async function resolveCanopyProject(): Promise<{ root: string; target: AiTarget } | undefined> {
+  const active = vscode.window.activeTextEditor?.document.uri.fsPath;
+  const folders = (vscode.workspace.workspaceFolders ?? []).map(f => f.uri.fsPath);
+  const candidates = resolveProjectFromPaths(active, folders, fs.existsSync);
+
+  if (candidates.length === 0) {
+    vscode.window.showErrorMessage(
+      'No Canopy project found in this workspace. Run "Canopy: Add as copy" or "Add as submodule" first.',
+    );
+    return undefined;
+  }
+  if (candidates.length === 1) return candidates[0];
+
+  const items = candidates.map(c => ({
+    label: `${path.basename(c.root)} (${c.target})`,
+    description: c.root,
+  }));
+  const picked = await vscode.window.showQuickPick(items, { placeHolder: 'Select Canopy project' });
+  if (!picked) return undefined;
+  return candidates.find(c => c.root === picked.description);
+}
+
+function listProjectSkills(projectRoot: string, target: AiTarget): string[] {
+  const base = targetBaseDir(projectRoot, target);
+  // When projectRoot is absolute, targetBaseDir returns an absolute path; join is a no-op.
+  // When relative (tests), the same holds because targetBaseDir already prepends root.
+  const dirs = [
+    path.join(base, 'skills'),
+    path.join(base, 'canopy', 'skills'),
+  ];
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const d of dirs) {
+    if (!fs.existsSync(d)) continue;
+    for (const entry of fs.readdirSync(d, { withFileTypes: true })) {
+      if (!entry.isDirectory() || entry.name === 'shared' || seen.has(entry.name)) continue;
+      if (fs.existsSync(path.join(d, entry.name, 'skill.md'))) {
+        out.push(entry.name);
+        seen.add(entry.name);
+      }
+    }
+  }
+  return out.sort();
+}
+
+const CURRENT_PREFIX = '$(target) ';
+const MANUAL_LABEL = '$(edit) Enter skill name manually';
+
+async function pickSkill(
+  root: string,
+  target: AiTarget,
+  promptText: string,
+): Promise<string | undefined> {
+  const skills = listProjectSkills(root, target);
+  const active = vscode.window.activeTextEditor?.document.uri.fsPath;
+  const current = detectCurrentSkill(active, root, target);
+
+  const items: vscode.QuickPickItem[] = [];
+  if (current) {
+    items.push({ label: `${CURRENT_PREFIX}${current}`, description: 'current file' });
+  }
+  for (const s of skills) {
+    if (s === current) continue;
+    items.push({ label: s });
+  }
+  items.push({ label: MANUAL_LABEL, alwaysShow: true });
+
+  const picked = await vscode.window.showQuickPick(items, { placeHolder: promptText });
+  if (!picked) return undefined;
+  if (picked.label === MANUAL_LABEL) {
+    return vscode.window.showInputBox({ prompt: promptText, placeHolder: 'skill-name' });
+  }
+  return picked.label.startsWith(CURRENT_PREFIX)
+    ? picked.label.slice(CURRENT_PREFIX.length)
+    : picked.label;
+}
+
+async function runOn(
+  project: { root: string; target: AiTarget },
+  request: string,
+): Promise<void> {
+  if (project.target === 'copilot') {
     await vscode.commands.executeCommand('workbench.action.chat.open', {
       query: buildAgentPrompt('copilot', request),
     });
     return;
   }
-
-  const term = getTerminal(cwd);
+  const term = getTerminalFor(project.root);
   term.show(true);
   term.sendText(buildClaudeCliCommand(request));
 }
 
-async function pickSkill(promptText: string): Promise<string | undefined> {
-  const folders = vscode.workspace.workspaceFolders ?? [];
-  const skills: string[] = [];
-  for (const folder of folders) {
-    const root = folder.uri.fsPath;
-    const targets: AiTarget[] = ['claude', 'copilot'];
-    for (const target of targets) {
-      const base = path.join(targetBaseDir(root, target), 'skills');
-      if (!fs.existsSync(base)) continue;
-      for (const entry of fs.readdirSync(base, { withFileTypes: true })) {
-        if (
-          entry.isDirectory() &&
-          entry.name !== 'shared' &&
-          fs.existsSync(path.join(base, entry.name, 'skill.md')) &&
-          !skills.includes(entry.name)
-        ) {
-          skills.push(entry.name);
-        }
-      }
-    }
-  }
-
-  if (skills.length > 0) {
-    const items: vscode.QuickPickItem[] = [
-      ...skills.map(s => ({ label: s })),
-      { label: '$(edit) Enter skill name manually', alwaysShow: true },
-    ];
-    const picked = await vscode.window.showQuickPick(items, { placeHolder: promptText });
-    if (!picked) return undefined;
-    if (picked.label.startsWith('$(edit)')) {
-      return vscode.window.showInputBox({ prompt: promptText, placeHolder: 'skill-name' });
-    }
-    return picked.label;
-  }
-
-  return vscode.window.showInputBox({ prompt: promptText, placeHolder: 'skill-name' });
+async function run(request: string): Promise<void> {
+  const project = await resolveCanopyProject();
+  if (!project) return;
+  await runOn(project, request);
 }
 
 // ---------------------------------------------------------------------------
@@ -139,14 +252,16 @@ export async function agentCreate(): Promise<void> {
 // ---------------------------------------------------------------------------
 
 export async function agentModify(): Promise<void> {
-  const skillName = await pickSkill('Skill to modify');
+  const project = await resolveCanopyProject();
+  if (!project) return;
+  const skillName = await pickSkill(project.root, project.target, 'Skill to modify');
   if (!skillName) return;
   const change = await vscode.window.showInputBox({
     prompt: `What should be changed in "${skillName}"?`,
     placeHolder: 'e.g. add a SHOW_PLAN step before the first op',
   });
   if (!change) return;
-  await run(`modify the ${skillName} skill — ${change}`);
+  await runOn(project, `modify the ${skillName} skill — ${change}`);
 }
 
 // ---------------------------------------------------------------------------
@@ -168,9 +283,11 @@ export async function agentScaffold(): Promise<void> {
 // ---------------------------------------------------------------------------
 
 export async function agentConvertToCanopy(): Promise<void> {
-  const skillName = await pickSkill('Skill to convert to Canopy format');
+  const project = await resolveCanopyProject();
+  if (!project) return;
+  const skillName = await pickSkill(project.root, project.target, 'Skill to convert to Canopy format');
   if (!skillName) return;
-  await run(`convert the ${skillName} skill to canopy format`);
+  await runOn(project, `convert the ${skillName} skill to canopy format`);
 }
 
 // ---------------------------------------------------------------------------
@@ -178,9 +295,11 @@ export async function agentConvertToCanopy(): Promise<void> {
 // ---------------------------------------------------------------------------
 
 export async function agentValidate(): Promise<void> {
-  const skillName = await pickSkill('Skill to validate');
+  const project = await resolveCanopyProject();
+  if (!project) return;
+  const skillName = await pickSkill(project.root, project.target, 'Skill to validate');
   if (!skillName) return;
-  await run(`validate the ${skillName} skill`);
+  await runOn(project, `validate the ${skillName} skill`);
 }
 
 // ---------------------------------------------------------------------------
@@ -188,9 +307,11 @@ export async function agentValidate(): Promise<void> {
 // ---------------------------------------------------------------------------
 
 export async function agentImprove(): Promise<void> {
-  const skillName = await pickSkill('Skill to improve');
+  const project = await resolveCanopyProject();
+  if (!project) return;
+  const skillName = await pickSkill(project.root, project.target, 'Skill to improve');
   if (!skillName) return;
-  await run(`improve the ${skillName} skill — align with framework rules`);
+  await runOn(project, `improve the ${skillName} skill — align with framework rules`);
 }
 
 // ---------------------------------------------------------------------------
@@ -219,9 +340,11 @@ export async function agentRefactorSkills(): Promise<void> {
 // ---------------------------------------------------------------------------
 
 export async function agentConvertToRegular(): Promise<void> {
-  const skillName = await pickSkill('Skill to convert back to regular format');
+  const project = await resolveCanopyProject();
+  if (!project) return;
+  const skillName = await pickSkill(project.root, project.target, 'Skill to convert back to regular format');
   if (!skillName) return;
-  await run(`convert the ${skillName} skill back to a regular plain skill`);
+  await runOn(project, `convert the ${skillName} skill back to a regular plain skill`);
 }
 
 // ---------------------------------------------------------------------------

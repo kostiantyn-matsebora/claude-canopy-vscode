@@ -2,6 +2,17 @@
 
 All notable changes to the Canopy Skills extension are documented here.
 
+## [0.7.0] — 2026-04-22
+
+### Fixed
+- `Canopy Agent: *` commands dispatched the terminal from the wrong directory in multi-project workspaces, so the Claude CLI started without `/canopy` in scope and the invocation silently failed. Project selection now walks up from the active editor file to the nearest ancestor containing `<base>/canopy/skills/shared/framework/ops.md`; falls back to scanning workspace folders; and shows a QuickPick when multiple projects are open (e.g. the canopy dev workspace itself, where both `claude-canopy-examples` and `claude-canopy-vscode` carry `.claude/canopy/`). Terminals are now cached per project root so each project gets its own `Canopy Agent (<project>)` terminal.
+- `pickSkill` previously unioned skill names across every workspace folder — a skill from project A could be picked then dispatched in project B. The picker is now scoped to the resolved project.
+
+### Added
+- Current-skill shortcut in the skill picker. When the active editor is inside a skill directory (`<base>/skills/<name>/...` or `<base>/canopy/skills/<name>/...`, any file — `skill.md`, `ops.md`, policies, templates, schemas, verify, etc.), that skill is promoted to the top of the `Improve / Validate / Modify / ConvertToCanopy / ConvertToRegular` picker with a `(current file)` description, pre-selected for one-Enter dispatch. Other skills remain available below it, plus the existing manual-entry option.
+- Error notification when no Canopy project is present in the workspace (previously silently defaulted to `claude` and opened a terminal at an arbitrary directory).
+- Exported pure helpers `projectTargetAt`, `findProjectUpward`, `resolveProjectFromPaths`, `detectCurrentSkill` with 14 new Vitest cases covering hint-based resolution, workspace-folder fallback, multi-project ambiguity, subtree skills, and the shared/ pseudo-skill exclusion.
+
 ## [0.6.0] — 2026-04-22
 
 ### Fixed
