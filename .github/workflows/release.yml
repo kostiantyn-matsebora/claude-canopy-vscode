@@ -22,7 +22,10 @@ jobs:
       - name: Resolve tag
         id: tag
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || [ "${{ github.event_name }}" = "workflow_call" ]; then
+          # For workflow_call, github.event_name is inherited from the caller's
+          # event (e.g. 'push') rather than 'workflow_call' — so we can't rely
+          # on event_name to decide. Check if inputs.tag was supplied instead.
+          if [ -n "${{ inputs.tag }}" ]; then
             echo "value=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
           else
             echo "value=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
