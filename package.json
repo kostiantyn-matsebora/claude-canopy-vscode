@@ -2,9 +2,13 @@
   "name": "canopy-skills",
   "displayName": "Canopy Skills",
   "description": "Write Claude Code AI skills as executable code, not prose — syntax highlighting, IntelliSense, semantic diagnostics, and go-to-definition for Canopy skills: skill.md, ops.md, schemas, templates, commands, constants, policies, checklists, and verify files.",
-  "version": "0.4.3",
+  "version": "0.5.0",
   "canopyVersion": "0.15.0",
   "icon": "images/icon.png",
+  "galleryBanner": {
+    "color": "#0969da",
+    "theme": "dark"
+  },
   "publisher": "canopy",
   "license": "MIT",
   "engines": {
@@ -18,8 +22,12 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/kostiantyn-matsebora/claude-canopy"
+    "url": "https://github.com/kostiantyn-matsebora/claude-canopy-vscode"
   },
+  "bugs": {
+    "url": "https://github.com/kostiantyn-matsebora/claude-canopy-vscode/issues"
+  },
+  "homepage": "https://github.com/kostiantyn-matsebora/claude-canopy-vscode#readme",
   "keywords": [
     "canopy",
     "skill",

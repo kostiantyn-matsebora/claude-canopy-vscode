@@ -8,7 +8,7 @@ argument-hint: ""
 
 ## Agent
 
-**explore** — Read `package.json` and extract `canopyVersion` as `tracked_version`. Run `git log --oneline .claude/canopy/ | head -1` to get the current subtree head SHA. Run `git ls-remote https://github.com/kostiantyn-matsebora/claude-canopy master` to get the upstream SHA. Set `upstream_version_available: true` if the upstream SHA differs from the current subtree head, otherwise `false`. Derive `current_version` from the upstream SHA (short form). Run `git status --porcelain` and set `working_tree_dirty: true` if any tracked files are modified, otherwise `false`. If `upstream_version_available` is true and `working_tree_dirty` is false: read `.claude/canopy/skills/shared/framework/ops.md` to get the current primitive list and signatures; read `src/providers/diagnosticsProvider.ts`, `src/providers/completionProvider.ts`, `src/opRegistry.ts`, `src/canopyDocument.ts`, and `package.json` to understand current extension state; read `constants/sync-points.md` for the full sync-point mapping table; compare framework state to extension state and populate `changes_detected`. Independently of the upstream check: run `git status src/` and `git log --oneline src/` since the last `docs/CHANGELOG.md` entry to detect uncommitted or recently committed extension-only changes; set `extension_changes_detected: true` if any exist and populate `extension_changes_summary` with `{file, description}` items. Output contract: `schemas/explore-schema.json`.
+**explore** — Read `package.json` and extract `canopyVersion` as `tracked_version`. Run `git log --oneline .claude/canopy/ | head -1` to get the current subtree head SHA. Run `git ls-remote https://github.com/kostiantyn-matsebora/claude-canopy master` to get the upstream SHA. Set `upstream_version_available: true` if the upstream SHA differs from the current subtree head, otherwise `false`. Derive `current_version` from the upstream SHA (short form). Run `git status --porcelain` and set `working_tree_dirty: true` if any tracked files are modified, otherwise `false`. If `upstream_version_available` is true and `working_tree_dirty` is false: read `.claude/canopy/skills/shared/framework/ops.md` to get the current primitive list and signatures; read `src/providers/diagnosticsProvider.ts`, `src/providers/completionProvider.ts`, `src/opRegistry.ts`, `src/canopyDocument.ts`, and `package.json` to understand current extension state; read `constants/sync-points.md` for the full sync-point mapping table; compare framework state to extension state and populate `changes_detected`. Independently of the upstream check: run `git status src/` and `git log --oneline src/` since the last `CHANGELOG.md` entry to detect uncommitted or recently committed extension-only changes; set `extension_changes_detected: true` if any exist and populate `extension_changes_summary` with `{file, description}` items. Output contract: `schemas/explore-schema.json`.
 
 ---
 
@@ -29,8 +29,8 @@ argument-hint: ""
   * FOR_EACH << change in context.changes_detected
     * APPLY_CHANGE << change
   * Update `canopyVersion` in `package.json` to `context.current_version`
-  * IF << docs/CHANGELOG.md does not already contain an entry for `context.current_version`
-    * Update `docs/CHANGELOG.md` to document the canopy version bump and all applied changes
+  * IF << CHANGELOG.md does not already contain an entry for `context.current_version`
+    * Update `CHANGELOG.md` to document the canopy version bump and all applied changes
   * WRITE_UNIT_TESTS >> tests_written
   * RUN_TESTS_UNTIL_PASS
   * VERIFY_EXPECTED << verify/update-expected.md

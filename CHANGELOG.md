@@ -2,6 +2,21 @@
 
 All notable changes to the Canopy Skills extension are documented here.
 
+## [0.5.0] — 2026-04-22
+
+### Added
+- Screenshots (autocomplete, diagnostics, hover docs) and a new **In action** section in the README.
+- `galleryBanner`, `bugs`, and `homepage` fields in `package.json` for a richer VS Code Marketplace listing once published.
+- Quick start section in the README.
+- `LICENSE` and GitHub Release badges in the README.
+
+### Changed
+- `CHANGELOG.md` moved from `docs/` to the repo root so the VS Code Marketplace Changelog tab will surface it once published.
+- Installation section rewritten around the GitHub Release `.vsix` download — the actual distribution channel until the Marketplace listing is live.
+
+### Fixed
+- `repository.url` in `package.json` pointed at the framework repo instead of this extension's repo.
+
 ## [0.4.3] — 2026-04-21
 
 ### Changed

@@ -8,7 +8,7 @@ argument-hint: ""
 
 ## Agent
 
-**explore** — Read `package.json` and extract `version` as `current_version`. Read `docs/CHANGELOG.md` and extract the most recent version heading as `last_changelog_version` and its date. Set `version_already_bumped: true` if `current_version` differs from `last_changelog_version` (package.json was bumped but the changelog entry is missing or the git commit was never made). Check whether an `update` skill result is available in conversation context (listed changes, canopy version bump); if so, set `has_update_context: true` and populate `changes_summary` from it. If not, run `git log --oneline` and `git diff` between HEAD and the commit at `last_changelog_version` to derive `changes_summary`. Output contract: `schemas/explore-schema.json`.
+**explore** — Read `package.json` and extract `version` as `current_version`. Read `CHANGELOG.md` and extract the most recent version heading as `last_changelog_version` and its date. Set `version_already_bumped: true` if `current_version` differs from `last_changelog_version` (package.json was bumped but the changelog entry is missing or the git commit was never made). Check whether an `update` skill result is available in conversation context (listed changes, canopy version bump); if so, set `has_update_context: true` and populate `changes_summary` from it. If not, run `git log --oneline` and `git diff` between HEAD and the commit at `last_changelog_version` to derive `changes_summary`. Output contract: `schemas/explore-schema.json`.
 
 ---
 
@@ -27,10 +27,10 @@ argument-hint: ""
     * Run `npm version <bump_type> --no-git-tag-version` to update `version` in `package.json`
     * IF << context.has_update_context is true
       * Run `npm run sync-canopy-version` to sync the embedded Canopy framework version
-  * IF << docs/CHANGELOG.md does not already contain an entry for `new_version`
-    * Prepend new changelog entry to `docs/CHANGELOG.md` following the existing format
+  * IF << CHANGELOG.md does not already contain an entry for `new_version`
+    * Prepend new changelog entry to `CHANGELOG.md` following the existing format
   * UPDATE_README << context.changes_summary
-  * Run `git add package.json docs/CHANGELOG.md README.md`
+  * Run `git add package.json CHANGELOG.md README.md`
   * Run `git commit -m "chore: release v<new_version>"`
   * VERIFY_EXPECTED << verify/bump-expected.md
   * Report: Summary / Old version / New version / Changelog entry
@@ -38,7 +38,7 @@ argument-hint: ""
 ## Rules
 
 - Never skip a version level — patch → minor → major only; no skipping from patch to major
-- Always read `package.json` and `docs/CHANGELOG.md` before writing to them
+- Always read `package.json` and `CHANGELOG.md` before writing to them
 - Changelog entry must use the same `## [X.Y.Z] — YYYY-MM-DD` heading format with today's date
 - Changelog entry must group items under `### Added`, `### Changed`, and/or `### Fixed` — only include non-empty groups
 - If ASK returns "Adjust", re-show the plan with the adjusted bump type or changelog content

@@ -10,3 +10,19 @@ vsc-extension-quickstart.md
 **/.eslintrc.json
 **/*.map
 **/*.ts
+
+# Repo-internal dirs not needed at runtime
+.claude/**
+.github/**
+scripts/**
+docs/**
+
+# Contributor docs
+CLAUDE.md
+
+# Source images used only to generate icon.png
+images/icon.svg
+
+# Compiled test code — not needed at runtime
+out/test/**
+out/__mocks__/**

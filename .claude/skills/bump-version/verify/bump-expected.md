@@ -1,7 +1,7 @@
 # Expected State After Bump
 
 - [ ] `version` in `package.json` updated to the new version string
-- [ ] New `## [X.Y.Z] — YYYY-MM-DD` heading prepended to `docs/CHANGELOG.md` with today's date
+- [ ] New `## [X.Y.Z] — YYYY-MM-DD` heading prepended to `CHANGELOG.md` with today's date
 - [ ] Changelog entry contains at least one non-empty group (`### Added`, `### Changed`, or `### Fixed`)
 - [ ] No existing changelog entries modified or removed
 - [ ] New version is strictly greater than the previous version (correct semver increment)

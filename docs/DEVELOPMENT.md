@@ -230,7 +230,7 @@ npm version patch        # or minor / major
 # 2. If Canopy framework was updated, sync its version
 npm run sync-canopy-version
 
-# 3. Update docs/CHANGELOG.md
+# 3. Update CHANGELOG.md
 
 # 4. Push branch and tag — triggers .github/workflows/release.yml
 git push origin main --follow-tags

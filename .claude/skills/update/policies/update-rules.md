@@ -10,7 +10,7 @@
 
 - Only modify files listed in `constants/sync-points.md` for the detected change type
 - Do not refactor unrelated code while applying a framework change
-- Do not update `docs/CHANGELOG.md` until all APPLY_CHANGE steps are complete and confirmed
+- Do not update `CHANGELOG.md` until all APPLY_CHANGE steps are complete and confirmed
 
 ## Tests
 

@@ -9,7 +9,7 @@
     },
     "last_changelog_version": {
       "type": "string",
-      "description": "Version from the most recent ## [X.Y.Z] heading in docs/CHANGELOG.md"
+      "description": "Version from the most recent ## [X.Y.Z] heading in CHANGELOG.md"
     },
     "last_changelog_date": {
       "type": "string",

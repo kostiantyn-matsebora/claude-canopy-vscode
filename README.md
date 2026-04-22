@@ -1,6 +1,13 @@
-# Canopy Skills — VS Code Extension
+# Canopy Skills for VS Code
 
-Supports **[Canopy](https://github.com/kostiantyn-matsebora/claude-canopy) framework v0.15.0** — language support for Canopy skill files: syntax highlighting, IntelliSense, semantic diagnostics, go-to-definition, scaffold commands, and AI agent integration.
+> Write Claude Code / GitHub Copilot skills as executable code, not prose.
+
+[![Latest Release](https://img.shields.io/github/v/release/kostiantyn-matsebora/claude-canopy-vscode?label=release&color=0969da)](https://github.com/kostiantyn-matsebora/claude-canopy-vscode/releases/latest)
+[![License](https://img.shields.io/badge/license-MIT-0969da)](LICENSE)
+
+IntelliSense, semantic diagnostics, and go-to-definition for [Canopy](https://github.com/kostiantyn-matsebora/claude-canopy) skills — the declarative, tree-structured execution framework for AI agents. Tracks framework **v0.15.0**.
+
+> **Not on the VS Code Marketplace yet.** Install the `.vsix` from the latest [GitHub Release](https://github.com/kostiantyn-matsebora/claude-canopy-vscode/releases/latest). Marketplace listing is planned for a future release.
 
 ---
 
@@ -53,6 +60,28 @@ This extension brings first-class editor support for Canopy files to VS Code:
 
 ---
 
+## In action
+
+### Autocomplete for primitives and custom ops
+
+Type a tree-node prefix and get completions for every `IF`, `ELSE`, `ASK`, `SHOW_PLAN`, `VERIFY_EXPECTED`, and any custom op defined in the current skill, the project, or the framework.
+
+![Autocomplete popup showing primitives with their signatures](images/screenshots/autocomplete.png)
+
+### Semantic diagnostics with Quick Fixes
+
+Real-time validation catches primitive signature violations, missing frontmatter, wrong `<<`/`>>` usage, and broken resource references — before you run the skill.
+
+![Diagnostic squiggle on VERIFY_EXPECTED with a Quick Fix suggesting the correct path syntax](images/screenshots/diagnostics.png)
+
+### Inline documentation for every primitive
+
+Hover any `ALL_CAPS` identifier to see its signature, description, and how it flows with `<<` / `>>` — no context switching to the framework docs.
+
+![Hover tooltip showing SHOW_PLAN primitive documentation and example usage](images/screenshots/hover-docs.png)
+
+---
+
 ## Features
 
 ### Syntax highlighting
@@ -100,6 +129,14 @@ Real-time squiggles for:
 - **Resource references** — `Read \`category/path\`` uses a recognised category and the file exists on disk; `VERIFY_EXPECTED` target file existence
 - **Unknown ops** — configurable severity for `ALL_CAPS` names not found in any registry
 - **Op conformance hints** — warns when a tree node's `<<`/`>>` usage doesn't match the op's declared signature
+
+---
+
+## Quick start
+
+1. Download the latest `canopy-skills-<version>.vsix` from [GitHub Releases](https://github.com/kostiantyn-matsebora/claude-canopy-vscode/releases/latest) and install it: `code --install-extension canopy-skills-<version>.vsix`
+2. Open a folder that contains `.claude/skills/<name>/skill.md` — or run **Canopy: Add as submodule** from the Command Palette to scaffold one.
+3. Syntax highlighting, IntelliSense, hover docs, and diagnostics activate automatically for every Canopy file.
 
 ---
 
@@ -169,11 +206,14 @@ All agent commands auto-detect the installed AI target (checks for `skills/share
 
 ## Installation
 
-Install from the VS Code Marketplace, or from a `.vsix` file:
+The extension is distributed as a `.vsix` on GitHub Releases until the Marketplace listing is live.
 
-```bash
-code --install-extension canopy-skills-<version>.vsix
-```
+1. Download the latest `canopy-skills-<version>.vsix` from the [Releases page](https://github.com/kostiantyn-matsebora/claude-canopy-vscode/releases/latest).
+2. Install from the command line:
+   ```bash
+   code --install-extension canopy-skills-<version>.vsix
+   ```
+   Or in VS Code: **Extensions** panel → **…** menu → **Install from VSIX…** → pick the file.
 
 ## Building from source
 

@@ -124,4 +124,4 @@ When in doubt, treat [`docs/FRAMEWORK.md`](https://github.com/kostiantyn-matsebo
 
 ## Changelog Location
 
-`docs/CHANGELOG.md` — update alongside any feature work. Current version section is `[0.3.0]`.
+`CHANGELOG.md` (repo root) — update alongside any feature work.
