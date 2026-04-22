@@ -105,18 +105,28 @@ pyproject.toml, and other version-bearing files; lists all files needing updates
 
 ### Option A - Installer (simplest)
 
-One command installs the latest release and wires Claude Code. Re-run with a version tag to update.
+One command installs the latest release and wires Claude Code (default) or GitHub Copilot. Re-run with a version tag to update.
 
 ```bash
-# Linux / macOS
+# Linux / macOS — Claude Code (default)
 curl -sSL https://raw.githubusercontent.com/kostiantyn-matsebora/claude-canopy/main/install.sh | bash
+
+# Linux / macOS — GitHub Copilot
+curl -sSL https://raw.githubusercontent.com/kostiantyn-matsebora/claude-canopy/main/install.sh | bash -s -- --target copilot
 
 # Install a specific version
 curl -sSL https://raw.githubusercontent.com/kostiantyn-matsebora/claude-canopy/main/install.sh | bash -s -- v1.0.0
 
-# Windows
+# Windows — Claude Code
 irm https://raw.githubusercontent.com/kostiantyn-matsebora/claude-canopy/main/install.ps1 | iex
+
+# Windows — GitHub Copilot
+# (download first, then run with -Target)
+irm https://raw.githubusercontent.com/kostiantyn-matsebora/claude-canopy/main/install.ps1 -OutFile install.ps1
+pwsh ./install.ps1 -Target copilot
 ```
+
+Choosing `copilot` installs Canopy under `.github/canopy/` and appends a `## Canopy Skill Resources` section to `.github/copilot-instructions.md` instead of creating `.claude/rules/skill-resources.md`.
 
 The installer writes a `.canopy-version` file at the project root. Commit it so collaborators know which version to reinstall on a fresh clone. Update Canopy by re-running the installer with the new version tag.
 

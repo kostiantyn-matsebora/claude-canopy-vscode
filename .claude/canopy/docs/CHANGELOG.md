@@ -7,6 +7,18 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.16.0] — 2026-04-22
+
+### Added
+
+- `install.sh` / `install.ps1` and `setup.sh` / `setup.ps1` now accept `--target claude|copilot` (`-Target` on PowerShell) to wire either `.claude/` or `.github/` on a fresh install. Previously the scripts were Claude-only despite the framework's dual-platform compatibility rule.
+- Copilot target: canopy source is placed at `.github/canopy/`; skills and agents are linked under `.github/skills/` and `.github/agents/`; a marker-delimited `## Canopy Skill Resources` section is appended to `.github/copilot-instructions.md` (Copilot has no glob-based ambient rules, so the Claude-flavored `rules/skill-resources.md` isn't created).
+- README Quick Start: dedicated Copilot invocation line for each installer.
+
+### Changed
+
+- Setup scripts now emit `$BASE`-aware paths in both `shared/ops.md` stubs and the "Next steps" output, so Copilot users see `.github/...` paths instead of `.claude/...`.
+
 ## [0.15.0] — 2026-04-21
 
 ### Added
