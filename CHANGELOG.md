@@ -2,6 +2,12 @@
 
 All notable changes to the Canopy Skills extension are documented here.
 
+## [0.6.0] — 2026-04-22
+
+### Fixed
+- `Canopy Agent: *` commands now invoke the agent using the documented runtime forms: `claude "/canopy <request>"` for Claude Code (per `runtimes/claude.md`) and `Follow .github/agents/canopy.md and <request>` opened in VS Code Chat for Copilot (per `runtimes/copilot.md`). Previously used `claude "canopy: ..."` and `gh copilot suggest "canopy: ..."` — the former used an undocumented `canopy:` prefix instead of the `/canopy` slash command, and the latter targeted the shell-command helper, not the chat agent.
+- Extracted `buildAgentPrompt` / `buildClaudeCliCommand` as pure helpers and added `src/test/canopyAgent.test.ts` covering both runtime shapes.
+
 ## [0.5.1] — 2026-04-22
 
 ### Changed

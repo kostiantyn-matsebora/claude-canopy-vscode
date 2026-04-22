@@ -1,6 +1,10 @@
 /**
- * Commands that invoke canopy agent operations via the Claude Code CLI or GitHub Copilot CLI.
- * Detects which AI tool has Canopy installed and uses the appropriate CLI.
+ * Commands that invoke canopy agent operations, per the documented runtimes:
+ *  - Claude target  (runtimes/claude.md):   `/canopy <request>` — sent via the `claude` CLI
+ *  - Copilot target (runtimes/copilot.md):  `Follow .github/agents/canopy.md and <request>` — opened in VS Code Chat
+ *
+ * Target detection mirrors setupCanopy: whichever base dir (.claude/ vs .github/) has
+ * `skills/shared/framework/ops.md`. Claude wins if both are present.
  */
 import * as vscode from 'vscode';
 import * as path from 'path';
@@ -9,14 +13,37 @@ import { AiTarget, targetBaseDir } from './setupCanopy';
 
 let agentTerminal: vscode.Terminal | undefined;
 
+// ---------------------------------------------------------------------------
+// Pure helpers (testable — no vscode APIs)
+// ---------------------------------------------------------------------------
+
+/**
+ * Build the prompt routed to the canopy agent for the given platform.
+ * Shapes match runtimes/claude.md §Invocation and runtimes/copilot.md §Invocation.
+ */
+export function buildAgentPrompt(target: AiTarget, request: string): string {
+  const trimmed = request.trim();
+  if (target === 'copilot') {
+    return `Follow .github/agents/canopy.md and ${trimmed}`;
+  }
+  return `/canopy ${trimmed}`;
+}
+
+/** Shell command for the Claude CLI (`claude "/canopy <request>"`). */
+export function buildClaudeCliCommand(request: string): string {
+  const prompt = buildAgentPrompt('claude', request).replace(/"/g, '\\"');
+  return `claude "${prompt}"`;
+}
+
+// ---------------------------------------------------------------------------
+// Runtime wiring
+// ---------------------------------------------------------------------------
+
 function getTerminal(cwd: string | undefined): vscode.Terminal {
   if (agentTerminal && agentTerminal.exitStatus === undefined) {
     return agentTerminal;
   }
-  agentTerminal = vscode.window.createTerminal({
-    name: 'Canopy Agent',
-    cwd,
-  });
+  agentTerminal = vscode.window.createTerminal({ name: 'Canopy Agent', cwd });
   return agentTerminal;
 }
 
@@ -40,21 +67,20 @@ function detectInstall(root: string): AiTarget | undefined {
   return undefined;
 }
 
-/** Builds the CLI invocation string for the detected target. */
-function buildCliCommand(prompt: string, target: AiTarget | undefined): string {
-  const escaped = prompt.replace(/"/g, '\\"');
-  if (target === 'copilot') {
-    return `gh copilot suggest "${escaped}"`;
-  }
-  return `claude "${escaped}"`;
-}
-
-function run(prompt: string): void {
+async function run(request: string): Promise<void> {
   const cwd = workspaceRoot();
-  const target = cwd ? detectInstall(cwd) : undefined;
+  const target: AiTarget = (cwd ? detectInstall(cwd) : undefined) ?? 'claude';
+
+  if (target === 'copilot') {
+    await vscode.commands.executeCommand('workbench.action.chat.open', {
+      query: buildAgentPrompt('copilot', request),
+    });
+    return;
+  }
+
   const term = getTerminal(cwd);
   term.show(true);
-  term.sendText(buildCliCommand(prompt, target));
+  term.sendText(buildClaudeCliCommand(request));
 }
 
 async function pickSkill(promptText: string): Promise<string | undefined> {
@@ -105,7 +131,7 @@ export async function agentCreate(): Promise<void> {
     placeHolder: 'e.g. bumps the version in package.json and updates CHANGELOG',
   });
   if (!description) return;
-  run(`canopy: create a skill that ${description}`);
+  await run(`create a skill that ${description}`);
 }
 
 // ---------------------------------------------------------------------------
@@ -120,7 +146,7 @@ export async function agentModify(): Promise<void> {
     placeHolder: 'e.g. add a SHOW_PLAN step before the first op',
   });
   if (!change) return;
-  run(`canopy: modify the ${skillName} skill — ${change}`);
+  await run(`modify the ${skillName} skill — ${change}`);
 }
 
 // ---------------------------------------------------------------------------
@@ -134,7 +160,7 @@ export async function agentScaffold(): Promise<void> {
     validateInput: v => /^[a-z][a-z0-9-]*$/.test(v) ? undefined : 'Must be kebab-case (e.g. my-skill)',
   });
   if (!skillName) return;
-  run(`canopy: scaffold a blank skill named ${skillName}`);
+  await run(`scaffold a blank skill named ${skillName}`);
 }
 
 // ---------------------------------------------------------------------------
@@ -144,7 +170,7 @@ export async function agentScaffold(): Promise<void> {
 export async function agentConvertToCanopy(): Promise<void> {
   const skillName = await pickSkill('Skill to convert to Canopy format');
   if (!skillName) return;
-  run(`canopy: convert the ${skillName} skill to canopy format`);
+  await run(`convert the ${skillName} skill to canopy format`);
 }
 
 // ---------------------------------------------------------------------------
@@ -154,7 +180,7 @@ export async function agentConvertToCanopy(): Promise<void> {
 export async function agentValidate(): Promise<void> {
   const skillName = await pickSkill('Skill to validate');
   if (!skillName) return;
-  run(`canopy: validate the ${skillName} skill`);
+  await run(`validate the ${skillName} skill`);
 }
 
 // ---------------------------------------------------------------------------
@@ -164,7 +190,7 @@ export async function agentValidate(): Promise<void> {
 export async function agentImprove(): Promise<void> {
   const skillName = await pickSkill('Skill to improve');
   if (!skillName) return;
-  run(`canopy: improve the ${skillName} skill — align with framework rules`);
+  await run(`improve the ${skillName} skill — align with framework rules`);
 }
 
 // ---------------------------------------------------------------------------
@@ -177,7 +203,7 @@ export async function agentAdvise(): Promise<void> {
     placeHolder: 'e.g. how to structure a skill that needs conditional branching',
   });
   if (!question) return;
-  run(`canopy: how to ${question}`);
+  await run(`how to ${question}`);
 }
 
 // ---------------------------------------------------------------------------
@@ -185,7 +211,7 @@ export async function agentAdvise(): Promise<void> {
 // ---------------------------------------------------------------------------
 
 export async function agentRefactorSkills(): Promise<void> {
-  run('canopy: refactor skills — extract common ops and resources');
+  await run('refactor skills — extract common ops and resources');
 }
 
 // ---------------------------------------------------------------------------
@@ -195,7 +221,7 @@ export async function agentRefactorSkills(): Promise<void> {
 export async function agentConvertToRegular(): Promise<void> {
   const skillName = await pickSkill('Skill to convert back to regular format');
   if (!skillName) return;
-  run(`canopy: convert the ${skillName} skill back to a regular plain skill`);
+  await run(`convert the ${skillName} skill back to a regular plain skill`);
 }
 
 // ---------------------------------------------------------------------------
@@ -203,5 +229,5 @@ export async function agentConvertToRegular(): Promise<void> {
 // ---------------------------------------------------------------------------
 
 export async function agentHelp(): Promise<void> {
-  run('canopy: help — list all operations');
+  await run('help — list all operations');
 }

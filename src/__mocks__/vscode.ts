@@ -39,4 +39,17 @@ export const workspace = {
   onDidSaveTextDocument: () => ({ dispose: () => {} }),
 };
 
-export const window = { activeTextEditor: undefined };
+export const window = {
+  activeTextEditor: undefined,
+  createTerminal: (_: unknown) => ({
+    show: () => {},
+    sendText: (_t: string) => {},
+    exitStatus: undefined,
+  }),
+  showInputBox: async (_: unknown) => undefined,
+  showQuickPick: async (_: unknown) => undefined,
+};
+
+export const commands = {
+  executeCommand: async (_: string, ..._args: unknown[]) => undefined,
+};
