@@ -2,6 +2,13 @@
 
 All notable changes to the Canopy Skills extension are documented here.
 
+## [0.5.1] — 2026-04-22
+
+### Changed
+- README reorganised: `Installation` promoted to the top (right after `What is Canopy?`), `Commands` moved above `Features`, and `Agent` commands emphasised as the beginner-friendly starting point (no framework knowledge required) while `Scaffold` commands are reframed as the manual authoring path for framework-familiar authors.
+- `IntelliSense` and `Semantic diagnostics` bullets converted to tables for scanability.
+- `What this extension does` condensed from a bullet list to a two-sentence overview.
+
 ## [0.5.0] — 2026-04-22
 
 ### Added
