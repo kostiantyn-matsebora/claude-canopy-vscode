@@ -9,8 +9,6 @@ IntelliSense, semantic diagnostics, and go-to-definition for [Canopy](https://gi
 
 > **Not on the VS Code Marketplace yet.** Install the `.vsix` from the latest [GitHub Release](https://github.com/kostiantyn-matsebora/claude-canopy-vscode/releases/latest). Marketplace listing is planned for a future release.
 
----
-
 ## What is Canopy?
 
 **Canopy** is a framework for writing AI skills as structured, executable code rather than freeform prose. Instead of describing what an AI agent should do in plain text, you define skills as a tree of named operations with explicit control flow, inputs, and outputs — then run them through Claude Code or GitHub Copilot.
@@ -43,22 +41,20 @@ Key ideas:
 
 Canopy turns AI instructions into something you can read, review, version-control, lint, and refactor — like real code.
 
----
+## Installation
+
+The extension is distributed as a `.vsix` on GitHub Releases until the Marketplace listing is live.
+
+1. Download the latest `canopy-skills-<version>.vsix` from the [Releases page](https://github.com/kostiantyn-matsebora/claude-canopy-vscode/releases/latest).
+2. Install from the command line:
+   ```bash
+   code --install-extension canopy-skills-<version>.vsix
+   ```
+   Or in VS Code: **Extensions** panel → **…** menu → **Install from VSIX…** → pick the file.
 
 ## What this extension does
 
-This extension brings first-class editor support for Canopy files to VS Code:
-
-- **Syntax highlighting** for all Canopy file types
-- **IntelliSense** — op name completions, control-flow keywords, category resource directives, frontmatter keys
-- **Hover documentation** for framework primitives and custom ops
-- **Go-to-definition** for `ALL_CAPS` op identifiers — navigates through skill-local → project → framework lookup order
-- **Semantic diagnostics** — real-time validation beyond syntax: required frontmatter fields, tree node structure, primitive signature conformance, resource reference existence, custom op conformance
-- **Scaffold commands** — create new skills, ops files, verify checklists, templates, constants, policies, schemas, and command scripts with correct structure
-- **Setup commands** — add Canopy to a project as a git submodule or a minimal file copy, for both Claude and Copilot targets
-- **Agent commands** — invoke the Canopy AI agent (via `claude` or `gh copilot suggest`) directly from the command palette to create, validate, improve, or convert skills
-
----
+Turns Canopy skill files into a first-class editor experience: live semantic validation with Quick Fixes, autocomplete for every primitive and custom op, inline hover docs, and go-to-definition across the skill → project → framework op lookup chain. Ships scaffolding commands for every resource type plus direct integration with the Canopy AI agent via `claude` or `gh copilot suggest`.
 
 ## In action
 
@@ -80,7 +76,49 @@ Hover any `ALL_CAPS` identifier to see its signature, description, and how it fl
 
 ![Hover tooltip showing SHOW_PLAN primitive documentation and example usage](images/screenshots/hover-docs.png)
 
----
+## Commands
+
+All commands are accessible via the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`).
+
+### ✨ Agent — describe it, let AI write it (`Canopy Agent` category)
+
+**Start here.** No deep framework knowledge required — describe what you want in plain English and the Canopy AI agent writes, validates, and refines the skill for you. Auto-detects the installed AI target (Claude Code under `.claude/` or GitHub Copilot under `.github/`) and invokes `claude "<prompt>"` or `gh copilot suggest "<prompt>"`.
+
+| Command | What it does |
+|---|---|
+| **Create Skill** | Describe a skill; the agent writes it end-to-end |
+| **Modify Skill** | Pick a skill and describe the change |
+| **Scaffold Skill** | Provide a name; the agent creates the blank structure |
+| **Convert to Canopy** | Converts a plain-markdown skill to Canopy tree format |
+| **Validate Skill** | Checks a skill against all framework rules |
+| **Improve Skill** | Aligns a skill with the latest framework conventions |
+| **Advise** | Ask the agent a design question about Canopy |
+| **Refactor Skills** | Extracts shared ops and resources across multiple skills |
+| **Convert to Regular Skill** | Converts a Canopy skill back to plain markdown |
+| **Help** | Lists all available agent operations |
+
+### Setup (`Canopy` category)
+
+Add the Canopy framework to your project.
+
+| Command | Description |
+|---|---|
+| **Add as submodule** | Adds Canopy as a git submodule; prompts for Claude (`.claude/`) or Copilot (`.github/`) target |
+| **Add as copy (minimal files)** | Shallow-clones Canopy and copies the minimum required files; same target prompt |
+
+### Scaffold — manual authoring (`Canopy` category)
+
+For authors who know the framework and prefer to hand-write skills and resources. Each command drops a correctly-structured blank file at the right path — you fill in the content.
+
+| Command | Description |
+|---|---|
+| **New Skill** | Creates `skill.md` + `ops.md` for a new skill |
+| **New Verify File** | Scaffolds a `verify/` checklist |
+| **New Template** | Scaffolds a `templates/` file (`.md`, `.yaml`, or `.yaml.gotmpl`) |
+| **New Constants File** | Scaffolds a `constants/` lookup file |
+| **New Policy File** | Scaffolds a `policies/` rule file |
+| **New Commands File** | Scaffolds a `commands/` script (`.ps1` or `.sh`) |
+| **New Schema** | Scaffolds a `schemas/` file |
 
 ## Features
 
@@ -100,12 +138,14 @@ All patterns cover both `.claude/` (Claude Code) and `.github/` (GitHub Copilot)
 
 ### IntelliSense
 
-In `skill.md` and `ops.md` files:
+Completions in `skill.md` and `ops.md`:
 
-- **Op name completions** — suggests ops from the current skill, project-level ops, and framework primitives; inserts the correct tree-node prefix (`* ` or `├── `) automatically
-- **Primitive completions** — all framework built-ins with descriptions
-- **Frontmatter completions** — `name`, `description`, and other known keys
-- **Category resource completions** — `Read \`category/path\`` directives for constants, policies, templates, schemas, and verify files
+| Completion | What it suggests |
+|---|---|
+| Op names | Ops from the current skill, project-level ops, and framework primitives; inserts the correct tree-node prefix (`* ` / `├── `) automatically |
+| Primitives | All framework built-ins with descriptions |
+| Frontmatter | `name`, `description`, and other known keys |
+| Category resources | ``Read `category/path` `` directives for `constants/`, `policies/`, `templates/`, `schemas/`, `verify/` |
 
 ### Hover documentation
 
@@ -123,75 +163,20 @@ Press `F12` (or right-click → Go to Definition) on any `ALL_CAPS` identifier. 
 
 Real-time squiggles for:
 
-- **Frontmatter** — missing `name` or `description`, empty values, unknown keys
-- **Tree syntax** — `>>` appearing before `<<`, empty operator slots
-- **Primitive signatures** — `IF`/`ELSE_IF` without `<<`; `ASK` without `|` options; `SHOW_PLAN` without `>>`; `VERIFY_EXPECTED` wrong path prefix; `ELSE`/`BREAK` with spurious operators; `EXPLORE` without `>>`
-- **Resource references** — `Read \`category/path\`` uses a recognised category and the file exists on disk; `VERIFY_EXPECTED` target file existence
-- **Unknown ops** — configurable severity for `ALL_CAPS` names not found in any registry
-- **Op conformance hints** — warns when a tree node's `<<`/`>>` usage doesn't match the op's declared signature
-
----
-
-## Quick start
-
-1. Download the latest `canopy-skills-<version>.vsix` from [GitHub Releases](https://github.com/kostiantyn-matsebora/claude-canopy-vscode/releases/latest) and install it: `code --install-extension canopy-skills-<version>.vsix`
-2. Open a folder that contains `.claude/skills/<name>/skill.md` — or run **Canopy: Add as submodule** from the Command Palette to scaffold one.
-3. Syntax highlighting, IntelliSense, hover docs, and diagnostics activate automatically for every Canopy file.
-
----
-
-## Commands
-
-All commands are accessible via the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`).
-
-### Setup (`Canopy` category)
-
-| Command | Description |
+| Check | Catches |
 |---|---|
-| **Add as submodule** | Adds Canopy as a git submodule; prompts for Claude (`.claude/`) or Copilot (`.github/`) target |
-| **Add as copy (minimal files)** | Shallow-clones Canopy and copies the minimum required files; same target prompt |
-
-### Scaffold (`Canopy` category)
-
-| Command | Description |
-|---|---|
-| **New Skill** | Creates `skill.md` + `ops.md` for a new skill |
-| **New Verify File** | Scaffolds a `verify/` checklist |
-| **New Template** | Scaffolds a `templates/` file (`.md`, `.yaml`, or `.yaml.gotmpl`) |
-| **New Constants File** | Scaffolds a `constants/` lookup file |
-| **New Policy File** | Scaffolds a `policies/` rule file |
-| **New Commands File** | Scaffolds a `commands/` script (`.ps1` or `.sh`) |
-| **New Schema** | Scaffolds a `schemas/` file |
-
-### Agent (`Canopy Agent` category)
-
-All agent commands auto-detect the installed AI target (checks for `skills/shared/framework/ops.md` under `.claude/` or `.github/`) and invoke the matching CLI:
-
-- **Claude Code**: `claude "<prompt>"`
-- **GitHub Copilot**: `gh copilot suggest "<prompt>"`
-
-| Command | Description |
-|---|---|
-| **Create Skill** | Describe a skill; the agent writes it |
-| **Modify Skill** | Pick a skill and describe the change |
-| **Scaffold Skill** | Provide a name; the agent creates the blank structure |
-| **Convert to Canopy** | Converts a plain-markdown skill to Canopy tree format |
-| **Validate Skill** | Checks a skill against all framework rules |
-| **Improve Skill** | Aligns a skill with the latest framework conventions |
-| **Advise** | Ask the agent a design question about Canopy |
-| **Refactor Skills** | Extracts shared ops and resources across multiple skills |
-| **Convert to Regular Skill** | Converts a Canopy skill back to plain markdown |
-| **Help** | Lists all available agent operations |
-
----
+| Frontmatter | Missing `name` or `description`, empty values, unknown keys |
+| Tree syntax | `>>` before `<<`, empty operator slots |
+| Primitive signatures | `IF`/`ELSE_IF` without `<<`; `ASK` without `\|` options; `SHOW_PLAN` without `>>`; `VERIFY_EXPECTED` wrong path prefix; `ELSE`/`BREAK` with spurious operators; `EXPLORE` without `>>` |
+| Resource references | ``Read `category/path` `` uses a recognised category and the file exists on disk; `VERIFY_EXPECTED` target file existence |
+| Unknown ops | Configurable severity for `ALL_CAPS` names not found in any registry |
+| Op conformance hints | Tree node's `<<`/`>>` usage doesn't match the op's declared signature |
 
 ## Requirements
 
 - VS Code 1.85 or later
 - For **Add as submodule** / **Add as copy**: `git` in PATH
 - For **Canopy Agent** commands: `claude` CLI (Claude Code) **or** `gh` CLI with the Copilot extension
-
----
 
 ## Settings
 
@@ -201,19 +186,6 @@ All agent commands auto-detect the installed AI target (checks for `skills/share
 | `canopy.validate.enabled` | `true` | Enable/disable all real-time validation |
 | `canopy.validate.unknownOps` | `"warning"` | Severity for unresolved op names: `error`, `warning`, `hint`, `none` |
 | `canopy.validate.opConformance` | `true` | Show hints when `<<`/`>>` usage doesn't match the op's declared signature |
-
----
-
-## Installation
-
-The extension is distributed as a `.vsix` on GitHub Releases until the Marketplace listing is live.
-
-1. Download the latest `canopy-skills-<version>.vsix` from the [Releases page](https://github.com/kostiantyn-matsebora/claude-canopy-vscode/releases/latest).
-2. Install from the command line:
-   ```bash
-   code --install-extension canopy-skills-<version>.vsix
-   ```
-   Or in VS Code: **Extensions** panel → **…** menu → **Install from VSIX…** → pick the file.
 
 ## Building from source
 
@@ -225,8 +197,6 @@ npm run package      # produces canopy-skills-<version>.vsix
 ```
 
 Press `F5` in VS Code to open an Extension Development Host with the extension loaded.
-
----
 
 ## Links
 
