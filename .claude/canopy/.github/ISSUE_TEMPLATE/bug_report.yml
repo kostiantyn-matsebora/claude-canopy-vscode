@@ -1,0 +1,56 @@
+name: Bug report
+description: Report incorrect framework behavior, documentation mismatches, or setup problems.
+title: "bug: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting an issue. Please include enough detail to reproduce it reliably.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - README / docs
+        - docs/FRAMEWORK.md
+        - setup scripts
+        - skill resource rules
+        - bundled skills
+        - other
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Describe the bug clearly and concretely.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. ...
+        2. ...
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Canopy version or commit
+      placeholder: e.g. v0.3.1 or a commit SHA
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Error output, screenshots, repo layout, or anything else useful.
