@@ -15,7 +15,14 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { AiTarget, targetBaseDir } from './setupCanopy';
 
-const FRAMEWORK_MARKER = path.join('skills', 'shared', 'framework', 'ops.md');
+// A canopy install can take one of two shapes under `<base>/`:
+//  - submodule / subtree / installer  → framework lives at `<base>/canopy/skills/shared/framework/ops.md`
+//  - "Add as copy" (setupCanopy.ts)   → framework is flattened to `<base>/skills/shared/framework/ops.md`
+// Either marker means "this directory is a canopy project".
+const FRAMEWORK_MARKERS = [
+  path.join('canopy', 'skills', 'shared', 'framework', 'ops.md'),
+  path.join('skills', 'shared', 'framework', 'ops.md'),
+];
 
 const terminals = new Map<string, vscode.Terminal>();
 
@@ -46,8 +53,12 @@ export function projectTargetAt(
   root: string,
   exists: (p: string) => boolean,
 ): AiTarget | undefined {
-  if (exists(path.join(targetBaseDir(root, 'claude'), FRAMEWORK_MARKER))) return 'claude';
-  if (exists(path.join(targetBaseDir(root, 'copilot'), FRAMEWORK_MARKER))) return 'copilot';
+  for (const marker of FRAMEWORK_MARKERS) {
+    if (exists(path.join(targetBaseDir(root, 'claude'), marker))) return 'claude';
+  }
+  for (const marker of FRAMEWORK_MARKERS) {
+    if (exists(path.join(targetBaseDir(root, 'copilot'), marker))) return 'copilot';
+  }
   return undefined;
 }
 

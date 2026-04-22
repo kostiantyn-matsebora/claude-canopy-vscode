@@ -56,7 +56,12 @@ describe('buildClaudeCliCommand', () => {
 // Project resolution
 // ---------------------------------------------------------------------------
 
-const MARKER = path.join('skills', 'shared', 'framework', 'ops.md');
+// Install shapes the detector must recognise:
+// - SUBTREE: framework is nested under `canopy/` (submodule / subtree / installer)
+// - FLAT:    framework is flattened directly under `skills/` ("Add as copy")
+const MARKER_SUBTREE = path.join('canopy', 'skills', 'shared', 'framework', 'ops.md');
+const MARKER_FLAT = path.join('skills', 'shared', 'framework', 'ops.md');
+const MARKER = MARKER_SUBTREE;
 
 /** Build a mock `exists` from a set of present file paths. */
 function mockExists(files: string[]): (candidate: string) => boolean {
@@ -65,25 +70,36 @@ function mockExists(files: string[]): (candidate: string) => boolean {
 }
 
 describe('projectTargetAt', () => {
-  it('returns "claude" when .claude/ marker present', () => {
-    const exists = mockExists([path.join(p('repo'), '.claude', MARKER)]);
+  it('returns "claude" for the subtree shape (.claude/canopy/skills/shared/framework/ops.md)', () => {
+    // This is the shape used by `claude-canopy-examples` and any submodule/subtree install.
+    const exists = mockExists([path.join(p('repo'), '.claude', MARKER_SUBTREE)]);
     expect(projectTargetAt(p('repo'), exists)).toBe('claude');
   });
 
-  it('returns "copilot" when only .github/ marker present', () => {
-    const exists = mockExists([path.join(p('repo'), '.github', MARKER)]);
+  it('returns "claude" for the flat "Add as copy" shape (.claude/skills/shared/framework/ops.md)', () => {
+    const exists = mockExists([path.join(p('repo'), '.claude', MARKER_FLAT)]);
+    expect(projectTargetAt(p('repo'), exists)).toBe('claude');
+  });
+
+  it('returns "copilot" when only .github/ marker is present (subtree shape)', () => {
+    const exists = mockExists([path.join(p('repo'), '.github', MARKER_SUBTREE)]);
     expect(projectTargetAt(p('repo'), exists)).toBe('copilot');
   });
 
-  it('prefers claude when both are present', () => {
+  it('returns "copilot" for the flat shape under .github/', () => {
+    const exists = mockExists([path.join(p('repo'), '.github', MARKER_FLAT)]);
+    expect(projectTargetAt(p('repo'), exists)).toBe('copilot');
+  });
+
+  it('prefers claude when both targets are present', () => {
     const exists = mockExists([
-      path.join(p('repo'), '.claude', MARKER),
-      path.join(p('repo'), '.github', MARKER),
+      path.join(p('repo'), '.claude', MARKER_SUBTREE),
+      path.join(p('repo'), '.github', MARKER_SUBTREE),
     ]);
     expect(projectTargetAt(p('repo'), exists)).toBe('claude');
   });
 
-  it('returns undefined when neither is present', () => {
+  it('returns undefined when neither marker is present', () => {
     expect(projectTargetAt(p('repo'), () => false)).toBeUndefined();
   });
 });
