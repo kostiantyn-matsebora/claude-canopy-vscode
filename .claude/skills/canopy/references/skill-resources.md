@@ -2,7 +2,7 @@
 
 Reference documentation describing how Canopy resolves resource references inside skills.
 
-This file is no longer auto-applied as an ambient rule (the agentskills.io distribution has no auto-glob mechanism). It is now a reference, loaded by `canopy-agent` ops when needed.
+This file is no longer auto-applied as an ambient rule (the agentskills.io distribution has no auto-glob mechanism). It is now a reference, loaded by `canopy` ops when needed.
 
 ---
 
@@ -29,9 +29,9 @@ Load at point of use in the tree — never front-load all reads at the top.
 When a step or tree node contains an ALL_CAPS identifier:
 1. Look up in `<skill>/ops.md` first (skill-local ops)
 2. Fall back to consumer-defined cross-skill ops (e.g. a dedicated `project-ops` skill the consumer authored, if any)
-3. Fall back to `.claude/skills/canopy-agent/references/framework-ops.md` (or `.github/skills/canopy-agent/references/framework-ops.md` on Copilot) for framework primitives
+3. Fall back to `.claude/skills/canopy/references/framework-ops.md` (or `.github/skills/canopy/references/framework-ops.md` on Copilot) for framework primitives
 
-`IF`, `ELSE_IF`, `ELSE`, `SWITCH`, `CASE`, `DEFAULT`, `FOR_EACH`, `BREAK`, `END`, `ASK`, `SHOW_PLAN`, `VERIFY_EXPECTED` are primitives — always in `framework-ops.md` (inside `canopy-agent/references/`).
+`IF`, `ELSE_IF`, `ELSE`, `SWITCH`, `CASE`, `DEFAULT`, `FOR_EACH`, `BREAK`, `END`, `ASK`, `SHOW_PLAN`, `VERIFY_EXPECTED` are primitives — always in `framework-ops.md` (inside `canopy/references/`).
 
 ## Tree format
 

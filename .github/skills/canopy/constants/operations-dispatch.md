@@ -1,6 +1,6 @@
 # Operations Dispatch Table
 
-Paths are relative to this skill's own directory (`skills/canopy-agent/`).
+Paths are relative to this skill's own directory (`skills/canopy/`).
 
 | Operation | Procedure file |
 |-----------|---------------|

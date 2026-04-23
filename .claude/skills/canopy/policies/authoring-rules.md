@@ -50,11 +50,11 @@ Mechanical behavior (e.g. "patch if path exists, put if new") belongs as a secti
 
 Replace multi-line blocks expressing a single recognizable operation with a named op.
 
-Lookup order: `<skill>/ops.md` first, then any consumer-defined cross-skill ops, then `references/framework-ops.md` inside this `canopy-agent` skill.
+Lookup order: `<skill>/ops.md` first, then any consumer-defined cross-skill ops, then `references/framework-ops.md` inside this `canopy` skill.
 
 - Skill-local ops → `<skill>/ops.md`
 - Cross-skill project ops → consumer's own packaging (e.g. a dedicated `project-ops` skill they author); no default location
-- Framework primitives → `references/framework-ops.md` (inside `canopy-agent`)
+- Framework primitives → `references/framework-ops.md` (inside `canopy`)
 
 Named op notation: `OP_NAME << inputs >> outputs`
 
@@ -97,7 +97,7 @@ One concern per bullet. One `constants/<file>.md` reference per bullet. Prose *w
 **explore** — execute `FETCH_DISPATCH_CONTEXT`. Output contract: `schemas/dispatch-schema.json`.
 ```
 
-The op lives in `<skill>/ops.md` (or `<skill>/ops/<named-op>.md` for skills with multi-file op libraries like `canopy-agent`) as a normal tree-form op. Runtime resolves the name and injects the op body as the subagent's task.
+The op lives in `<skill>/ops.md` (or `<skill>/ops/<named-op>.md` for skills with multi-file op libraries like `canopy`) as a normal tree-form op. Runtime resolves the name and injects the op body as the subagent's task.
 
 ### `## Agent` body MUST NOT contain
 

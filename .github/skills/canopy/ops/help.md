@@ -32,7 +32,7 @@ The simplest path is the `/canopy` slash command (provided by the `canopy` wrapp
 You can also address the agent directly without the wrapper:
 
 ```
-Follow .claude/skills/canopy-agent/SKILL.md and improve bump-version
+Follow .claude/skills/canopy/SKILL.md and improve bump-version
 ```
 
 Or just describe what you want in natural language — Claude will pick up the agent automatically when the request matches its description.
@@ -48,7 +48,7 @@ Same `/canopy` slash command via the `canopy` wrapper skill installed at `.githu
 Explicit form (always works):
 
 ```
-Follow .github/skills/canopy-agent/SKILL.md and validate review-backend
+Follow .github/skills/canopy/SKILL.md and validate review-backend
 ```
 
 ---
@@ -108,4 +108,4 @@ verify/         ← expected-state checklists for VERIFY_EXPECTED
 references/     ← supporting docs loaded on demand
 ```
 
-Op lookup order: `<skill>/ops.md` → consumer-defined cross-skill ops (optional) → `canopy-agent/references/framework-ops.md`
+Op lookup order: `<skill>/ops.md` → consumer-defined cross-skill ops (optional) → `canopy/references/framework-ops.md`
