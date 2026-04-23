@@ -20,7 +20,7 @@ Framework source: https://github.com/kostiantyn-matsebora/claude-canopy
 
 ### Claude Code
 
-The simplest path is the `/canopy` slash command (provided by the `canopy` wrapper skill):
+The `/canopy` slash command is auto-registered from the `canopy` skill installed at `.claude/skills/canopy/`:
 
 ```
 /canopy improve bump-version
@@ -29,17 +29,11 @@ The simplest path is the `/canopy` slash command (provided by the `canopy` wrapp
 /canopy create a skill that bumps the version and updates the changelog
 ```
 
-You can also address the agent directly without the wrapper:
-
-```
-Follow .claude/skills/canopy/SKILL.md and improve bump-version
-```
-
-Or just describe what you want in natural language — Claude will pick up the agent automatically when the request matches its description.
+Or just describe what you want in natural language — Claude will pick up the skill automatically when the request matches its description.
 
 ### GitHub Copilot
 
-Same `/canopy` slash command via the `canopy` wrapper skill installed at `.github/skills/canopy/`:
+Same `/canopy` slash command from the skill installed at `.github/skills/canopy/`:
 
 ```
 /canopy convert list-skills to canopy

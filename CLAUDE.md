@@ -4,16 +4,15 @@
 
 ## Canopy Integration
 
-Canopy ships as three [agentskills.io](https://agentskills.io)-format Agent Skills installed via [`gh skill install`](https://cli.github.com/manual/gh_skill_install) (GitHub CLI v2.90.0+). This repo embeds them into `.claude/skills/` (Claude Code) AND `.github/skills/` (GitHub Copilot, since this repo serves both):
+Canopy ships as two [agentskills.io](https://agentskills.io)-format Agent Skills installed via [`gh skill install`](https://cli.github.com/manual/gh_skill_install) (GitHub CLI v2.90.0+). This repo embeds them into `.claude/skills/` (Claude Code) AND `.github/skills/` (GitHub Copilot, since this repo serves both):
 
-- `canopy` — the agent skill (ops, policies, constants, schemas, templates, verify, framework primitives, runtime specs). Provides `/canopy`.
+- `canopy` — the agent skill (ops, policies, constants, schemas, templates, verify, framework primitives, runtime specs). Provides `/canopy`. Run `/canopy help` for the operations reference.
 - `canopy-debug` — trace meta-skill (`/canopy-debug`)
-- `canopy-help` — read-only operations reference (`/canopy-help`)
 
 To update to a newer release:
 
 ```bash
-for s in canopy canopy-debug canopy-help; do
+for s in canopy canopy-debug; do
   gh skill install kostiantyn-matsebora/claude-canopy $s --agent claude-code    --scope project --pin v0.18.0 --force
   gh skill install kostiantyn-matsebora/claude-canopy $s --agent github-copilot --scope project --pin v0.18.0 --force
 done
