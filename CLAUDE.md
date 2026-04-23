@@ -4,19 +4,23 @@
 
 ## Canopy Integration
 
-Canopy is embedded in this repo at `.claude/canopy/` as a **git subtree**. The `canopy` agent and bundled skills are wired into `.claude/agents/` and `.claude/skills/` via setup. On a fresh clone, run setup to create the junctions/symlinks:
+Canopy ships as four [agentskills.io](https://agentskills.io)-format Agent Skills installed via [`gh skill install`](https://cli.github.com/manual/gh_skill_install) (GitHub CLI v2.90.0+). This repo embeds them into `.claude/skills/` (Claude Code) AND `.github/skills/` (GitHub Copilot, since this repo serves both):
+
+- `canopy-agent` — heavy agent skill (ops, policies, constants, schemas, templates, verify, framework primitives, runtime specs)
+- `canopy` — `/canopy` slash-command wrapper that delegates to `canopy-agent`
+- `canopy-debug` — trace meta-skill
+- `canopy-help` — read-only operations reference
+
+To update to a newer release:
 
 ```bash
-pwsh .claude/canopy/setup.ps1    # Windows
-bash .claude/canopy/setup.sh     # Linux / macOS
+for s in canopy-agent canopy canopy-debug canopy-help; do
+  gh skill install kostiantyn-matsebora/claude-canopy $s --agent claude-code    --scope project --pin v0.18.0 --force
+  gh skill install kostiantyn-matsebora/claude-canopy $s --agent github-copilot --scope project --pin v0.18.0 --force
+done
 ```
 
-To pull a newer version of the framework:
-
-```bash
-git subtree pull --prefix=.claude/canopy \
-  https://github.com/kostiantyn-matsebora/claude-canopy master --squash
-```
+> **Extension follow-up needed:** `src/commands/canopyAgent.ts` and the `update` skill in `.claude/skills/` still expect the legacy `.claude/canopy/` subtree path. Both will misbehave until updated to the new install model. Tracked in a separate plan.
 
 ## This Repository
 
@@ -79,10 +83,10 @@ All providers register against `{ language: 'canopy' }` only. Resource file lang
 
 | ID | Filename patterns | Purpose |
 |----|-------------------|---------|
-| `canopy` | `**/skill.md`, `**/ops.md` | Full IntelliSense + diagnostics |
+| `canopy` | `**/SKILL.md`, `**/skill.md`, `**/ops.md` | Full IntelliSense + diagnostics |
 | `canopy-verify` | `**/verify/*.md`, `**/checklists/*.md` | Checkbox item highlighting |
 | `canopy-template` | `**/templates/*.md`, `**/templates/*.yaml` | `<token>` placeholder highlighting |
-| `canopy-resource` | `**/constants/*.md`, `**/policies/*.md`, `**/schemas/*.md` | Table + numbered-rule highlighting |
+| `canopy-resource` | `**/constants/*.md`, `**/policies/*.md`, `**/schemas/*.md`, `**/references/*.md` | Table + numbered-rule highlighting |
 | `canopy-commands` | `**/commands/*.ps1`, `**/commands/*.sh` | `# === Section Name ===` highlighting |
 
 Patterns cover both `.claude/` and `.github/` targets. `schemas/*.json` intentionally left as JSON.
@@ -109,16 +113,16 @@ This extension is a consumer of the Canopy framework. When `claude-canopy/` chan
 
 | What changes in `claude-canopy/` | What to update here |
 |---|---|
-| New framework primitive added to [`skills/shared/framework/ops.md`](https://github.com/kostiantyn-matsebora/claude-canopy/blob/main/skills/shared/framework/ops.md) | Add to `RESERVED_PRIMITIVES` in `diagnosticsProvider.ts`; add `PRIMITIVE_DOCS` entry in `opRegistry.ts`; add `case` in `checkPrimitiveSignatures()` |
+| New framework primitive added to [`skills/canopy-agent/references/framework-ops.md`](https://github.com/kostiantyn-matsebora/claude-canopy/blob/main/skills/canopy-agent/references/framework-ops.md) | Add to `RESERVED_PRIMITIVES` in `diagnosticsProvider.ts`; add `PRIMITIVE_DOCS` entry in `opRegistry.ts`; add `case` in `checkPrimitiveSignatures()` |
 | Primitive signature changes (`<<`/`>>` requirements) | Update matching `case` in `checkPrimitiveSignatures()` and `PRIMITIVE_DOCS` |
-| New category resource directory added ([`agents/canopy/constants/category-dirs.md`](https://github.com/kostiantyn-matsebora/claude-canopy/blob/main/agents/canopy/constants/category-dirs.md)) | Add to `VALID_CATEGORIES` in `diagnosticsProvider.ts`; add to `CATEGORY_DIRS` in `completionProvider.ts`; register new language ID + grammar + filename patterns in `package.json` |
+| New category resource directory added ([`skills/canopy-agent/constants/category-dirs.md`](https://github.com/kostiantyn-matsebora/claude-canopy/blob/main/skills/canopy-agent/constants/category-dirs.md)) | Add to `VALID_CATEGORIES` in `diagnosticsProvider.ts`; add to `CATEGORY_DIRS` in `completionProvider.ts`; register new language ID + grammar + filename patterns in `package.json` |
 | Category directory renamed or removed | Update all four locations above |
-| Frontmatter fields change ([`docs/FRAMEWORK.md`](https://github.com/kostiantyn-matsebora/claude-canopy/blob/main/docs/FRAMEWORK.md)) | Update `FRONTMATTER_REQUIRED`, `FRONTMATTER_ALLOWED` in `diagnosticsProvider.ts`; update `FRONTMATTER_KEYS` in `completionProvider.ts`; update `FRONTMATTER_DOCS` in `hoverProvider.ts` |
+| Frontmatter fields change ([`docs/FRAMEWORK.md`](https://github.com/kostiantyn-matsebora/claude-canopy/blob/main/docs/FRAMEWORK.md) — note: agentskills.io spec governs required fields) | Update `FRONTMATTER_REQUIRED`, `FRONTMATTER_ALLOWED` in `diagnosticsProvider.ts`; update `FRONTMATTER_KEYS` in `completionProvider.ts`; update `FRONTMATTER_DOCS` in `hoverProvider.ts` |
 | Tree syntax notation changes ([`docs/FRAMEWORK.md`](https://github.com/kostiantyn-matsebora/claude-canopy/blob/main/docs/FRAMEWORK.md)) | Update `parseTreeLine()` in `canopyDocument.ts` |
 | New section header added (`## Agent`, `## Tree`, etc.) | Update `SECTION_NAMES` in `completionProvider.ts`; update `SECTION_DOCS` in `hoverProvider.ts`; update section parsing in `parseDocument()` |
 | Op lookup chain changes ([`docs/FRAMEWORK.md`](https://github.com/kostiantyn-matsebora/claude-canopy/blob/main/docs/FRAMEWORK.md)) | Update `OpRegistry` resolution order in `opRegistry.ts` |
-| Runtime spec added or renamed (`runtimes/claude.md`, `runtimes/copilot.md`) | No code change needed — `runtimes/` is not a skill category; update `setupCanopy.ts` only if setup wiring changes |
-| Canopy agent restructured (now in Canopy skill format with `## Agent` + `## Tree`) | Validate that diagnostics and completions work correctly against `.claude/agents/canopy.md` — it now uses the full skill anatomy |
+| Runtime spec added or renamed (`skills/canopy-agent/references/runtime-claude.md`, `runtime-copilot.md`) | No code change needed — these are reference docs inside the canopy-agent skill |
+| Canopy distribution model changes (e.g. install command, skill names) | Update `src/commands/setupCanopy.ts` and `src/commands/canopyAgent.ts` |
 
 When in doubt, treat [`docs/FRAMEWORK.md`](https://github.com/kostiantyn-matsebora/claude-canopy/blob/main/docs/FRAMEWORK.md) as the canonical spec and audit the extension against it.
 
