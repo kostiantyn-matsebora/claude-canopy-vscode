@@ -5,7 +5,7 @@ Align an existing Canopy skill with the current Canopy framework rules — fix s
 1. Locate the skill directory using Glob.
 2. Read all files: `SKILL.md`, `ops.md` (if present), and all category subdir files.
 3. Run VALIDATE inline to collect all Errors, Warnings, and Optimizations. Record as `validate_findings`.
-4. Read `references/framework-ops.md` (framework primitives) and any consumer-defined cross-skill ops the user mentions.
+4. Consult `framework-ops.md` (framework primitives — already loaded by the canopy tree) and any consumer-defined cross-skill ops the user mentions.
    - Note any ops or resources in the skill that duplicate primitives or consumer-shared content — record as `shared_findings`
 5. Audit every category subdir file using the **Category Decision Flowchart** from `policies/category-decision-flowchart.md` (in order — use the first matching test). Record all misplacements as `audit_findings`.
 

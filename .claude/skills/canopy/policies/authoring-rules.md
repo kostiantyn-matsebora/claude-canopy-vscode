@@ -50,11 +50,11 @@ Mechanical behavior (e.g. "patch if path exists, put if new") belongs as a secti
 
 Replace multi-line blocks expressing a single recognizable operation with a named op.
 
-Lookup order: `<skill>/ops.md` first, then any consumer-defined cross-skill ops, then `references/framework-ops.md` inside this `canopy` skill.
+Lookup order: `<skill>/ops.md` first, then any consumer-defined cross-skill ops, then `framework-ops.md` from the `canopy-runtime` skill (physical path: `../canopy-runtime/references/framework-ops.md`, loaded up-front by the canopy tree).
 
 - Skill-local ops → `<skill>/ops.md`
 - Cross-skill project ops → consumer's own packaging (e.g. a dedicated `project-ops` skill they author); no default location
-- Framework primitives → `references/framework-ops.md` (inside `canopy`)
+- Framework primitives → `../canopy-runtime/references/framework-ops.md` (ships with the `canopy-runtime` skill)
 
 Named op notation: `OP_NAME << inputs >> outputs`
 
@@ -64,7 +64,7 @@ Conditional branches, multi-step procedures, and decision trees specific to one 
 
 If a skill launches a subagent:
 - Schema must exist as `schemas/explore-schema.json`.
-- "Do not inline-read" and "return JSON only matching schema" are implicit from `references/skill-resources.md` — do not restate.
+- "Do not inline-read" and "return JSON only matching schema" are implicit from `../canopy-runtime/references/skill-resources.md` — do not restate.
 - No freeform prose output — every field the skill uses must be declared in the schema.
 - First tree node must be `EXPLORE >> context` when `## Agent` declares `**explore**`.
 
@@ -114,7 +114,7 @@ Shape selection:
 - ≥2 parallel concerns with no ordering/data dependencies → (B)
 - Procedure has ordering, branching, or data flow → (C)
 
-Platform-specific execution (native subagent on Claude Code, inline fallback on Copilot) is defined by the runtime spec — see `references/runtime-claude.md` and `references/runtime-copilot.md`.
+Platform-specific execution (native subagent on Claude Code, inline fallback on Copilot) is defined by the runtime spec — see `../canopy-runtime/references/runtime-claude.md` and `../canopy-runtime/references/runtime-copilot.md`.
 
 ## Debug meta-skill
 

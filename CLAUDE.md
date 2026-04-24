@@ -4,15 +4,22 @@
 
 ## Canopy Integration
 
-Canopy ships as two [agentskills.io](https://agentskills.io)-format Agent Skills installed via [`gh skill install`](https://cli.github.com/manual/gh_skill_install) (GitHub CLI v2.90.0+). This repo embeds them into `.claude/skills/` (Claude Code) AND `.github/skills/` (GitHub Copilot, since this repo serves both):
+Canopy ships as three [agentskills.io](https://agentskills.io)-format Agent Skills, split along authoring-vs-execution lines. This repo embeds them into `.claude/skills/` (Claude Code) AND `.github/skills/` (GitHub Copilot, since this repo serves both):
 
-- `canopy` — the agent skill (ops, policies, constants, schemas, templates, verify, framework primitives, runtime specs). Provides `/canopy`. Run `/canopy help` for the operations reference.
-- `canopy-debug` — trace meta-skill (`/canopy-debug`)
+- `canopy-runtime` — execution engine. Interprets canopy-flavored skills at runtime (platform detection, primitives spec, op lookup chain, category semantics, subagent contract). Hidden from the `/` menu; loaded ambiently via `CLAUDE.md` / `.github/copilot-instructions.md` (install script writes marker block).
+- `canopy` — authoring agent. Create/modify/validate/improve/scaffold/refactor/advise/convert skills. Provides `/canopy`. Depends on `canopy-runtime`.
+- `canopy-debug` — trace wrapper. `/canopy-debug <skill>` emits phase banners and per-node tracing.
 
-To update to a newer release:
+To update to a newer release (easiest path — also wires ambient CLAUDE.md + copilot-instructions.md):
 
 ```bash
-for s in canopy canopy-debug; do
+curl -sSL https://raw.githubusercontent.com/kostiantyn-matsebora/claude-canopy/master/install.sh | bash -s -- --target both --version 0.18.0
+```
+
+Or per-skill via `gh skill` (does not write ambient files):
+
+```bash
+for s in canopy-runtime canopy canopy-debug; do
   gh skill install kostiantyn-matsebora/claude-canopy $s --agent claude-code    --scope project --pin v0.18.0 --force
   gh skill install kostiantyn-matsebora/claude-canopy $s --agent github-copilot --scope project --pin v0.18.0 --force
 done

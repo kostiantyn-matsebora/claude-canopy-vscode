@@ -2,7 +2,7 @@
 
 Reference documentation describing how Canopy resolves resource references inside skills.
 
-This file is no longer auto-applied as an ambient rule (the agentskills.io distribution has no auto-glob mechanism). It is now a reference, loaded by `canopy` ops when needed.
+Loaded via ambient instruction at session start (the `canopy-runtime` marker block in `CLAUDE.md` / `.github/copilot-instructions.md`) and by canopy authoring ops when needed. Shared between the runtime (for interpretation at execution time) and the canopy authoring agent (for VALIDATE/IMPROVE/SCAFFOLD/CONVERT_TO_CANOPY/etc. at authoring time).
 
 ---
 

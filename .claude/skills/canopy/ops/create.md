@@ -13,7 +13,7 @@ Create a new Canopy skill from a description.
    - Determine whether an explore subagent is needed (the skill must read project files before acting)
    - Identify which steps should become named ops in `ops.md`
    - Identify which structured content belongs in category subdirs
-6. Read `references/framework-ops.md` (framework primitives, inside `canopy`) and any consumer-defined cross-skill ops the user mentions.
+6. Consult `framework-ops.md` (framework primitives — already loaded into context by the canopy tree's up-front Read of `../canopy-runtime/references/framework-ops.md`) and any consumer-defined cross-skill ops the user mentions.
    - For each candidate op: if an equivalent already exists in framework primitives or consumer-shared ops, reference it — do not redefine it skill-locally
    - For each candidate resource file: if equivalent content already exists elsewhere, reference that file — do not duplicate it
 7. Show plan: skill name | tree structure preview | files to create (marking shared references vs new files). Then emit an apply block per `constants/apply-block-protocol.md` with fields: `op: CREATE` | `skill: <name>` | `tree-syntax: <markdown-list|box-drawing>` | `changes`.

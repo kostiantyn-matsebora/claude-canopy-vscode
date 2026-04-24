@@ -27,7 +27,7 @@ Analyse all available Canopy skills, identify ops and resources duplicated acros
    - A new dedicated skill (recommended): `<consumer-shared-skill>/ops.md` and `<consumer-shared-skill>/<category>/<filename>` — apply `policies/category-decision-flowchart.md` to confirm the right category
    - An existing consumer-shared skill they already have
 
-4. Read `references/framework-ops.md` (framework primitives) and any consumer-shared skill files the user names to confirm no candidate is already defined there.
+4. Consult `framework-ops.md` (framework primitives — already loaded by the canopy tree) and any consumer-shared skill files the user names to confirm no candidate is already defined there.
 
 5. Present a decision table before making any changes:
 

@@ -102,4 +102,4 @@ verify/         ← expected-state checklists for VERIFY_EXPECTED
 references/     ← supporting docs loaded on demand
 ```
 
-Op lookup order: `<skill>/ops.md` → consumer-defined cross-skill ops (optional) → `canopy/references/framework-ops.md`
+Op lookup order: `<skill>/ops.md` → consumer-defined cross-skill ops (optional) → `canopy-runtime/references/framework-ops.md`

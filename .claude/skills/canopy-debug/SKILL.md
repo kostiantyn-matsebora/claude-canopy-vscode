@@ -15,6 +15,17 @@ Preamble: parse $ARGUMENTS — first token is `target_skill`, remainder is `skil
     * END Usage: /canopy-debug <skill-name> [skill-arguments]
   * bind target_skill = first token of $ARGUMENTS
   * bind skill_args = remainder of $ARGUMENTS (may be empty)
+  * detect platform: `.claude/skills/` present → claude; `.github/skills/` present → copilot
+  * IF << platform == "claude"
+    * Read `../canopy-runtime/SKILL.md` for the canopy execution engine overview
+    * Read `../canopy-runtime/references/runtime-claude.md` for Claude Code runtime rules
+    * Read `../canopy-runtime/references/framework-ops.md` for primitive spec
+    * Read `../canopy-runtime/references/skill-resources.md` for category semantics, op lookup chain, tree format
+  * ELSE
+    * Read `../canopy-runtime/SKILL.md` for the canopy execution engine overview
+    * Read `../canopy-runtime/references/runtime-copilot.md` for Copilot runtime rules
+    * Read `../canopy-runtime/references/framework-ops.md` for primitive spec
+    * Read `../canopy-runtime/references/skill-resources.md` for category semantics, op lookup chain, tree format
   * Read `policies/debug-output.md` for debug rendering and animation protocol
   * EMIT_PHASE_BANNER << phase=Initialize | skill=target_skill | args=skill_args
   * EXECUTE_WITH_TRACE << target_skill | skill_args

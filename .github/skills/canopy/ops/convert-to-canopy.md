@@ -11,7 +11,7 @@ A "regular skill" is any `.md` skill file that uses prose or numbered `## Steps`
    - Post-execution verification steps → `VERIFY_EXPECTED << verify/verify-expected.md` node; create `verify/verify-expected.md` with the expected-state checklist
    - If no explicit post-execution verification exists but the skill writes files or makes changes, add a `VERIFY_EXPECTED << verify/verify-expected.md` node as the last step in the success branch and include it in the decision table with reason: "skill makes changes but has no verification step"
 3. Ask: **"Which tree syntax? | Markdown list (`*`) | Box-drawing (tree characters)"**
-4. Read `references/framework-ops.md` (framework primitives) and any consumer-defined cross-skill ops the user mentions.
+4. Consult `framework-ops.md` (framework primitives — already loaded by the canopy tree) and any consumer-defined cross-skill ops the user mentions.
    - For each candidate op identified in step 2: if an equivalent already exists in primitives or consumer-shared ops, mark it as a shared reference — do not add it to the skill-local `ops.md`
    - For each candidate resource file: if equivalent content already exists, mark it as a shared reference — do not create a duplicate
 5. Present a decision table before making any changes:
