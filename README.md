@@ -5,7 +5,7 @@
 [![Latest Release](https://img.shields.io/github/v/release/kostiantyn-matsebora/claude-canopy-vscode?label=release&color=0969da)](https://github.com/kostiantyn-matsebora/claude-canopy-vscode/releases/latest)
 [![License](https://img.shields.io/badge/license-MIT-0969da)](LICENSE)
 
-IntelliSense, semantic diagnostics, and go-to-definition for [Canopy](https://github.com/kostiantyn-matsebora/claude-canopy) skills — the declarative, tree-structured execution framework for AI agents. Tracks framework **v0.15.0**.
+IntelliSense, semantic diagnostics, and go-to-definition for [Canopy](https://github.com/kostiantyn-matsebora/claude-canopy) skills — the declarative, tree-structured execution framework for AI agents. Tracks framework **v0.17.1**.
 
 > **Not on the VS Code Marketplace yet.** Install the `.vsix` from the latest [GitHub Release](https://github.com/kostiantyn-matsebora/claude-canopy-vscode/releases/latest). Marketplace listing is planned for a future release.
 
@@ -33,10 +33,10 @@ description: Review a pull request for correctness and style
 
 Key ideas:
 
-- **Skills** (`skill.md`) define behavior as a tree of operation calls.
+- **Skills** (`SKILL.md`) define behavior as a tree of operation calls.
 - **Ops** (`ops.md`) define reusable named operations local to a skill or shared across skills.
-- **Framework primitives** (`IF`, `ELSE_IF`, `ELSE`, `BREAK`, `ASK`, `VERIFY_EXPECTED`, `EXPLORE`, `SHOW_PLAN`, …) are built-in control-flow ops provided by the framework.
-- **Resources** (constants, policies, templates, schemas, verify checklists, command scripts) are supporting files co-located with each skill.
+- **Framework primitives** (`IF`, `ELSE_IF`, `ELSE`, `SWITCH`, `CASE`, `DEFAULT`, `FOR_EACH`, `BREAK`, `END`, `ASK`, `SHOW_PLAN`, `VERIFY_EXPECTED`, `EXPLORE`) are built-in control-flow + interaction + execution ops provided by the framework.
+- **Resources** (constants, policies, templates, schemas, verify checklists, command scripts, references) are supporting files co-located with each skill.
 - Skills can target **Claude Code** (`.claude/skills/`) or **GitHub Copilot** (`.github/skills/`).
 
 Canopy turns AI instructions into something you can read, review, version-control, lint, and refactor — like real code.
@@ -97,14 +97,16 @@ All commands are accessible via the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift
 | **Convert to Regular Skill** | Converts a Canopy skill back to plain markdown |
 | **Help** | Lists all available agent operations |
 
-### Setup (`Canopy` category)
+### Install (`Canopy` category)
 
-Add the Canopy framework to your project.
+Install the Canopy framework into your project. Each command shows a Quick Pick of the three skills (canopy, canopy-runtime, canopy-debug) — all checked by default.
 
-| Command | Description |
+| Command | What it does |
 |---|---|
-| **Add as submodule** | Adds Canopy as a git submodule; prompts for Claude (`.claude/`) or Copilot (`.github/`) target |
-| **Add as copy (minimal files)** | Shallow-clones Canopy and copies the minimum required files; same target prompt |
+| **Install...** | Unified entry point; presents a Quick Pick of the three install methods with availability badges based on which CLIs (`git`, `gh skill`, `claude`) are on PATH |
+| **Install (via install script)** | Clone canopy and run `install.sh` / `install.ps1`. Picks Claude or Copilot target; writes the canopy-runtime ambient marker block automatically. Requires `git`. |
+| **Install as Agent Skill (gh skill)** | `gh skill install` per checked skill. Picks Claude Code or GitHub Copilot agent. Writes the marker block too (gh skill itself doesn't). Requires `gh` ≥ 2.90.0. |
+| **Install as Claude Code Plugin** | Copies the three `/plugin` slash commands (marketplace add + install + activate) to clipboard for paste in a Claude Code session. Plugin install bundles all three skills. |
 
 ### Scaffold — manual authoring (`Canopy` category)
 
@@ -112,7 +114,7 @@ For authors who know the framework and prefer to hand-write skills and resources
 
 | Command | Description |
 |---|---|
-| **New Skill** | Creates `skill.md` + `ops.md` for a new skill |
+| **New Skill** | Creates `SKILL.md` + `ops.md` for a new skill |
 | **New Verify File** | Scaffolds a `verify/` checklist |
 | **New Template** | Scaffolds a `templates/` file (`.md`, `.yaml`, or `.yaml.gotmpl`) |
 | **New Constants File** | Scaffolds a `constants/` lookup file |
@@ -128,24 +130,24 @@ Five language IDs cover all Canopy file types:
 
 | Language | Files | Highlights |
 |---|---|---|
-| `canopy` | `skill.md`, `ops.md` | Tree notation, `IF`/`ELSE`, `<<`/`>>`, op names, binding expressions |
+| `canopy` | `SKILL.md`, `ops.md` | Tree notation, `IF`/`ELSE`/`SWITCH`/`CASE`/`DEFAULT`/`FOR_EACH`/`BREAK`/`END`, `ASK`/`SHOW_PLAN`/`VERIFY_EXPECTED`/`EXPLORE`, `<<`/`>>`, op names, binding expressions |
 | `canopy-verify` | `verify/*.md`, `checklists/*.md` | Checkbox items |
 | `canopy-template` | `templates/*.md`, `templates/*.yaml` | `<token>` placeholders |
-| `canopy-resource` | `constants/*.md`, `policies/*.md`, `schemas/*.md` | Tables, numbered rules |
+| `canopy-resource` | `constants/*.md`, `policies/*.md`, `schemas/*.md`, `references/*.md` | Tables, numbered rules |
 | `canopy-commands` | `commands/*.ps1`, `commands/*.sh` | `# === Section Name ===` headers |
 
 All patterns cover both `.claude/` (Claude Code) and `.github/` (GitHub Copilot) targets.
 
 ### IntelliSense
 
-Completions in `skill.md` and `ops.md`:
+Completions in `SKILL.md` and `ops.md`:
 
 | Completion | What it suggests |
 |---|---|
 | Op names | Ops from the current skill, project-level ops, and framework primitives; inserts the correct tree-node prefix (`* ` / `├── `) automatically |
 | Primitives | All framework built-ins with descriptions |
-| Frontmatter | `name`, `description`, and other known keys |
-| Category resources | ``Read `category/path` `` directives for `constants/`, `policies/`, `templates/`, `schemas/`, `verify/` |
+| Frontmatter | `name`, `description`, `argument-hint`, `license`, `metadata`, `allowed-tools`, `user-invocable` (full agentskills.io spec) |
+| Category resources | ``Read `category/path` `` directives for `constants/`, `policies/`, `templates/`, `schemas/`, `checklists/`, `verify/`, `references/` |
 
 ### Hover documentation
 
@@ -156,8 +158,8 @@ Hovering over a framework primitive or a custom op shows its description, expect
 Press `F12` (or right-click → Go to Definition) on any `ALL_CAPS` identifier. The extension resolves through:
 
 1. Current skill's `ops.md`
-2. Project-level `ops.md` files
-3. Framework `skills/shared/framework/ops.md`
+2. Consumer-defined cross-skill ops (if any)
+3. Framework primitives (statically defined in the extension; defined in canopy at `skills/canopy-runtime/references/framework-ops.md`)
 
 ### Semantic diagnostics
 
@@ -175,14 +177,15 @@ Real-time squiggles for:
 ## Requirements
 
 - VS Code 1.85 or later
-- For **Add as submodule** / **Add as copy**: `git` in PATH
-- For **Canopy Agent** commands: `claude` CLI (Claude Code) **or** `gh` CLI with the Copilot extension
+- For **Install (via install script)**: `git` in PATH
+- For **Install as Agent Skill (gh skill)**: `gh` CLI v2.90.0+ in PATH (the `skill` subcommand)
+- For **Canopy Agent** commands targeting Claude: `claude` CLI in PATH (each command surfaces an "open download" link if missing)
 
 ## Settings
 
 | Setting | Default | Description |
 |---|---|---|
-| `canopy.frameworkUrl` | `https://github.com/kostiantyn-matsebora/claude-canopy` | Framework repo URL used by setup commands |
+| `canopy.frameworkUrl` | `https://github.com/kostiantyn-matsebora/claude-canopy` | Framework repo URL used by install commands |
 | `canopy.validate.enabled` | `true` | Enable/disable all real-time validation |
 | `canopy.validate.unknownOps` | `"warning"` | Severity for unresolved op names: `error`, `warning`, `hint`, `none` |
 | `canopy.validate.opConformance` | `true` | Show hints when `<<`/`>>` usage doesn't match the op's declared signature |
