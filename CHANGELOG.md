@@ -2,6 +2,12 @@
 
 All notable changes to the Canopy Skills extension are documented here.
 
+## [0.9.1] — 2026-04-25
+
+### Changed
+
+- **Publisher renamed `canopy` → `canopy-ai`** to match the registered Azure DevOps publisher at https://marketplace.visualstudio.com/manage/publishers/canopy-ai. First version published to the VS Code Marketplace.
+
 ## [0.9.0] — 2026-04-25
 
 ### Added
