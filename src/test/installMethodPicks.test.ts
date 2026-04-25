@@ -44,14 +44,14 @@ describe('buildInstallMethodPicks', () => {
   it('detail copy explains the missing-tool state for blocked methods', () => {
     const missing = buildInstallMethodPicks(NONE);
     expect(missing[0].detail).toMatch(/git not found/i);
-    expect(missing[1].detail).toMatch(/gh CLI not found/i);
+    expect(missing[1].detail).toMatch(/gh skill subcommand not available/i);
     expect(missing[2].detail).toMatch(/clipboard/i);
   });
 
   it('detail copy is positive when tools are present', () => {
     const present = buildInstallMethodPicks(ALL);
     expect(present[0].detail).toMatch(/git ✓/);
-    expect(present[1].detail).toMatch(/gh ✓/);
+    expect(present[1].detail).toMatch(/gh skill ✓/);
     expect(present[2].detail).toMatch(/claude ✓/);
   });
 });

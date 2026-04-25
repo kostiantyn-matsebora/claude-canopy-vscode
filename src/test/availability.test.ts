@@ -28,14 +28,33 @@ describe('isCommandAvailable', () => {
     expect(await isCommandAvailable('git', runner)).toBe(false);
   });
 
-  it('passes the right --version probe to the runner', async () => {
+  it('probes git via `git --version`', async () => {
     const probed: string[] = [];
+    const runner: ExecRunner = async (cmd) => { probed.push(cmd); return { stdout: '', stderr: '' }; };
+    await isCommandAvailable('git', runner);
+    expect(probed).toEqual(['git --version']);
+  });
+
+  it('probes claude via `claude --version`', async () => {
+    const probed: string[] = [];
+    const runner: ExecRunner = async (cmd) => { probed.push(cmd); return { stdout: '', stderr: '' }; };
+    await isCommandAvailable('claude', runner);
+    expect(probed).toEqual(['claude --version']);
+  });
+
+  it('probes gh via `gh skill --help` (subcommand exists ⇒ gh ≥ 2.90.0)', async () => {
+    const probed: string[] = [];
+    const runner: ExecRunner = async (cmd) => { probed.push(cmd); return { stdout: '', stderr: '' }; };
+    await isCommandAvailable('gh', runner);
+    expect(probed).toEqual(['gh skill --help']);
+  });
+
+  it('reports gh as unavailable when the skill subcommand probe fails (older gh)', async () => {
     const runner: ExecRunner = async (cmd) => {
-      probed.push(cmd);
+      if (cmd === 'gh skill --help') throw new Error('unknown command "skill" for "gh"');
       return { stdout: '', stderr: '' };
     };
-    await isCommandAvailable('gh', runner);
-    expect(probed).toEqual(['gh --version']);
+    expect(await isCommandAvailable('gh', runner)).toBe(false);
   });
 
   it('does not throw on runner error — converts to false', async () => {
@@ -70,6 +89,6 @@ describe('detectTools', () => {
       return { stdout: '', stderr: '' };
     };
     await detectTools(runner);
-    expect(calls.sort()).toEqual(['claude --version', 'gh --version', 'git --version']);
+    expect(calls.sort()).toEqual(['claude --version', 'gh skill --help', 'git --version']);
   });
 });

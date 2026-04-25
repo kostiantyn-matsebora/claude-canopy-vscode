@@ -30,10 +30,18 @@ const defaultRunner: ExecRunner = async (command) => {
   return { stdout: String(stdout), stderr: String(stderr) };
 };
 
-/** True if `<cmd> --version` succeeds (exit 0, no spawn error, within timeout). */
+/**
+ * True if the probe command succeeds (exit 0, no spawn error, within timeout).
+ *
+ * For 'gh' we probe `gh skill --help` — not `gh --version` — because the
+ * user-facing capability we need is the `skill` subcommand, which requires
+ * GitHub CLI v2.90.0+. A binary-only check would falsely report availability
+ * on older gh installs and we'd hit "unknown command 'skill'" at run time.
+ */
 export async function isCommandAvailable(cmd: Tool, runner: ExecRunner = defaultRunner): Promise<boolean> {
+  const probe = cmd === 'gh' ? 'gh skill --help' : `${cmd} --version`;
   try {
-    await runner(`${cmd} --version`);
+    await runner(probe);
     return true;
   } catch {
     return false;

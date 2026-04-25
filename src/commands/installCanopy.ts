@@ -154,8 +154,8 @@ export function buildInstallMethodPicks(tools: ToolAvailability): InstallMethodP
       label: `${tools.gh ? '$(check)' : '$(warning)'} Install as Agent Skill (gh skill)`,
       description: 'Claude Code or GitHub Copilot — gh skill install per skill',
       detail: tools.gh
-        ? 'gh ✓ — version-pinned per-skill installs'
-        : 'gh CLI not found — install from cli.github.com',
+        ? 'gh skill ✓ — version-pinned per-skill installs'
+        : 'gh skill subcommand not available — install or upgrade to gh 2.90.0+ (cli.github.com)',
       available: tools.gh,
     },
     {
@@ -453,8 +453,8 @@ export async function installByCopy(): Promise<void> {
 export async function installAsAgentSkill(): Promise<void> {
   if (!(await isCommandAvailable('gh'))) {
     const choice = await vscode.window.showErrorMessage(
-      'GitHub CLI (gh) is required for the gh-skill method. ' +
-      'Install from cli.github.com, or use the install-script method instead.',
+      'GitHub CLI v2.90.0+ with the `skill` subcommand is required for the gh-skill method. ' +
+      'Install or upgrade gh from cli.github.com, or use the install-script method instead.',
       'Use install script',
       'Open gh download',
       'Cancel',
