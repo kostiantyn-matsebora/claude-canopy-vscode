@@ -111,11 +111,21 @@ export function buildInstallScriptCommand(
   return `bash ${quoted} --target ${target}${v}`;
 }
 
-/** Two slash commands the user must paste into a Claude Code session. */
+/**
+ * Three slash commands the user runs in a Claude Code session, in order:
+ *   1. Register the marketplace (one-time, user-scope)
+ *   2. Install the canopy plugin bundle (one-time, user-scope)
+ *   3. Activate canopy-runtime in the current project — writes the marker
+ *      block to CLAUDE.md / .github/copilot-instructions.md so user-authored
+ *      canopy skills under .claude/skills/ are runtime-active. Required for
+ *      the plugin install path; install.sh / install.ps1 / the vscode
+ *      extension's gh-skill flow write the block automatically.
+ */
 export function pluginInstallSlashCommands(repo: string): string[] {
   return [
     `/plugin marketplace add ${repo}`,
     `/plugin install ${PLUGIN_NAME}@${MARKETPLACE_NAME}`,
+    `/${PLUGIN_NAME}:${PLUGIN_NAME} activate`,
   ];
 }
 
@@ -591,9 +601,14 @@ export async function installAsPlugin(): Promise<void> {
   await vscode.env.clipboard.writeText(cmds.join('\n'));
 
   const claudeAvailable = await isCommandAvailable('claude');
+  const message =
+    `Plugin install: three slash commands (copied to clipboard). Run them in order in a Claude Code session:\n\n` +
+    `${cmds.join('\n')}\n\n` +
+    `The third command (\`activate\`) writes the canopy-runtime marker block to this project's CLAUDE.md so user-authored canopy skills under .claude/skills/ load runtime ambiently. Required for the plugin install path.`;
+
   if (claudeAvailable) {
     const choice = await vscode.window.showInformationMessage(
-      `Plugin install: two /plugin slash commands (copied to clipboard).\n\n${cmds.join('\n')}\n\nClaude CLI detected — open it in a terminal so you can paste?`,
+      `${message}\n\nClaude CLI detected — open it in a terminal so you can paste?`,
       { modal: true },
       'Open Claude in terminal',
       'Just keep the clipboard copy',
@@ -608,7 +623,7 @@ export async function installAsPlugin(): Promise<void> {
   }
 
   await vscode.window.showInformationMessage(
-    `Open Claude Code and run these two slash commands (already copied to clipboard):\n\n${cmds.join('\n')}`,
+    message,
     { modal: true },
     'OK',
   );

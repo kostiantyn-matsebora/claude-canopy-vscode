@@ -133,20 +133,22 @@ describe('buildInstallScriptCommand', () => {
 // ---------------------------------------------------------------------------
 
 describe('pluginInstallSlashCommands', () => {
-  it('emits the marketplace add and plugin install slash commands', () => {
+  it('emits the three commands in install order: marketplace add, plugin install, activate', () => {
     const repo = 'kostiantyn-matsebora/claude-canopy';
     expect(pluginInstallSlashCommands(repo)).toEqual([
       `/plugin marketplace add ${repo}`,
       '/plugin install canopy@claude-canopy',
+      '/canopy:canopy activate',
     ]);
   });
 
-  it('uses the supplied repo for the marketplace-add line', () => {
+  it('uses the supplied repo only for the marketplace-add line', () => {
     const repo = 'fork-owner/claude-canopy';
     const cmds = pluginInstallSlashCommands(repo);
     expect(cmds[0]).toBe(`/plugin marketplace add ${repo}`);
-    // Plugin name + marketplace name come from canopy's marketplace.json — independent of repo.
+    // Plugin + marketplace + activate-op names come from canopy itself — independent of repo.
     expect(cmds[1]).toBe('/plugin install canopy@claude-canopy');
+    expect(cmds[2]).toBe('/canopy:canopy activate');
   });
 });
 
