@@ -4,7 +4,7 @@ import { CanopyHoverProvider } from './providers/hoverProvider';
 import { CanopyDefinitionProvider } from './providers/definitionProvider';
 import { CanopyDiagnosticsProvider } from './providers/diagnosticsProvider';
 import { registry } from './opRegistry';
-import { addAsSubmodule, addAsCopy } from './commands/setupCanopy';
+import { install, installByCopy, installAsAgentSkill, installAsPlugin } from './commands/installCanopy';
 import {
   newSkill, newVerifyFile, newTemplate, newConstantsFile,
   newPolicyFile, newCommandsFile, newSchema,
@@ -12,16 +12,16 @@ import {
 import {
   agentCreate, agentModify, agentScaffold, agentConvertToCanopy,
   agentValidate, agentImprove, agentAdvise, agentRefactorSkills,
-  agentConvertToRegular, agentHelp,
+  agentConvertToRegular, agentHelp, agentDebug,
 } from './commands/canopyAgent';
 
 const CANOPY_LANG = 'canopy';
 
 const CANOPY_FILE_RE = [
-  /[/\\]\.claude[/\\].*[/\\]skill\.md$/,
-  /[/\\]\.claude[/\\].*[/\\]ops\.md$/,
-  /[/\\]\.github[/\\].*[/\\]skill\.md$/,
-  /[/\\]\.github[/\\].*[/\\]ops\.md$/,
+  /[/\\]\.claude[/\\].*[/\\]skill\.md$/i,
+  /[/\\]\.claude[/\\].*[/\\]ops\.md$/i,
+  /[/\\]\.github[/\\].*[/\\]skill\.md$/i,
+  /[/\\]\.github[/\\].*[/\\]ops\.md$/i,
 ];
 
 function isCanopyFile(fsPath: string): boolean {
@@ -109,8 +109,10 @@ export function activate(context: vscode.ExtensionContext): void {
         `Canopy Skills v${pkg.version} — Canopy framework v${pkg.canopyVersion ?? 'unknown'}`
       );
     }),
-    vscode.commands.registerCommand('canopy.addAsSubmodule', addAsSubmodule),
-    vscode.commands.registerCommand('canopy.addAsCopy', addAsCopy),
+    vscode.commands.registerCommand('canopy.install', install),
+    vscode.commands.registerCommand('canopy.installByCopy', installByCopy),
+    vscode.commands.registerCommand('canopy.installAsAgentSkill', installAsAgentSkill),
+    vscode.commands.registerCommand('canopy.installAsPlugin', installAsPlugin),
   );
 
   // --- New resource commands ---
@@ -136,6 +138,7 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand('canopy.agentRefactorSkills', agentRefactorSkills),
     vscode.commands.registerCommand('canopy.agentConvertToRegular', agentConvertToRegular),
     vscode.commands.registerCommand('canopy.agentHelp', agentHelp),
+    vscode.commands.registerCommand('canopy.agentDebug', agentDebug),
   );
 
   context.subscriptions.push(diagnostics);

@@ -138,7 +138,38 @@
     "prefix": "read",
     "description": "Load a category resource file",
     "body": [
-      "* Read `${1|schemas,templates,commands,constants,policies,verify|}/${2:file}` for ${3:purpose}"
+      "* Read `${1|schemas,templates,commands,constants,checklists,policies,verify,references|}/${2:file}` for ${3:purpose}"
+    ]
+  },
+  "SWITCH / CASE / DEFAULT": {
+    "prefix": "switch",
+    "description": "SWITCH / CASE / DEFAULT block — branch on a single expression",
+    "body": [
+      "* SWITCH << ${1:expression}",
+      "  * CASE << ${2:value1}",
+      "    * ${3:action for value1}",
+      "  * CASE << ${4:value2}",
+      "    * ${5:action for value2}",
+      "  * DEFAULT",
+      "    * ${6:action otherwise}"
+    ]
+  },
+  "FOR_EACH": {
+    "prefix": "for",
+    "description": "FOR_EACH loop — iterate over a collection",
+    "body": [
+      "* FOR_EACH << ${1:item} in ${2:collection}",
+      "  * ${3:body action using <<${1:item}>>}"
+    ]
+  },
+  "FOR_EACH with BREAK": {
+    "prefix": "for-break",
+    "description": "FOR_EACH loop with conditional BREAK",
+    "body": [
+      "* FOR_EACH << ${1:item} in ${2:collection}",
+      "  * ${3:body action}",
+      "  * IF << ${4:exit-condition}",
+      "    * BREAK"
     ]
   },
   "bind variable": {

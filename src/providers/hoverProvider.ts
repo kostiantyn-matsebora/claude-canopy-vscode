@@ -13,6 +13,10 @@ const FRONTMATTER_DOCS: Record<string, string> = {
   name: '**`name`** — Kebab-case skill identifier (e.g. `bump-version`). Used in the skill picker.',
   description: '**`description`** — One-line description shown in the skill picker.',
   'argument-hint': '**`argument-hint`** — Shows the expected arguments. Use `<required>` and `[optional]` notation (e.g. `"<version> [strategy]"`).',
+  license: '**`license`** — SPDX license identifier (e.g. `MIT`).',
+  'allowed-tools': '**`allowed-tools`** — Space-separated list of tools the skill may invoke (e.g. `Read Write Edit Glob Grep Bash`).',
+  metadata: '**`metadata`** — Free-form metadata block. Conventional keys: `version` (semver string), `author`.',
+  'user-invocable': '**`user-invocable`** — When `false`, hides the skill from the `/` menu (still loadable by other skills via the Skill tool). Default: `true`.',
 };
 
 export class CanopyHoverProvider implements vscode.HoverProvider {
@@ -31,7 +35,7 @@ export class CanopyHoverProvider implements vscode.HoverProvider {
     }
 
     // --- Hover on frontmatter key ---
-    const fmMatch = line.match(/^(name|description|argument-hint):/);
+    const fmMatch = line.match(/^(name|description|argument-hint|license|allowed-tools|metadata|user-invocable):/);
     if (fmMatch) {
       const doc = FRONTMATTER_DOCS[fmMatch[1]];
       if (doc) return new vscode.Hover(new vscode.MarkdownString(doc));

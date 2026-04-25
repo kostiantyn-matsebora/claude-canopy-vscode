@@ -11,6 +11,11 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 
+/** True if `dir` contains a SKILL.md or skill.md (agentskills.io spec is uppercase). */
+function hasSkillFile(dir: string): boolean {
+  return fs.existsSync(path.join(dir, 'SKILL.md')) || fs.existsSync(path.join(dir, 'skill.md'));
+}
+
 // ---------------------------------------------------------------------------
 // Template content
 // ---------------------------------------------------------------------------
@@ -155,11 +160,12 @@ function getActiveSkillDir(): string | undefined {
   const dir = path.dirname(filePath);
   const parentDir = path.dirname(dir);
 
-  // Direct: skill.md or ops.md
-  if (fileName === 'skill.md' || fileName === 'ops.md') return dir;
+  // Direct: SKILL.md or ops.md
+  const lower = fileName.toLowerCase();
+  if (lower === 'skill.md' || lower === 'ops.md') return dir;
 
   // One level deep: inside schemas/, templates/, commands/, etc.
-  if (fs.existsSync(path.join(parentDir, 'skill.md'))) return parentDir;
+  if (hasSkillFile(parentDir)) return parentDir;
 
   return undefined;
 }
@@ -178,14 +184,14 @@ async function pickSkillDir(): Promise<string | undefined> {
     for (const entry of fs.readdirSync(base, { withFileTypes: true })) {
       if (!entry.isDirectory()) continue;
       const candidate = path.join(base, entry.name);
-      if (fs.existsSync(path.join(candidate, 'skill.md'))) {
+      if (hasSkillFile(candidate)) {
         skillDirs.push(candidate);
       }
     }
   }
 
   if (skillDirs.length === 0) {
-    vscode.window.showErrorMessage('No skill directories found. Open a skill.md file first, or set up Canopy in this workspace.');
+    vscode.window.showErrorMessage('No skill directories found. Open a SKILL.md file first, or set up Canopy in this workspace.');
     return undefined;
   }
   if (skillDirs.length === 1) return skillDirs[0];
@@ -256,16 +262,16 @@ export async function newSkill(): Promise<void> {
 
   const skillDir = path.join(workspaceRoot, '.claude', 'skills', skillName);
 
-  if (fs.existsSync(path.join(skillDir, 'skill.md'))) {
+  if (hasSkillFile(skillDir)) {
     vscode.window.showErrorMessage(`Skill '${skillName}' already exists.`);
     return;
   }
 
   ensureDir(skillDir);
-  fs.writeFileSync(path.join(skillDir, 'skill.md'), SKILL_MD_TEMPLATE(skillName), 'utf8');
+  fs.writeFileSync(path.join(skillDir, 'SKILL.md'), SKILL_MD_TEMPLATE(skillName), 'utf8');
   fs.writeFileSync(path.join(skillDir, 'ops.md'), OPS_MD_TEMPLATE(skillName), 'utf8');
 
-  const doc = await vscode.workspace.openTextDocument(vscode.Uri.file(path.join(skillDir, 'skill.md')));
+  const doc = await vscode.workspace.openTextDocument(vscode.Uri.file(path.join(skillDir, 'SKILL.md')));
   await vscode.window.showTextDocument(doc);
   vscode.window.showInformationMessage(`Skill '${skillName}' created.`);
 }

@@ -1,14 +1,15 @@
-// Reads .claude/canopy/.canopy-version and writes canopyVersion into package.json.
-// Run after every Canopy subtree update: npm run sync-canopy-version
+// Reads .canopy-version (written by claude-canopy's install.sh / install.ps1) and
+// writes canopyVersion into package.json. Run after every Canopy install/update:
+//   npm run sync-canopy-version
 const fs = require('fs');
 const path = require('path');
 
 const root = path.resolve(__dirname, '..');
-const versionFile = path.join(root, '.claude', 'canopy', '.canopy-version');
+const versionFile = path.join(root, '.canopy-version');
 const pkgFile = path.join(root, 'package.json');
 
 if (!fs.existsSync(versionFile)) {
-  console.error('ERROR: .claude/canopy/.canopy-version not found.');
+  console.error('ERROR: .canopy-version not found at repo root. Run install.sh / install.ps1 with --version to write it.');
   process.exit(1);
 }
 

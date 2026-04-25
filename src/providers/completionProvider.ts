@@ -2,9 +2,15 @@ import * as vscode from 'vscode';
 import { parseDocument, SectionKind, isPrimitive } from '../canopyDocument';
 import { PRIMITIVE_DOCS, registry } from '../opRegistry';
 
-const FRONTMATTER_KEYS = ['name', 'description', 'argument-hint'];
+const FRONTMATTER_KEYS = [
+  'name', 'description', 'argument-hint',
+  'license', 'allowed-tools', 'metadata', 'user-invocable',
+];
 const SECTION_NAMES = ['Agent', 'Tree', 'Rules', 'Response:'];
-const CATEGORY_DIRS = ['schemas/', 'templates/', 'commands/', 'constants/', 'policies/', 'verify/'];
+const CATEGORY_DIRS = [
+  'schemas/', 'templates/', 'commands/', 'constants/',
+  'policies/', 'verify/', 'checklists/', 'references/',
+];
 
 export class CanopyCompletionProvider implements vscode.CompletionItemProvider {
   async provideCompletionItems(

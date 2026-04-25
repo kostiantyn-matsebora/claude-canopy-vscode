@@ -124,18 +124,18 @@
       }
     },
     "primitive-control": {
-      "comment": "Control flow primitives — always resolved from framework/ops.md",
-      "match": "\\b(IF|ELSE_IF|ELSE|BREAK|END)\\b",
+      "comment": "Control flow primitives — defined in canopy-runtime/references/framework-ops.md",
+      "match": "\\b(IF|ELSE_IF|ELSE|SWITCH|CASE|DEFAULT|FOR_EACH|BREAK|END)\\b",
       "name": "keyword.control.canopy"
     },
     "primitive-action": {
-      "comment": "Action primitives — ASK, SHOW_PLAN, VERIFY_EXPECTED, EXPLORE",
+      "comment": "Interaction + execution primitives — ASK, SHOW_PLAN, VERIFY_EXPECTED, EXPLORE",
       "match": "\\b(ASK|SHOW_PLAN|VERIFY_EXPECTED|EXPLORE)\\b",
       "name": "support.function.builtin.canopy"
     },
     "op-call": {
       "comment": "Custom ALL_CAPS op names (non-primitive)",
-      "match": "\\b(?!IF\\b|ELSE_IF\\b|ELSE\\b|BREAK\\b|END\\b|ASK\\b|SHOW_PLAN\\b|VERIFY_EXPECTED\\b|EXPLORE\\b)[A-Z][A-Z0-9_]{1,}\\b",
+      "match": "\\b(?!IF\\b|ELSE_IF\\b|ELSE\\b|SWITCH\\b|CASE\\b|DEFAULT\\b|FOR_EACH\\b|BREAK\\b|END\\b|ASK\\b|SHOW_PLAN\\b|VERIFY_EXPECTED\\b|EXPLORE\\b)[A-Z][A-Z0-9_]{1,}\\b",
       "name": "entity.name.function.canopy"
     },
     "input-operator": {

@@ -10,9 +10,13 @@ const RESERVED_PRIMITIVES = new Set([
 ]);
 
 const FRONTMATTER_REQUIRED = ['name', 'description'];
-const FRONTMATTER_ALLOWED = new Set(['name', 'description', 'argument-hint']);
+const FRONTMATTER_ALLOWED = new Set([
+  'name', 'description', 'argument-hint',
+  'license', 'allowed-tools', 'metadata', 'user-invocable',
+]);
 const VALID_CATEGORIES = new Set([
-  'schemas/', 'templates/', 'commands/', 'constants/', 'policies/', 'verify/', 'checklists/'
+  'schemas/', 'templates/', 'commands/', 'constants/',
+  'policies/', 'verify/', 'checklists/', 'references/',
 ]);
 
 export class CanopyDiagnosticsProvider {

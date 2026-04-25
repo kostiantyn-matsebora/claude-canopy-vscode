@@ -3,7 +3,7 @@
   "displayName": "Canopy Skills",
   "description": "Write Claude Code AI skills as executable code, not prose — syntax highlighting, IntelliSense, semantic diagnostics, and go-to-definition for Canopy skills: skill.md, ops.md, schemas, templates, commands, constants, policies, checklists, and verify files.",
   "version": "0.7.0",
-  "canopyVersion": "0.15.0",
+  "canopyVersion": "0.17.0",
   "icon": "images/icon.png",
   "galleryBanner": {
     "color": "#0969da",
@@ -46,8 +46,10 @@
           "canopy"
         ],
         "filenamePatterns": [
+          "**/.claude/**/SKILL.md",
           "**/.claude/**/skill.md",
           "**/.claude/**/ops.md",
+          "**/.github/**/SKILL.md",
           "**/.github/**/skill.md",
           "**/.github/**/ops.md"
         ],
@@ -89,9 +91,11 @@
           "**/.claude/**/constants/*.md",
           "**/.claude/**/policies/*.md",
           "**/.claude/**/schemas/*.md",
+          "**/.claude/**/references/*.md",
           "**/.github/**/constants/*.md",
           "**/.github/**/policies/*.md",
-          "**/.github/**/schemas/*.md"
+          "**/.github/**/schemas/*.md",
+          "**/.github/**/references/*.md"
         ]
       },
       {
@@ -148,13 +152,23 @@
         "category": "Canopy"
       },
       {
-        "command": "canopy.addAsSubmodule",
-        "title": "Add as submodule",
+        "command": "canopy.install",
+        "title": "Install... (pick method)",
         "category": "Canopy"
       },
       {
-        "command": "canopy.addAsCopy",
-        "title": "Add as copy (minimal files)",
+        "command": "canopy.installByCopy",
+        "title": "Install (via install script)",
+        "category": "Canopy"
+      },
+      {
+        "command": "canopy.installAsAgentSkill",
+        "title": "Install as Agent Skill (gh skill)",
+        "category": "Canopy"
+      },
+      {
+        "command": "canopy.installAsPlugin",
+        "title": "Install as Claude Code Plugin",
         "category": "Canopy"
       },
       {
@@ -240,6 +254,11 @@
       {
         "command": "canopy.agentHelp",
         "title": "Help",
+        "category": "Canopy Agent"
+      },
+      {
+        "command": "canopy.agentDebug",
+        "title": "Debug Skill (canopy-debug)",
         "category": "Canopy Agent"
       }
     ],

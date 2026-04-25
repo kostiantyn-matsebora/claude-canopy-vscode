@@ -2,7 +2,9 @@ import { describe, it, expect } from 'vitest';
 import * as path from 'path';
 import {
   buildAgentPrompt,
+  buildDebugPrompt,
   buildClaudeCliCommand,
+  buildClaudeCliDebugCommand,
   projectTargetAt,
   findProjectUpward,
   resolveProjectFromPaths,
@@ -23,15 +25,15 @@ describe('buildAgentPrompt', () => {
       .toBe('/canopy improve bump-version');
   });
 
-  it('produces the explicit Follow-path form for Copilot (no @canopy shorthand)', () => {
+  it('produces the explicit Follow-path form for Copilot', () => {
     expect(buildAgentPrompt('copilot', 'improve bump-version'))
-      .toBe('Follow .github/agents/canopy.md and improve bump-version');
+      .toBe('Follow .github/skills/canopy/SKILL.md and improve bump-version');
   });
 
   it('trims incidental whitespace around the request', () => {
     expect(buildAgentPrompt('claude', '   validate foo   ')).toBe('/canopy validate foo');
     expect(buildAgentPrompt('copilot', '   validate foo   '))
-      .toBe('Follow .github/agents/canopy.md and validate foo');
+      .toBe('Follow .github/skills/canopy/SKILL.md and validate foo');
   });
 
   it('preserves em-dashes and punctuation inside the request', () => {
@@ -52,16 +54,37 @@ describe('buildClaudeCliCommand', () => {
   });
 });
 
+describe('buildDebugPrompt', () => {
+  it('produces the /canopy-debug slash form for Claude', () => {
+    expect(buildDebugPrompt('claude', 'bump-version'))
+      .toBe('/canopy-debug bump-version');
+  });
+
+  it('produces the explicit Follow-path form for Copilot pointing at canopy-debug skill', () => {
+    expect(buildDebugPrompt('copilot', 'bump-version'))
+      .toBe('Follow .github/skills/canopy-debug/SKILL.md and trace bump-version');
+  });
+
+  it('trims incidental whitespace around the skill name', () => {
+    expect(buildDebugPrompt('claude', '   bump-version   '))
+      .toBe('/canopy-debug bump-version');
+  });
+});
+
+describe('buildClaudeCliDebugCommand', () => {
+  it('wraps the /canopy-debug prompt in a claude CLI invocation', () => {
+    expect(buildClaudeCliDebugCommand('bump-version'))
+      .toBe('claude "/canopy-debug bump-version"');
+  });
+});
+
 // ---------------------------------------------------------------------------
 // Project resolution
 // ---------------------------------------------------------------------------
 
-// Install shapes the detector must recognise:
-// - SUBTREE: framework is nested under `canopy/` (submodule / subtree / installer)
-// - FLAT:    framework is flattened directly under `skills/` ("Add as copy")
-const MARKER_SUBTREE = path.join('canopy', 'skills', 'shared', 'framework', 'ops.md');
-const MARKER_FLAT = path.join('skills', 'shared', 'framework', 'ops.md');
-const MARKER = MARKER_SUBTREE;
+// v0.17.0 install layout: every canopy install ships canopy-runtime as the minimum.
+// Its SKILL.md is the canonical project marker.
+const MARKER = path.join('skills', 'canopy-runtime', 'SKILL.md');
 
 /** Build a mock `exists` from a set of present file paths. */
 function mockExists(files: string[]): (candidate: string) => boolean {
@@ -70,31 +93,20 @@ function mockExists(files: string[]): (candidate: string) => boolean {
 }
 
 describe('projectTargetAt', () => {
-  it('returns "claude" for the subtree shape (.claude/canopy/skills/shared/framework/ops.md)', () => {
-    // This is the shape used by `claude-canopy-examples` and any submodule/subtree install.
-    const exists = mockExists([path.join(p('repo'), '.claude', MARKER_SUBTREE)]);
+  it('returns "claude" when .claude/skills/canopy-runtime/SKILL.md is present', () => {
+    const exists = mockExists([path.join(p('repo'), '.claude', MARKER)]);
     expect(projectTargetAt(p('repo'), exists)).toBe('claude');
   });
 
-  it('returns "claude" for the flat "Add as copy" shape (.claude/skills/shared/framework/ops.md)', () => {
-    const exists = mockExists([path.join(p('repo'), '.claude', MARKER_FLAT)]);
-    expect(projectTargetAt(p('repo'), exists)).toBe('claude');
-  });
-
-  it('returns "copilot" when only .github/ marker is present (subtree shape)', () => {
-    const exists = mockExists([path.join(p('repo'), '.github', MARKER_SUBTREE)]);
-    expect(projectTargetAt(p('repo'), exists)).toBe('copilot');
-  });
-
-  it('returns "copilot" for the flat shape under .github/', () => {
-    const exists = mockExists([path.join(p('repo'), '.github', MARKER_FLAT)]);
+  it('returns "copilot" when only .github/ marker is present', () => {
+    const exists = mockExists([path.join(p('repo'), '.github', MARKER)]);
     expect(projectTargetAt(p('repo'), exists)).toBe('copilot');
   });
 
   it('prefers claude when both targets are present', () => {
     const exists = mockExists([
-      path.join(p('repo'), '.claude', MARKER_SUBTREE),
-      path.join(p('repo'), '.github', MARKER_SUBTREE),
+      path.join(p('repo'), '.claude', MARKER),
+      path.join(p('repo'), '.github', MARKER),
     ]);
     expect(projectTargetAt(p('repo'), exists)).toBe('claude');
   });
@@ -134,7 +146,7 @@ describe('resolveProjectFromPaths', () => {
 
   it('prefers the hint path and returns exactly one project', () => {
     const got = resolveProjectFromPaths(
-      path.join(examples, '.claude', 'skills', 'foo', 'skill.md'),
+      path.join(examples, '.claude', 'skills', 'foo', 'SKILL.md'),
       [examples, vscode],
       both,
     );
@@ -169,8 +181,8 @@ describe('resolveProjectFromPaths', () => {
 describe('detectCurrentSkill', () => {
   const root = p('work', 'examples');
 
-  it('returns the skill name for skill.md in a project skill dir', () => {
-    const file = path.join(root, '.claude', 'skills', 'bump-version', 'skill.md');
+  it('returns the skill name for SKILL.md in a project skill dir', () => {
+    const file = path.join(root, '.claude', 'skills', 'bump-version', 'SKILL.md');
     expect(detectCurrentSkill(file, root, 'claude')).toBe('bump-version');
   });
 
@@ -179,19 +191,16 @@ describe('detectCurrentSkill', () => {
     expect(detectCurrentSkill(file, root, 'claude')).toBe('bump-version');
   });
 
-  it('returns the skill name for files under .claude/canopy/skills/... (subtree)', () => {
-    const file = path.join(root, '.claude', 'canopy', 'skills', 'canopy-help', 'skill.md');
-    expect(detectCurrentSkill(file, root, 'claude')).toBe('canopy-help');
-  });
-
   it('works for Copilot projects (.github/)', () => {
-    const file = path.join(root, '.github', 'skills', 'generate-readme', 'skill.md');
+    const file = path.join(root, '.github', 'skills', 'generate-readme', 'SKILL.md');
     expect(detectCurrentSkill(file, root, 'copilot')).toBe('generate-readme');
   });
 
-  it('ignores files inside the shared/ pseudo-skill', () => {
-    const file = path.join(root, '.claude', 'skills', 'shared', 'project', 'ops.md');
-    expect(detectCurrentSkill(file, root, 'claude')).toBeUndefined();
+  it('excludes framework skills (canopy, canopy-debug, canopy-runtime)', () => {
+    for (const fw of ['canopy', 'canopy-debug', 'canopy-runtime']) {
+      const file = path.join(root, '.claude', 'skills', fw, 'SKILL.md');
+      expect(detectCurrentSkill(file, root, 'claude')).toBeUndefined();
+    }
   });
 
   it('returns undefined for files outside any skills root', () => {

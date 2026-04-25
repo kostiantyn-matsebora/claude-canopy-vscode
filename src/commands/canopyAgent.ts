@@ -1,11 +1,11 @@
 /**
  * Commands that invoke canopy agent operations, per the documented runtimes:
- *  - Claude target  (runtimes/claude.md):   `/canopy <request>` — sent via the `claude` CLI
- *  - Copilot target (runtimes/copilot.md):  `Follow .github/agents/canopy.md and <request>` — opened in VS Code Chat
+ *  - Claude target  (runtimes/runtime-claude.md):   `/canopy <request>` — sent via the `claude` CLI
+ *  - Copilot target (runtimes/runtime-copilot.md):  `Follow .github/skills/canopy/SKILL.md and <request>` — opened in VS Code Chat
  *
  * Project selection:
  *  - Walk up from the active editor file to the nearest ancestor containing
- *    `<base>/canopy/skills/shared/framework/ops.md` (.claude wins over .github).
+ *    `<base>/skills/canopy-runtime/SKILL.md` (.claude wins over .github).
  *  - If no active editor or no match, scan workspace folders. 0 → error, 1 → silent,
  *    N → QuickPick.
  *  - Terminals are cached per project root so each project gets its own terminal.
@@ -13,16 +13,22 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import { AiTarget, targetBaseDir } from './setupCanopy';
+import { AiTarget, targetBaseDir } from './installCanopy';
+import { isCommandAvailable } from '../availability';
 
-// A canopy install can take one of two shapes under `<base>/`:
-//  - submodule / subtree / installer  → framework lives at `<base>/canopy/skills/shared/framework/ops.md`
-//  - "Add as copy" (setupCanopy.ts)   → framework is flattened to `<base>/skills/shared/framework/ops.md`
-// Either marker means "this directory is a canopy project".
+// v0.17.0 install layout: every canopy install ships canopy-runtime as the minimum.
+// Its SKILL.md is the canonical project marker.
 const FRAMEWORK_MARKERS = [
-  path.join('canopy', 'skills', 'shared', 'framework', 'ops.md'),
-  path.join('skills', 'shared', 'framework', 'ops.md'),
+  path.join('skills', 'canopy-runtime', 'SKILL.md'),
 ];
+
+// Skills shipped by claude-canopy itself; excluded from the user's pick list.
+const FRAMEWORK_SKILL_NAMES = new Set(['canopy', 'canopy-debug', 'canopy-runtime']);
+
+/** True if `dir/<file>` exists matching either case (skill.md or SKILL.md). */
+function skillFileExists(dir: string): boolean {
+  return fs.existsSync(path.join(dir, 'SKILL.md')) || fs.existsSync(path.join(dir, 'skill.md'));
+}
 
 const terminals = new Map<string, vscode.Terminal>();
 
@@ -32,19 +38,34 @@ const terminals = new Map<string, vscode.Terminal>();
 
 /**
  * Build the prompt routed to the canopy agent for the given platform.
- * Shapes match runtimes/claude.md §Invocation and runtimes/copilot.md §Invocation.
+ * Shapes match canopy-runtime references/runtime-claude.md and runtime-copilot.md §Invocation.
  */
 export function buildAgentPrompt(target: AiTarget, request: string): string {
   const trimmed = request.trim();
   if (target === 'copilot') {
-    return `Follow .github/agents/canopy.md and ${trimmed}`;
+    return `Follow .github/skills/canopy/SKILL.md and ${trimmed}`;
   }
   return `/canopy ${trimmed}`;
+}
+
+/** Build the prompt for the canopy-debug trace wrapper (one skill at a time). */
+export function buildDebugPrompt(target: AiTarget, skillName: string): string {
+  const trimmed = skillName.trim();
+  if (target === 'copilot') {
+    return `Follow .github/skills/canopy-debug/SKILL.md and trace ${trimmed}`;
+  }
+  return `/canopy-debug ${trimmed}`;
 }
 
 /** Shell command for the Claude CLI (`claude "/canopy <request>"`). */
 export function buildClaudeCliCommand(request: string): string {
   const prompt = buildAgentPrompt('claude', request).replace(/"/g, '\\"');
+  return `claude "${prompt}"`;
+}
+
+/** Shell command for the Claude CLI for canopy-debug (`claude "/canopy-debug <skill>"`). */
+export function buildClaudeCliDebugCommand(skillName: string): string {
+  const prompt = buildDebugPrompt('claude', skillName).replace(/"/g, '\\"');
   return `claude "${prompt}"`;
 }
 
@@ -108,8 +129,7 @@ export function resolveProjectFromPaths(
 
 /**
  * If `activeFilePath` lives under the project's skills tree, return the skill name.
- * Covers `<base>/skills/<name>/...` and `<base>/canopy/skills/<name>/...`.
- * Excludes `shared`.
+ * Covers `<base>/skills/<name>/...`. Excludes framework skills.
  */
 export function detectCurrentSkill(
   activeFilePath: string | undefined,
@@ -117,18 +137,12 @@ export function detectCurrentSkill(
   target: AiTarget,
 ): string | undefined {
   if (!activeFilePath) return undefined;
-  const base = targetBaseDir(projectRoot, target);
-  const roots = [
-    path.join(base, 'skills'),
-    path.join(base, 'canopy', 'skills'),
-  ];
-  for (const skillsRoot of roots) {
-    const prefix = skillsRoot + path.sep;
-    if (!activeFilePath.startsWith(prefix)) continue;
-    const rel = activeFilePath.slice(prefix.length);
-    const first = rel.split(/[\\/]/, 1)[0];
-    if (first && first !== 'shared') return first;
-  }
+  const skillsRoot = path.join(targetBaseDir(projectRoot, target), 'skills');
+  const prefix = skillsRoot + path.sep;
+  if (!activeFilePath.startsWith(prefix)) return undefined;
+  const rel = activeFilePath.slice(prefix.length);
+  const first = rel.split(/[\\/]/, 1)[0];
+  if (first && !FRAMEWORK_SKILL_NAMES.has(first)) return first;
   return undefined;
 }
 
@@ -170,23 +184,13 @@ async function resolveCanopyProject(): Promise<{ root: string; target: AiTarget 
 }
 
 function listProjectSkills(projectRoot: string, target: AiTarget): string[] {
-  const base = targetBaseDir(projectRoot, target);
-  // When projectRoot is absolute, targetBaseDir returns an absolute path; join is a no-op.
-  // When relative (tests), the same holds because targetBaseDir already prepends root.
-  const dirs = [
-    path.join(base, 'skills'),
-    path.join(base, 'canopy', 'skills'),
-  ];
+  const skillsRoot = path.join(targetBaseDir(projectRoot, target), 'skills');
+  if (!fs.existsSync(skillsRoot)) return [];
   const out: string[] = [];
-  const seen = new Set<string>();
-  for (const d of dirs) {
-    if (!fs.existsSync(d)) continue;
-    for (const entry of fs.readdirSync(d, { withFileTypes: true })) {
-      if (!entry.isDirectory() || entry.name === 'shared' || seen.has(entry.name)) continue;
-      if (fs.existsSync(path.join(d, entry.name, 'skill.md'))) {
-        out.push(entry.name);
-        seen.add(entry.name);
-      }
+  for (const entry of fs.readdirSync(skillsRoot, { withFileTypes: true })) {
+    if (!entry.isDirectory() || FRAMEWORK_SKILL_NAMES.has(entry.name)) continue;
+    if (skillFileExists(path.join(skillsRoot, entry.name))) {
+      out.push(entry.name);
     }
   }
   return out.sort();
@@ -224,6 +228,19 @@ async function pickSkill(
     : picked.label;
 }
 
+async function ensureClaudeOrFail(): Promise<boolean> {
+  if (await isCommandAvailable('claude')) return true;
+  const choice = await vscode.window.showErrorMessage(
+    'Claude Code CLI (claude) is not on PATH. Install Claude Code, or open this project in a Copilot workspace to use the Copilot target.',
+    'Open Claude Code download',
+    'Cancel',
+  );
+  if (choice === 'Open Claude Code download') {
+    vscode.env.openExternal(vscode.Uri.parse('https://claude.ai/code'));
+  }
+  return false;
+}
+
 async function runOn(
   project: { root: string; target: AiTarget },
   request: string,
@@ -234,6 +251,7 @@ async function runOn(
     });
     return;
   }
+  if (!(await ensureClaudeOrFail())) return;
   const term = getTerminalFor(project.root);
   term.show(true);
   term.sendText(buildClaudeCliCommand(request));
@@ -364,4 +382,26 @@ export async function agentConvertToRegular(): Promise<void> {
 
 export async function agentHelp(): Promise<void> {
   await run('help — list all operations');
+}
+
+// ---------------------------------------------------------------------------
+// DEBUG (/canopy-debug <skill>) — trace wrapper, separate skill from /canopy
+// ---------------------------------------------------------------------------
+
+export async function agentDebug(): Promise<void> {
+  const project = await resolveCanopyProject();
+  if (!project) return;
+  const skillName = await pickSkill(project.root, project.target, 'Skill to trace with canopy-debug');
+  if (!skillName) return;
+
+  if (project.target === 'copilot') {
+    await vscode.commands.executeCommand('workbench.action.chat.open', {
+      query: buildDebugPrompt('copilot', skillName),
+    });
+    return;
+  }
+  if (!(await ensureClaudeOrFail())) return;
+  const term = getTerminalFor(project.root);
+  term.show(true);
+  term.sendText(buildClaudeCliDebugCommand(skillName));
 }

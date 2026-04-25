@@ -73,7 +73,7 @@ export function isPrimitive(name: string): boolean {
 
 export function parseDocument(document: vscode.TextDocument): ParsedSkillDocument {
   const uri = document.uri;
-  const fileName = path.basename(uri.fsPath);
+  const fileName = path.basename(uri.fsPath).toLowerCase();
   const isOpsFile = fileName === 'ops.md';
   const isSkillFile = fileName === 'skill.md';
 
