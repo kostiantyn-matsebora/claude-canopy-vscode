@@ -13,9 +13,9 @@ body:
         - IntelliSense / completions
         - diagnostics / validation
         - hover / go-to-definition
-        - scaffold commands (New Skill / Template / Policy / ...)
-        - setup commands (Add as submodule / Add as copy)
-        - agent commands (Canopy Agent: *)
+        - scaffold commands (Canopy Template: New Skill / Template / Policy / ...)
+        - install commands (Canopy Install: *)
+        - agent commands (Canopy Skill: *)
         - packaging / install
         - other
     validations:

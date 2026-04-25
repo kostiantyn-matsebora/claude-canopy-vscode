@@ -13,16 +13,16 @@ Run this after installing the VSIX (`code --install-extension canopy-skills-0.7.
 - [ ] Open a fresh empty folder in VS Code (this is your "consumer project" target)
 - [ ] Confirm extension activates (status bar / Output → "Canopy Install" channel exists)
 
-## B. `Canopy: Install...` (unified Quick Pick)
+## B. `Canopy Install: Install...` (unified Quick Pick)
 
-- [ ] Run command "Canopy: Install... (pick method)"
+- [ ] Run command "Canopy Install: Install... (pick method)"
 - [ ] Quick Pick shows three items
 - [ ] **Install (via install script)** → labeled `$(check)` (you have git)
 - [ ] **Install as Agent Skill (gh skill)** → labeled `$(warning)` with detail "gh skill subcommand not available — install or upgrade to gh 2.90.0+" (your gh is 2.89.0)
 - [ ] **Install as Claude Code Plugin** → labeled `$(check)` or `$(zap)` depending on whether `claude` CLI is on PATH
 - [ ] Selecting each routes to its underlying command (verify by Esc out and try directly)
 
-## C. `Canopy: Install (via install script)`
+## C. `Canopy Install: Install (via install script)`
 
 - [ ] Run command — git is detected, no error dialog
 - [ ] Target picker offers Claude / GitHub Copilot
@@ -36,7 +36,7 @@ Run this after installing the VSIX (`code --install-extension canopy-skills-0.7.
 - [ ] If you unchecked one skill, that skill's directory is missing
 - [ ] Re-run with `--target` Copilot — `.github/skills/{canopy,canopy-runtime,canopy-debug}/SKILL.md` exist; `.github/copilot-instructions.md` has the marker block
 
-## D. `Canopy: Install as Agent Skill (gh skill)`
+## D. `Canopy Install: Install as Agent Skill (gh skill)`
 
 - [ ] Run command — error dialog appears: "GitHub CLI v2.90.0+ with the `skill` subcommand is required…"
 - [ ] Three buttons: "Use install script" (→ delegates to install-by-copy), "Open gh download" (→ opens cli.github.com), "Cancel"
@@ -44,7 +44,7 @@ Run this after installing the VSIX (`code --install-extension canopy-skills-0.7.
 - [ ] After install: skills land at `.claude/skills/<name>/SKILL.md` (or `.github/skills/`)
 - [ ] **Critical:** confirm `CLAUDE.md` (or `.github/copilot-instructions.md`) was written with the canopy-runtime marker block — gh skill itself doesn't write it; the extension does.
 
-## E. `Canopy: Install as Claude Code Plugin`
+## E. `Canopy Install: Install as Claude Code Plugin`
 
 - [ ] Run command — skill picker shows
 - [ ] If you uncheck any skill, modal warning explains plugin install bundles all 3
@@ -89,8 +89,8 @@ Open `.claude/skills/canopy/SKILL.md` (or any skill).
 
 These need a workspace where canopy-runtime is installed (use the test-dir from C/D).
 
-- [ ] **Canopy Agent: Validate Skill** → skill picker shows non-framework skills only (excludes canopy/canopy-runtime/canopy-debug); selecting one launches Claude CLI in a terminal with `claude "/canopy validate the X skill"`
-- [ ] **Canopy Agent: Debug Skill (canopy-debug)** → same skill picker; launches `claude "/canopy-debug X"`
+- [ ] **Canopy Skill: Validate Skill** → skill picker shows non-framework skills only (excludes canopy/canopy-runtime/canopy-debug); selecting one launches Claude CLI in a terminal with `claude "/canopy validate the X skill"`
+- [ ] **Canopy Skill: Debug Skill (canopy-debug)** → same skill picker; launches `claude "/canopy-debug X"`
 - [ ] If `claude` not on PATH: error dialog "Claude Code CLI (claude) is not on PATH" with "Open Claude Code download" button
 - [ ] Copilot target equivalents: agent commands open the chat with `Follow .github/skills/canopy/SKILL.md and validate the X skill` (no claude check needed)
 
@@ -99,7 +99,7 @@ These need a workspace where canopy-runtime is installed (use the test-dir from 
 In a workspace that has skills under `.claude/skills/<your-skill>/SKILL.md`:
 
 - [ ] Open one of your skills' SKILL.md — diagnostics pass, syntax-highlighting correct
-- [ ] Run `Canopy Agent: Validate Skill` on it → completes without error
+- [ ] Run `Canopy Skill: Validate Skill` on it → completes without error
 - [ ] If you added `license`/`metadata`/`allowed-tools` to your skills, those don't get flagged
 
 ## Findings (already known)

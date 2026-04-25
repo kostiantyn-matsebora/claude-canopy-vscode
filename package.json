@@ -154,112 +154,112 @@
       {
         "command": "canopy.install",
         "title": "Install... (pick method)",
-        "category": "Canopy"
+        "category": "Canopy Install"
       },
       {
         "command": "canopy.installByCopy",
         "title": "Install (via install script)",
-        "category": "Canopy"
+        "category": "Canopy Install"
       },
       {
         "command": "canopy.installAsAgentSkill",
         "title": "Install as Agent Skill (gh skill)",
-        "category": "Canopy"
+        "category": "Canopy Install"
       },
       {
         "command": "canopy.installAsPlugin",
         "title": "Install as Claude Code Plugin",
-        "category": "Canopy"
+        "category": "Canopy Install"
       },
       {
         "command": "canopy.newSkill",
         "title": "New Skill",
-        "category": "Canopy"
+        "category": "Canopy Template"
       },
       {
         "command": "canopy.newVerifyFile",
         "title": "New Verify File",
-        "category": "Canopy"
+        "category": "Canopy Template"
       },
       {
         "command": "canopy.newTemplate",
         "title": "New Template",
-        "category": "Canopy"
+        "category": "Canopy Template"
       },
       {
         "command": "canopy.newConstantsFile",
         "title": "New Constants File",
-        "category": "Canopy"
+        "category": "Canopy Template"
       },
       {
         "command": "canopy.newPolicyFile",
         "title": "New Policy File",
-        "category": "Canopy"
+        "category": "Canopy Template"
       },
       {
         "command": "canopy.newCommandsFile",
         "title": "New Commands File",
-        "category": "Canopy"
+        "category": "Canopy Template"
       },
       {
         "command": "canopy.newSchema",
         "title": "New Schema",
-        "category": "Canopy"
+        "category": "Canopy Template"
       },
       {
         "command": "canopy.agentCreate",
         "title": "Create Skill",
-        "category": "Canopy Agent"
+        "category": "Canopy Skill"
       },
       {
         "command": "canopy.agentModify",
         "title": "Modify Skill",
-        "category": "Canopy Agent"
+        "category": "Canopy Skill"
       },
       {
         "command": "canopy.agentScaffold",
         "title": "Scaffold Skill",
-        "category": "Canopy Agent"
+        "category": "Canopy Skill"
       },
       {
         "command": "canopy.agentConvertToCanopy",
         "title": "Convert to Canopy",
-        "category": "Canopy Agent"
+        "category": "Canopy Skill"
       },
       {
         "command": "canopy.agentValidate",
         "title": "Validate Skill",
-        "category": "Canopy Agent"
+        "category": "Canopy Skill"
       },
       {
         "command": "canopy.agentImprove",
         "title": "Improve Skill",
-        "category": "Canopy Agent"
+        "category": "Canopy Skill"
       },
       {
         "command": "canopy.agentAdvise",
         "title": "Advise",
-        "category": "Canopy Agent"
+        "category": "Canopy Skill"
       },
       {
         "command": "canopy.agentRefactorSkills",
         "title": "Refactor Skills",
-        "category": "Canopy Agent"
+        "category": "Canopy Skill"
       },
       {
         "command": "canopy.agentConvertToRegular",
         "title": "Convert to Regular Skill",
-        "category": "Canopy Agent"
+        "category": "Canopy Skill"
       },
       {
         "command": "canopy.agentHelp",
         "title": "Help",
-        "category": "Canopy Agent"
+        "category": "Canopy Skill"
       },
       {
         "command": "canopy.agentDebug",
         "title": "Debug Skill (canopy-debug)",
-        "category": "Canopy Agent"
+        "category": "Canopy Skill"
       }
     ],
     "configuration": {

@@ -16,7 +16,9 @@ The `activate` step (canopy v0.17.1+) writes the canopy-runtime marker block to 
 
 The marker block is already committed to this repo's `CLAUDE.md`, so a fresh checkout + plugin install is enough — `activate` is a safe no-op if the block matches the current canopy release. Re-run `activate` after a `/plugin update canopy@claude-canopy` if the new release changed the block content.
 
-> **Extension follow-up needed:** `src/commands/setupCanopy.ts` was removed in v0.17.0. The new install commands live in `src/commands/installCanopy.ts` (`Canopy: Install...`, `Canopy: Install (via install script)`, `Canopy: Install as Agent Skill (gh skill)`, `Canopy: Install as Claude Code Plugin`). Pinned to canopy v0.17.1 via `.canopy-version` and `package.json#canopyVersion`.
+> **Extension follow-up needed:** `src/commands/setupCanopy.ts` was removed in v0.17.0. The new install commands live in `src/commands/installCanopy.ts` (`Canopy Install: Install...`, `Canopy Install: Install (via install script)`, `Canopy Install: Install as Agent Skill (gh skill)`, `Canopy Install: Install as Claude Code Plugin`). Pinned to canopy v0.17.1 via `.canopy-version` and `package.json#canopyVersion`.
+
+> **Command palette categories:** three groups in `package.json#contributes.commands`, named so they sort alphabetically into a workflow order — `Canopy Install` → `Canopy Skill` (agent commands) → `Canopy Template` (manual scaffold commands). `canopy.showVersion` stays in the bare `Canopy` category as a meta utility. `Canopy Agent` (the old agent category) was renamed to `Canopy Skill`; the integrated-terminal label in `canopyAgent.ts` (`Canopy Agent (<root>)`) is unrelated and intentionally left as-is — it describes the running agent, not a command group.
 
 ## This Repository
 

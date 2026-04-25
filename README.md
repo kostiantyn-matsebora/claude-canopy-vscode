@@ -52,6 +52,27 @@ The extension is distributed as a `.vsix` on GitHub Releases until the Marketpla
    ```
    Or in VS Code: **Extensions** panel → **…** menu → **Install from VSIX…** → pick the file.
 
+## Quick Start
+
+Open your project, then run these from the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`):
+
+1. **`Canopy Install: Install...`**
+   - Pick an install method: script / `gh skill` / Claude Code plugin
+   - Pick a target: Claude Code or Copilot
+   - Installs the three framework skills and writes the runtime marker block
+2. **Create your first skill** (requires `claude` or `gh copilot` on `PATH`)
+   - **`Canopy Skill: Create Skill`** — describe it in plain English; the agent scaffolds and validates
+   - **`Canopy Template: New Skill`** — drop a blank `SKILL.md` + `ops.md` and hand-author
+3. **Edit the generated `SKILL.md`** — these activate automatically:
+   - Autocomplete for primitives and custom ops
+   - Hover docs on every `ALL_CAPS` identifier
+   - `F12` go-to-definition
+   - Real-time diagnostics with Quick Fixes
+4. **Run the skill** from your AI agent
+   - Claude Code auto-discovers `.claude/skills/`
+   - Copilot loads `.github/skills/`
+   - Iterate with `Canopy Skill: Modify / Validate / Improve Skill`
+
 ## What this extension does
 
 Turns Canopy skill files into a first-class editor experience: live semantic validation with Quick Fixes, autocomplete for every primitive and custom op, inline hover docs, and go-to-definition across the skill → project → framework op lookup chain. Ships scaffolding commands for every resource type plus direct integration with the Canopy AI agent via `claude` or `gh copilot suggest`.
@@ -78,9 +99,20 @@ Hover any `ALL_CAPS` identifier to see its signature, description, and how it fl
 
 ## Commands
 
-All commands are accessible via the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`).
+All commands are accessible via the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`). Commands are grouped into three categories that sort alphabetically in the palette to give you a natural workflow order: **Canopy Install** → **Canopy Skill** → **Canopy Template**.
 
-### ✨ Agent — describe it, let AI write it (`Canopy Agent` category)
+### Install (`Canopy Install` category)
+
+Install the Canopy framework into your project. Each command shows a Quick Pick of the three skills (canopy, canopy-runtime, canopy-debug) — all checked by default.
+
+| Command | What it does |
+|---|---|
+| **Install...** | Unified entry point; presents a Quick Pick of the three install methods with availability badges based on which CLIs (`git`, `gh skill`, `claude`) are on PATH |
+| **Install (via install script)** | Clone canopy and run `install.sh` / `install.ps1`. Picks Claude or Copilot target; writes the canopy-runtime ambient marker block automatically. Requires `git`. |
+| **Install as Agent Skill (gh skill)** | `gh skill install` per checked skill. Picks Claude Code or GitHub Copilot agent. Writes the marker block too (gh skill itself doesn't). Requires `gh` ≥ 2.90.0. |
+| **Install as Claude Code Plugin** | Copies the three `/plugin` slash commands (marketplace add + install + activate) to clipboard for paste in a Claude Code session. Plugin install bundles all three skills. |
+
+### ✨ Skill — describe it, let AI write it (`Canopy Skill` category)
 
 **Start here.** No deep framework knowledge required — describe what you want in plain English and the Canopy AI agent writes, validates, and refines the skill for you. Auto-detects the installed AI target (Claude Code under `.claude/` or GitHub Copilot under `.github/`) and invokes `claude "<prompt>"` or `gh copilot suggest "<prompt>"`.
 
@@ -97,18 +129,7 @@ All commands are accessible via the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift
 | **Convert to Regular Skill** | Converts a Canopy skill back to plain markdown |
 | **Help** | Lists all available agent operations |
 
-### Install (`Canopy` category)
-
-Install the Canopy framework into your project. Each command shows a Quick Pick of the three skills (canopy, canopy-runtime, canopy-debug) — all checked by default.
-
-| Command | What it does |
-|---|---|
-| **Install...** | Unified entry point; presents a Quick Pick of the three install methods with availability badges based on which CLIs (`git`, `gh skill`, `claude`) are on PATH |
-| **Install (via install script)** | Clone canopy and run `install.sh` / `install.ps1`. Picks Claude or Copilot target; writes the canopy-runtime ambient marker block automatically. Requires `git`. |
-| **Install as Agent Skill (gh skill)** | `gh skill install` per checked skill. Picks Claude Code or GitHub Copilot agent. Writes the marker block too (gh skill itself doesn't). Requires `gh` ≥ 2.90.0. |
-| **Install as Claude Code Plugin** | Copies the three `/plugin` slash commands (marketplace add + install + activate) to clipboard for paste in a Claude Code session. Plugin install bundles all three skills. |
-
-### Scaffold — manual authoring (`Canopy` category)
+### Scaffold — manual authoring (`Canopy Template` category)
 
 For authors who know the framework and prefer to hand-write skills and resources. Each command drops a correctly-structured blank file at the right path — you fill in the content.
 
@@ -179,7 +200,7 @@ Real-time squiggles for:
 - VS Code 1.85 or later
 - For **Install (via install script)**: `git` in PATH
 - For **Install as Agent Skill (gh skill)**: `gh` CLI v2.90.0+ in PATH (the `skill` subcommand)
-- For **Canopy Agent** commands targeting Claude: `claude` CLI in PATH (each command surfaces an "open download" link if missing)
+- For **Canopy Skill** commands targeting Claude: `claude` CLI in PATH (each command surfaces an "open download" link if missing)
 
 ## Settings
 

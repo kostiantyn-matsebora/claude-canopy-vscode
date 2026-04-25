@@ -608,16 +608,29 @@ export async function installAsPlugin(): Promise<void> {
 
   if (claudeAvailable) {
     const choice = await vscode.window.showInformationMessage(
-      `${message}\n\nClaude CLI detected — open it in a terminal so you can paste?`,
+      `${message}\n\nClaude CLI detected — open it in a terminal and auto-run the commands? ` +
+      `If Claude is slow to start and a command lands in the shell instead, the clipboard copy is still primed for manual paste.`,
       { modal: true },
-      'Open Claude in terminal',
+      'Open Claude and run commands',
       'Just keep the clipboard copy',
     );
-    if (choice === 'Open Claude in terminal') {
+    if (choice === 'Open Claude and run commands') {
       const term = vscode.window.createTerminal({ name: 'Canopy Plugin Install' });
       term.show(true);
       term.sendText('claude', true);
-      // Slash commands are interactive; user pastes from clipboard at the Claude prompt.
+      // Wait for claude to boot, then send each slash command to its interactive
+      // prompt. Leading empty newline is a safety floor — if claude hasn't taken
+      // over stdin yet, it lands as a harmless empty shell line rather than
+      // corrupting the next command. Clipboard copy stays primed as fallback.
+      setTimeout(() => {
+        term.sendText('', true);
+        for (const cmd of cmds) {
+          term.sendText(cmd, true);
+        }
+      }, 3000);
+      vscode.window.showInformationMessage(
+        'If the three /plugin commands did not run inside Claude, paste from the clipboard (Ctrl+V) at the Claude prompt.',
+      );
     }
     return;
   }
