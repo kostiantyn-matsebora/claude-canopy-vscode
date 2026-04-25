@@ -56,11 +56,15 @@ jobs:
       - run: npm test
       - run: npm run package
 
-      - name: Create GitHub Release
+      - name: Create or update GitHub Release
         run: |
-          gh release create "${{ steps.tag.outputs.value }}" *.vsix \
-            --title "Canopy Skills ${{ steps.tag.outputs.value }}" \
-            --generate-notes
+          if gh release view "${{ steps.tag.outputs.value }}" > /dev/null 2>&1; then
+            gh release upload "${{ steps.tag.outputs.value }}" *.vsix --clobber
+          else
+            gh release create "${{ steps.tag.outputs.value }}" *.vsix \
+              --title "Canopy Skills ${{ steps.tag.outputs.value }}" \
+              --generate-notes
+          fi
         env:
           GH_TOKEN: ${{ github.token }}
 
