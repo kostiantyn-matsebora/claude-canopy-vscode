@@ -2,6 +2,17 @@
 
 All notable changes to the Canopy Skills extension are documented here.
 
+## [0.10.0] — 2026-04-25
+
+### Added
+
+- **Plugin install detection** — workspace commands now recognize projects where Canopy is installed as a Claude Code plugin (no skill files on disk). Detection falls back to the `<!-- canopy-runtime-begin -->` marker block in `CLAUDE.md` written by `/canopy:canopy activate`. `InstallKind` (`'file' | 'plugin'`) is carried through the full resolution chain.
+
+### Fixed
+
+- **Plugin op invocation** — commands now send `/canopy:canopy <request>` and `/canopy:canopy-debug <skill>` when Canopy is plugin-installed, instead of the bare `/canopy` / `/canopy-debug` forms that only work for file-based installs.
+- **Outdated "no project found" error** — message no longer references the removed "Add as copy" / "Add as submodule" commands; now directs to `Canopy Install: Install…`.
+
 ## [0.9.2] — 2026-04-25
 
 ### Added
