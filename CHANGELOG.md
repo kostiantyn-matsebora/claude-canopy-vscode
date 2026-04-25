@@ -2,6 +2,53 @@
 
 All notable changes to the Canopy Skills extension are documented here.
 
+## [0.8.0] — 2026-04-25
+
+Sync with Canopy framework `v0.17.1` (was `v0.15.0`). The framework restructured around the [agentskills.io](https://agentskills.io) spec, split the runtime into a standalone `canopy-runtime` skill, switched from a bundled subtree to plugin / `gh skill` / install-script distribution, and added the `ACTIVATE` op. The extension's install commands and language support are rebuilt around the new model.
+
+### Added
+
+- **Three new install commands** in the `Canopy` category — replacing the deleted `Add as submodule` / `Add as copy`:
+  - **`Canopy: Install...`** — unified Quick Pick of the three methods, with `$(check)`/`$(warning)`/`$(zap)` availability badges based on which CLIs (`git`, `gh skill`, `claude`) are on PATH.
+  - **`Canopy: Install (via install script)`** — clone canopy + run `install.sh` / `install.ps1` (per-platform). Picks Claude / Copilot target. Multi-select Quick Pick of the three skills (canopy / canopy-runtime / canopy-debug, all checked by default); unchecked skills are deleted post-install. Requires `git`.
+  - **`Canopy: Install as Agent Skill (gh skill)`** — `gh skill install` per checked skill. Picks Claude Code / GitHub Copilot agent. Writes the canopy-runtime marker block to `CLAUDE.md` / `.github/copilot-instructions.md` automatically (gh skill itself doesn't). Requires `gh ≥ 2.90.0`.
+  - **`Canopy: Install as Claude Code Plugin`** — copies the three `/plugin` slash commands (`marketplace add` + `install` + `/canopy:canopy activate`) to clipboard. If `claude` CLI is detected, also offers to open Claude in the integrated terminal for paste-and-run.
+- **`Canopy Agent: Debug Skill (canopy-debug)`** — new agent command that dispatches `/canopy-debug <skill>` (Claude) or `Follow .github/skills/canopy-debug/SKILL.md and trace <skill>` (Copilot), bringing the extension to **11** agent commands total.
+- **Tool availability detection** (`src/availability.ts`) — `isCommandAvailable(cmd)` and `detectTools()` probe `git --version`, `gh skill --help`, `claude --version`. Used to gate install commands and surface "open download" links when a tool is missing.
+- **gh-skill availability probes the `skill` subcommand specifically** — false positives on `gh < 2.90.0` (which lacks the subcommand) are eliminated.
+- **claude-CLI availability check before agent dispatch** — agent commands no longer silently fail when `claude` isn't on PATH; an error dialog with an "Open Claude Code download" button surfaces instead.
+- **Marker-block writer** for both `installAsAgentSkill` and the agent-installs path (`MARKER_BLOCK`, `applyMarkerBlock`, `ambientInstructionFile`, `writeAmbientMarkerBlock`) — byte-identical with `claude-canopy/install.sh build_marker_block()`. Idempotent (create / append / replace / unchanged / refuse-on-malformed).
+- **`SWITCH` / `CASE` / `DEFAULT` / `FOR_EACH` primitives** added to grammar and snippets (synced from canopy v0.13.0 — were previously recognised by diagnostics only). Highlights as control-flow keywords; new snippets `switch`, `for`, `for-break`.
+- **`references/` and `checklists/` categories** added to snippets `Read` resource dropdown for parity with diagnostics.
+- **`license`, `metadata`, `allowed-tools`, `user-invocable`** frontmatter fields added to `FRONTMATTER_ALLOWED` / `FRONTMATTER_KEYS` / `FRONTMATTER_DOCS` (full agentskills.io spec). Closes the false-positive "unknown frontmatter field" warning on real v0.17.0 SKILL.md files.
+- **Real-SKILL.md integration tests** (`src/test/realSkills.test.ts`) — load actual SKILL.md files from sibling `claude-canopy/` and from this repo's `.claude/skills/` and assert no unknown-frontmatter slips through.
+- **`TEST-PLAN-v0.17.0-sync.md`** — manual UI test plan documenting all UI flows (Quick Picks, modals, snippet expansion, syntax highlighting, hover, completion, agent commands).
+- **`.github/copilot-instructions.md`** — created at repo root with the canopy-runtime marker block, mirroring `CLAUDE.md` for Copilot users.
+- 254 unit + integration tests passing (was 183 in 0.7.0).
+
+### Changed
+
+- **Canopy is no longer bundled in this repo.** `.claude/skills/canopy*` and `.github/skills/` removed. Canopy now installs as a Claude Code plugin at user scope (`/plugin install canopy@claude-canopy`); this repo's user skills (`bump-version`, `release`, `update`) load the plugin runtime ambiently via the marker block now committed to `CLAUDE.md` and `.github/copilot-instructions.md`.
+- **Framework project-detection marker** updated from `<base>/canopy/skills/shared/framework/ops.md` and `<base>/skills/shared/framework/ops.md` (pre-v0.17.0 layouts) to `<base>/skills/canopy-runtime/SKILL.md`.
+- **`SKILL.md` (uppercase)** is now the canonical filename per agentskills.io spec. Detection is case-insensitive across `canopyDocument.ts`, `extension.ts`, `commands/canopyAgent.ts`, `commands/newResource.ts`. New skills are scaffolded as `SKILL.md`. `package.json` filename patterns include both cases.
+- **`canopy-resource` filename patterns** include `**/references/*.md` (new category in canopy v0.17.0).
+- **Framework skills** (`canopy`, `canopy-runtime`, `canopy-debug`) excluded from the agent-command skill picker (`FRAMEWORK_SKILL_NAMES`).
+- **Copilot agent prompt** updated to `Follow .github/skills/canopy/SKILL.md and <request>` (was `.github/agents/canopy.md` in 0.7.0).
+- **`.canopy-version` source path** moved from `.claude/canopy/.canopy-version` (legacy subtree) to repo root. `scripts/sync-canopy-version.js` updated.
+- **README and CLAUDE.md** rewritten — install paths, command tables, sync-points, source layout all reflect v0.17.0+.
+- **`docs/DEVELOPMENT.md`** updated — source layout, test coverage map, op-lookup chain, and primitive/category sync checklists all reflect the post-v0.17.0 codebase.
+
+### Removed
+
+- **`canopy.addAsSubmodule`** and **`canopy.addAsCopy`** commands — superseded by the four new install commands.
+- **`src/commands/setupCanopy.ts`** — its scaffolding logic was tied to the legacy v0.16-and-earlier `shared/framework/ops.md` layout; replaced by `src/commands/installCanopy.ts`.
+- **Bundled framework skills** (`canopy`, `canopy-runtime`, `canopy-debug`) under `.claude/skills/` and the entire `.github/skills/` tree.
+
+### Fixed
+
+- Plugin-install path UX gap: the `/plugin install canopy@claude-canopy` flow now includes `/canopy:canopy activate` as a third step in the clipboard copy and modal text — without it, user-authored canopy skills under `.claude/skills/` weren't runtime-active because plugin install doesn't write the ambient marker block.
+- Tests for `canopyAgent` updated to use SKILL.md and the v0.17.0 marker (`skills/canopy-runtime/SKILL.md`) instead of the deleted subtree-flat marker pair.
+
 ## [0.7.0] — 2026-04-22
 
 ### Fixed

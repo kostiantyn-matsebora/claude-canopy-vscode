@@ -19,7 +19,7 @@
 
 ### Running the extension locally (dev loop)
 
-Press **F5** in VS Code. This launches an **Extension Development Host** with the extension loaded. Open any `.claude/**/skill.md` file to activate IntelliSense and diagnostics.
+Press **F5** in VS Code. This launches an **Extension Development Host** with the extension loaded. Open any `.claude/**/SKILL.md` (or legacy `skill.md`) file to activate IntelliSense and diagnostics.
 
 Every time you change TypeScript source, re-run `npm run compile` (or keep `npm run watch` running) and reload the Extension Development Host window with **Ctrl+Shift+P → Developer: Reload Window**.
 
@@ -88,6 +88,11 @@ The vscode mock (`src/__mocks__/vscode.ts`) is a plain object, so `vi.spyOn` wor
 | `resourceParser.test.ts` | `extractCommandsSections`, `extractPlaceholders` |
 | `diagnosticsProvider.test.ts` | All `validate()` branches in `CanopyDiagnosticsProvider` |
 | `opRegistry.test.ts` | `PRIMITIVE_DOCS`, `OpRegistry.loadDefs`, `invalidate`, `resolve`, `allOpNames` |
+| `canopyAgent.test.ts` | `buildAgentPrompt`, `buildDebugPrompt`, `buildClaudeCliCommand`, `projectTargetAt`, `findProjectUpward`, `resolveProjectFromPaths`, `detectCurrentSkill` |
+| `installCanopy.test.ts` | `parseGithubRepo`, `targetBaseDir`, `buildGhSkillCommand`, `buildInstallScriptCommand`, `pluginInstallSlashCommands`, `applyMarkerBlock`, `ambientInstructionFile`, `FRAMEWORK_SKILLS` |
+| `installMethodPicks.test.ts` | `buildInstallMethodPicks` (icon selection per tool availability, scope detail copy) |
+| `availability.test.ts` | `isCommandAvailable` (per-tool probes), `detectTools` (parallel probe of git/gh/claude) |
+| `realSkills.test.ts` | Integration: real SKILL.md from sibling `claude-canopy/` and bundled `.claude/skills/` parse with no unknown-frontmatter slips |
 
 ---
 
@@ -96,6 +101,7 @@ The vscode mock (`src/__mocks__/vscode.ts`) is a plain object, so `vi.spyOn` wor
 ```
 src/
   extension.ts              — activate(): registers all providers and commands
+  availability.ts           — isCommandAvailable / detectTools (probes git, gh skill, claude)
   canopyDocument.ts         — document model (single source of truth for parsing)
   opRegistry.ts             — OpRegistry singleton + PRIMITIVE_DOCS
   __mocks__/vscode.ts       — VS Code API shim for tests
@@ -105,9 +111,10 @@ src/
     definitionProvider.ts   — go-to-definition for ALL_CAPS op names
     diagnosticsProvider.ts  — semantic validation
   commands/
-    setupCanopy.ts          — addAsSubmodule, addAsCopy
+    installCanopy.ts        — install + installByCopy + installAsAgentSkill + installAsPlugin
+                              (4 commands) + MARKER_BLOCK / applyMarkerBlock idempotent writer
+    canopyAgent.ts          — 11 Canopy agent operation commands incl. agentDebug
     newResource.ts          — 7 scaffold commands
-    canopyAgent.ts          — 10 Canopy agent operation commands
   util/
     resourceParser.ts       — extractCommandsSections, extractPlaceholders
 ```
@@ -137,13 +144,12 @@ parseDocument()          ← canopyDocument.ts (called by every provider)
 
 ### OpRegistry lookup chain
 
-`OpRegistry.resolve(opName, docUri)` walks three locations in order, returning the first match:
+`OpRegistry.resolve(opName, docUri)` walks the per-skill location and falls back to legacy shared paths (no-ops in v0.17.0+ but kept for back-compat):
 
 1. `<same-dir>/ops.md` (skill-local)
-2. `<.claude-root>/skills/shared/project/ops.md`
-3. `<.claude-root>/skills/shared/framework/ops.md`
+2. Legacy fallback: `<.claude-root>/skills/shared/<kind>/ops.md` and `<.claude-root>/canopy/skills/shared/<kind>/ops.md`
 
-Also checks the Canopy submodule path (`<.claude-root>/canopy/skills/shared/<kind>/ops.md`).
+Framework primitives (`IF`, `SWITCH`, `FOR_EACH`, `ASK`, `SHOW_PLAN`, `VERIFY_EXPECTED`, `EXPLORE`, …) are defined statically in `PRIMITIVE_DOCS` (in `opRegistry.ts`) — they are **not** loaded from disk. The canonical canopy v0.17.0+ source for primitives is `claude-canopy/skills/canopy-runtime/references/framework-ops.md`; if it diverges, sync `PRIMITIVE_DOCS` per the sync-points table in `CLAUDE.md`.
 
 The registry caches parsed definitions per file path. Call `registry.invalidate(uri)` when an `ops.md` file changes (wired in `extension.ts`).
 
@@ -153,23 +159,26 @@ The registry caches parsed definitions per file path. Call `registry.invalidate(
 
 ### Add a new framework primitive
 
-Primitives are hardcoded in four places. All four must be updated together:
+Primitives are hardcoded in **six** places. All must be updated together — see the sync-points table in `CLAUDE.md` for the canonical list.
 
-1. `canopyDocument.ts` — `PRIMITIVES` set (line ~62): add the name.
+1. `canopyDocument.ts` — `PRIMITIVES` set: add the name.
 2. `opRegistry.ts` — `PRIMITIVE_DOCS` record: add `{ name, signature, description, example }`.
 3. `diagnosticsProvider.ts`:
    - `RESERVED_PRIMITIVES` set: add the name.
    - `checkPrimitiveSignatures()`: add a `case` for the new primitive's signature rules.
 4. `completionProvider.ts` — `primitiveCompletions()`: add a `CompletionItem`.
+5. `syntaxes/canopy.tmLanguage.json` — add to the `primitive-control` or `primitive-action` regex AND to the `op-call` exclusion regex (otherwise it'll be highlighted as a custom op).
+6. `snippets/canopy.json` — consider adding a snippet (see `switch` / `for` for examples) if the primitive has a useful expansion shape.
 
 ### Add a new category resource directory
 
-Category dirs appear in four places:
+Category dirs appear in **five** places:
 
 1. `diagnosticsProvider.ts` — `VALID_CATEGORIES` set.
 2. `completionProvider.ts` — `CATEGORY_DIRS` array.
-3. `package.json` — add a new language ID under `contributes.languages` with matching `filenamePatterns`, plus a grammar entry under `contributes.grammars`.
-4. Create the corresponding `.tmLanguage.json` grammar file under `syntaxes/`.
+3. `package.json` — add to the existing `canopy-resource` language ID's `filenamePatterns` if it's a markdown reference dir, OR register a new language ID + grammar entry if it has distinct highlighting needs.
+4. `snippets/canopy.json` — add to the `Read resource` snippet's enum dropdown (`${1|...|}` choice list).
+5. If a new language ID was added: create the corresponding `.tmLanguage.json` grammar file under `syntaxes/`.
 
 ### Add a new diagnostic check
 
@@ -243,4 +252,4 @@ The release workflow verifies that the tag matches `package.json version` before
 ## Keeping in Sync with claude-canopy
 
 See [CLAUDE.md](../CLAUDE.md#keeping-in-sync-with-claude-canopy) for the full sync table.
-The canonical spec is [`docs/FRAMEWORK.md`](https://github.com/kostiantyn-matsebora/claude-canopy/blob/main/docs/FRAMEWORK.md) in the framework repo.
+The canonical spec is [`docs/FRAMEWORK.md`](https://github.com/kostiantyn-matsebora/claude-canopy/blob/master/docs/FRAMEWORK.md) and `skills/canopy-runtime/references/skill-resources.md` in the framework repo.
