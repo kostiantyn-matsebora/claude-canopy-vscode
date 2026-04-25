@@ -2,8 +2,8 @@
 
 > Write Claude Code / GitHub Copilot skills as executable code, not prose.
 
-[![Marketplace Version](https://img.shields.io/vscode-marketplace/v/canopy-ai.canopy-skills?label=marketplace&color=0969da)](https://marketplace.visualstudio.com/items?itemName=canopy-ai.canopy-skills)
-[![Installs](https://img.shields.io/vscode-marketplace/i/canopy-ai.canopy-skills?color=0969da)](https://marketplace.visualstudio.com/items?itemName=canopy-ai.canopy-skills)
+[![Marketplace Version](https://vsmarketplacebadges.dev/version-short/canopy-ai.canopy-skills.svg)](https://marketplace.visualstudio.com/items?itemName=canopy-ai.canopy-skills)
+[![Installs](https://vsmarketplacebadges.dev/installs-short/canopy-ai.canopy-skills.svg)](https://marketplace.visualstudio.com/items?itemName=canopy-ai.canopy-skills)
 [![Latest Release](https://img.shields.io/github/v/release/kostiantyn-matsebora/claude-canopy-vscode?label=release&color=0969da)](https://github.com/kostiantyn-matsebora/claude-canopy-vscode/releases/latest)
 [![License](https://img.shields.io/badge/license-MIT-0969da)](LICENSE)
 
