@@ -2,6 +2,19 @@
 
 All notable changes to the Canopy Skills extension are documented here.
 
+## [0.9.0] — 2026-04-25
+
+### Added
+
+- **Quick Start section in README** — four numbered post-install steps covering `Canopy Install: Install...`, creating a first skill, editing with IntelliSense, and running it from the AI agent. Sublist style for readability.
+- **`Install as Claude Code Plugin` auto-runs the three `/plugin` slash commands.** After launching `claude` in the integrated terminal, the extension waits ~3s for boot then sends `marketplace add` / `install` / `activate`. Leading empty newline is a safety floor — if `claude` hasn't taken over stdin yet, it lands as a harmless empty shell line. Clipboard copy stays primed and a follow-up notification points to manual paste (Ctrl+V) if Claude is slow to start.
+- **Three-group Command Palette structure.** Categories are named so they sort alphabetically into a workflow order: `Canopy Install` → `Canopy Skill` → `Canopy Template`.
+
+### Changed
+
+- **Command Palette categories renamed and split.** `Canopy Agent` → `Canopy Skill` (11 agent commands). The single mixed `Canopy` category is split into `Canopy Install` (4 install commands) and `Canopy Template` (7 scaffold commands). `Show Version` stays in the bare `Canopy` category as a meta utility. Bug-report Area dropdown, README command tables, `CLAUDE.md`, and `TEST-PLAN-v0.17.0-sync.md` all reflect the new prefixes. The `Canopy Agent (<root>)` integrated-terminal label in `canopyAgent.ts` is intentionally unchanged — it labels the running agent, not a Command Palette group.
+- **`Install as Claude Code Plugin` modal copy.** Button "Open Claude in terminal" → "Open Claude and run commands"; modal text now mentions the clipboard fallback explicitly.
+
 ## [0.8.0] — 2026-04-25
 
 Sync with Canopy framework `v0.17.1` (was `v0.15.0`). The framework restructured around the [agentskills.io](https://agentskills.io) spec, split the runtime into a standalone `canopy-runtime` skill, switched from a bundled subtree to plugin / `gh skill` / install-script distribution, and added the `ACTIVATE` op. The extension's install commands and language support are rebuilt around the new model.
