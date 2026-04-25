@@ -2,6 +2,19 @@
 
 All notable changes to the Canopy Skills extension are documented here.
 
+## [0.9.2] — 2026-04-25
+
+### Added
+
+- **`SECURITY.md`** — vulnerability reporting policy via private GitHub Security Advisories, with scope notes (extension + workflows in scope; framework + VS Code/Microsoft infra deferred upstream).
+- **`CODE_OF_CONDUCT.md`** — adopts Contributor Covenant 2.1 by reference, with a private reporting channel.
+- **`.github/dependabot.yml`** — weekly grouped dev-dep updates, weekly direct-dep updates, monthly Actions version bumps.
+- **VS Code Marketplace badges in README** — Marketplace Version + Installs badges added alongside the existing GitHub Release / License badges.
+
+### Changed
+
+- **`package.json#keywords` realigned with framework topics** for Marketplace search discoverability — replaces the canopy-only set (`canopy/skill/claude/ai/markdown`) with the full [`claude-canopy`](https://github.com/kostiantyn-matsebora/claude-canopy) topic list (`claude-code`, `claude-skills`, `copilot-chat`, `ai-agent`, `prompt-engineering`, `llm`, `framework`, `workflow`, `automation`, `declarative`, etc.) plus extension-specific tags (`agentskills`, `vscode-extension`).
+
 ## [0.9.1] — 2026-04-25
 
 ### Changed
