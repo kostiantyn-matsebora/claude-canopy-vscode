@@ -13,7 +13,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import { AiTarget, targetBaseDir } from './installCanopy';
+import { AiTarget, targetBaseDir, MARKER_START } from './installCanopy';
 import { isCommandAvailable } from '../availability';
 
 // v0.17.0 install layout: every canopy install ships canopy-runtime as the minimum.
@@ -21,6 +21,13 @@ import { isCommandAvailable } from '../availability';
 const FRAMEWORK_MARKERS = [
   path.join('skills', 'canopy-runtime', 'SKILL.md'),
 ];
+
+/**
+ * How canopy was installed in this project.
+ * - 'file'   — skill files present on disk (install script, gh skill, submodule, copy)
+ * - 'plugin' — Claude Code plugin install; no skill files; invocation uses /<plugin>:<skill> form
+ */
+export type InstallKind = 'file' | 'plugin';
 
 // Skills shipped by claude-canopy itself; excluded from the user's pick list.
 const FRAMEWORK_SKILL_NAMES = new Set(['canopy', 'canopy-debug', 'canopy-runtime']);
@@ -38,47 +45,56 @@ const terminals = new Map<string, vscode.Terminal>();
 
 /**
  * Build the prompt routed to the canopy agent for the given platform.
- * Shapes match canopy-runtime references/runtime-claude.md and runtime-copilot.md §Invocation.
+ * Plugin installs use the namespaced form `/canopy:canopy <request>` instead of `/canopy <request>`.
  */
-export function buildAgentPrompt(target: AiTarget, request: string): string {
+export function buildAgentPrompt(target: AiTarget, request: string, installKind: InstallKind = 'file'): string {
   const trimmed = request.trim();
   if (target === 'copilot') {
     return `Follow .github/skills/canopy/SKILL.md and ${trimmed}`;
   }
-  return `/canopy ${trimmed}`;
+  return installKind === 'plugin' ? `/canopy:canopy ${trimmed}` : `/canopy ${trimmed}`;
 }
 
 /** Build the prompt for the canopy-debug trace wrapper (one skill at a time). */
-export function buildDebugPrompt(target: AiTarget, skillName: string): string {
+export function buildDebugPrompt(target: AiTarget, skillName: string, installKind: InstallKind = 'file'): string {
   const trimmed = skillName.trim();
   if (target === 'copilot') {
     return `Follow .github/skills/canopy-debug/SKILL.md and trace ${trimmed}`;
   }
-  return `/canopy-debug ${trimmed}`;
+  return installKind === 'plugin' ? `/canopy:canopy-debug ${trimmed}` : `/canopy-debug ${trimmed}`;
 }
 
 /** Shell command for the Claude CLI (`claude "/canopy <request>"`). */
-export function buildClaudeCliCommand(request: string): string {
-  const prompt = buildAgentPrompt('claude', request).replace(/"/g, '\\"');
+export function buildClaudeCliCommand(request: string, installKind: InstallKind = 'file'): string {
+  const prompt = buildAgentPrompt('claude', request, installKind).replace(/"/g, '\\"');
   return `claude "${prompt}"`;
 }
 
 /** Shell command for the Claude CLI for canopy-debug (`claude "/canopy-debug <skill>"`). */
-export function buildClaudeCliDebugCommand(skillName: string): string {
-  const prompt = buildDebugPrompt('claude', skillName).replace(/"/g, '\\"');
+export function buildClaudeCliDebugCommand(skillName: string, installKind: InstallKind = 'file'): string {
+  const prompt = buildDebugPrompt('claude', skillName, installKind).replace(/"/g, '\\"');
   return `claude "${prompt}"`;
 }
 
-/** Target at `root` if it is a canopy project, else undefined. Claude wins on ties. */
+/** Target and install kind at `root` if it is a canopy project, else undefined. Claude wins on ties. */
 export function projectTargetAt(
   root: string,
   exists: (p: string) => boolean,
-): AiTarget | undefined {
+  readText?: (p: string) => string | undefined,
+): { target: AiTarget; installKind: InstallKind } | undefined {
   for (const marker of FRAMEWORK_MARKERS) {
-    if (exists(path.join(targetBaseDir(root, 'claude'), marker))) return 'claude';
+    if (exists(path.join(targetBaseDir(root, 'claude'), marker)))
+      return { target: 'claude', installKind: 'file' };
   }
   for (const marker of FRAMEWORK_MARKERS) {
-    if (exists(path.join(targetBaseDir(root, 'copilot'), marker))) return 'copilot';
+    if (exists(path.join(targetBaseDir(root, 'copilot'), marker)))
+      return { target: 'copilot', installKind: 'file' };
+  }
+  // Plugin install writes no skill files — detect via the canopy-runtime marker block in CLAUDE.md.
+  if (readText) {
+    const content = readText(path.join(root, 'CLAUDE.md'));
+    if (content?.includes(MARKER_START))
+      return { target: 'claude', installKind: 'plugin' };
   }
   return undefined;
 }
@@ -87,12 +103,13 @@ export function projectTargetAt(
 export function findProjectUpward(
   dir: string,
   exists: (p: string) => boolean,
-): { root: string; target: AiTarget } | undefined {
+  readText?: (p: string) => string | undefined,
+): { root: string; target: AiTarget; installKind: InstallKind } | undefined {
   let current = dir;
   // Guard against infinite loops on malformed paths.
   for (let i = 0; i < 64; i++) {
-    const target = projectTargetAt(current, exists);
-    if (target) return { root: current, target };
+    const found = projectTargetAt(current, exists, readText);
+    if (found) return { root: current, ...found };
     const parent = path.dirname(current);
     if (parent === current) return undefined;
     current = parent;
@@ -109,18 +126,19 @@ export function resolveProjectFromPaths(
   hintPath: string | undefined,
   folders: string[],
   exists: (p: string) => boolean,
-): Array<{ root: string; target: AiTarget }> {
+  readText?: (p: string) => string | undefined,
+): Array<{ root: string; target: AiTarget; installKind: InstallKind }> {
   if (hintPath) {
-    const found = findProjectUpward(path.dirname(hintPath), exists);
+    const found = findProjectUpward(path.dirname(hintPath), exists, readText);
     if (found) return [found];
   }
-  const out: Array<{ root: string; target: AiTarget }> = [];
+  const out: Array<{ root: string; target: AiTarget; installKind: InstallKind }> = [];
   const seen = new Set<string>();
   for (const folder of folders) {
     if (seen.has(folder)) continue;
-    const target = projectTargetAt(folder, exists);
-    if (target) {
-      out.push({ root: folder, target });
+    const found = projectTargetAt(folder, exists, readText);
+    if (found) {
+      out.push({ root: folder, ...found });
       seen.add(folder);
     }
   }
@@ -161,21 +179,25 @@ function getTerminalFor(root: string): vscode.Terminal {
   return term;
 }
 
-async function resolveCanopyProject(): Promise<{ root: string; target: AiTarget } | undefined> {
+function fsReadText(p: string): string | undefined {
+  try { return fs.readFileSync(p, 'utf8'); } catch { return undefined; }
+}
+
+async function resolveCanopyProject(): Promise<{ root: string; target: AiTarget; installKind: InstallKind } | undefined> {
   const active = vscode.window.activeTextEditor?.document.uri.fsPath;
   const folders = (vscode.workspace.workspaceFolders ?? []).map(f => f.uri.fsPath);
-  const candidates = resolveProjectFromPaths(active, folders, fs.existsSync);
+  const candidates = resolveProjectFromPaths(active, folders, fs.existsSync, fsReadText);
 
   if (candidates.length === 0) {
     vscode.window.showErrorMessage(
-      'No Canopy project found in this workspace. Run "Canopy: Add as copy" or "Add as submodule" first.',
+      'No Canopy project found in this workspace. Use "Canopy Install: Install…" to add Canopy to this project.',
     );
     return undefined;
   }
   if (candidates.length === 1) return candidates[0];
 
   const items = candidates.map(c => ({
-    label: `${path.basename(c.root)} (${c.target})`,
+    label: `${path.basename(c.root)} (${c.target}${c.installKind === 'plugin' ? '/plugin' : ''})`,
     description: c.root,
   }));
   const picked = await vscode.window.showQuickPick(items, { placeHolder: 'Select Canopy project' });
@@ -242,7 +264,7 @@ async function ensureClaudeOrFail(): Promise<boolean> {
 }
 
 async function runOn(
-  project: { root: string; target: AiTarget },
+  project: { root: string; target: AiTarget; installKind: InstallKind },
   request: string,
 ): Promise<void> {
   if (project.target === 'copilot') {
@@ -254,7 +276,7 @@ async function runOn(
   if (!(await ensureClaudeOrFail())) return;
   const term = getTerminalFor(project.root);
   term.show(true);
-  term.sendText(buildClaudeCliCommand(request));
+  term.sendText(buildClaudeCliCommand(request, project.installKind));
 }
 
 async function run(request: string): Promise<void> {
@@ -403,5 +425,5 @@ export async function agentDebug(): Promise<void> {
   if (!(await ensureClaudeOrFail())) return;
   const term = getTerminalFor(project.root);
   term.show(true);
-  term.sendText(buildClaudeCliDebugCommand(skillName));
+  term.sendText(buildClaudeCliDebugCommand(skillName, project.installKind));
 }

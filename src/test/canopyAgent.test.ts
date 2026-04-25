@@ -9,7 +9,9 @@ import {
   findProjectUpward,
   resolveProjectFromPaths,
   detectCurrentSkill,
+  type InstallKind,
 } from '../commands/canopyAgent';
+import { MARKER_START } from '../commands/installCanopy';
 
 // Platform-native path helper. Tests use `p('/work', 'examples')` so separators
 // match the host OS (backslash on Windows, forward slash on POSIX).
@@ -40,6 +42,16 @@ describe('buildAgentPrompt', () => {
     expect(buildAgentPrompt('claude', 'modify the x skill — add a SHOW_PLAN step'))
       .toBe('/canopy modify the x skill — add a SHOW_PLAN step');
   });
+
+  it('uses namespaced /canopy:canopy form for plugin installs', () => {
+    expect(buildAgentPrompt('claude', 'improve bump-version', 'plugin'))
+      .toBe('/canopy:canopy improve bump-version');
+  });
+
+  it('copilot target is unaffected by installKind', () => {
+    expect(buildAgentPrompt('copilot', 'improve bump-version', 'plugin'))
+      .toBe('Follow .github/skills/canopy/SKILL.md and improve bump-version');
+  });
 });
 
 describe('buildClaudeCliCommand', () => {
@@ -51,6 +63,11 @@ describe('buildClaudeCliCommand', () => {
   it('escapes double quotes inside the request', () => {
     expect(buildClaudeCliCommand('create a skill that says "hi"'))
       .toBe('claude "/canopy create a skill that says \\"hi\\""');
+  });
+
+  it('uses /canopy:canopy form for plugin installs', () => {
+    expect(buildClaudeCliCommand('improve bump-version', 'plugin'))
+      .toBe('claude "/canopy:canopy improve bump-version"');
   });
 });
 
@@ -69,12 +86,22 @@ describe('buildDebugPrompt', () => {
     expect(buildDebugPrompt('claude', '   bump-version   '))
       .toBe('/canopy-debug bump-version');
   });
+
+  it('uses namespaced /canopy:canopy-debug form for plugin installs', () => {
+    expect(buildDebugPrompt('claude', 'bump-version', 'plugin'))
+      .toBe('/canopy:canopy-debug bump-version');
+  });
 });
 
 describe('buildClaudeCliDebugCommand', () => {
   it('wraps the /canopy-debug prompt in a claude CLI invocation', () => {
     expect(buildClaudeCliDebugCommand('bump-version'))
       .toBe('claude "/canopy-debug bump-version"');
+  });
+
+  it('uses /canopy:canopy-debug form for plugin installs', () => {
+    expect(buildClaudeCliDebugCommand('bump-version', 'plugin'))
+      .toBe('claude "/canopy:canopy-debug bump-version"');
   });
 });
 
@@ -92,15 +119,20 @@ function mockExists(files: string[]): (candidate: string) => boolean {
   return (candidate: string) => set.has(candidate);
 }
 
+/** Build a mock `readText` from a path→content map. */
+function mockReadText(files: Record<string, string>): (candidate: string) => string | undefined {
+  return (candidate: string) => files[candidate];
+}
+
 describe('projectTargetAt', () => {
-  it('returns "claude" when .claude/skills/canopy-runtime/SKILL.md is present', () => {
+  it('returns claude/file when .claude/skills/canopy-runtime/SKILL.md is present', () => {
     const exists = mockExists([path.join(p('repo'), '.claude', MARKER)]);
-    expect(projectTargetAt(p('repo'), exists)).toBe('claude');
+    expect(projectTargetAt(p('repo'), exists)).toEqual({ target: 'claude', installKind: 'file' });
   });
 
-  it('returns "copilot" when only .github/ marker is present', () => {
+  it('returns copilot/file when only .github/ marker is present', () => {
     const exists = mockExists([path.join(p('repo'), '.github', MARKER)]);
-    expect(projectTargetAt(p('repo'), exists)).toBe('copilot');
+    expect(projectTargetAt(p('repo'), exists)).toEqual({ target: 'copilot', installKind: 'file' });
   });
 
   it('prefers claude when both targets are present', () => {
@@ -108,11 +140,27 @@ describe('projectTargetAt', () => {
       path.join(p('repo'), '.claude', MARKER),
       path.join(p('repo'), '.github', MARKER),
     ]);
-    expect(projectTargetAt(p('repo'), exists)).toBe('claude');
+    expect(projectTargetAt(p('repo'), exists)).toEqual({ target: 'claude', installKind: 'file' });
   });
 
   it('returns undefined when neither marker is present', () => {
     expect(projectTargetAt(p('repo'), () => false)).toBeUndefined();
+  });
+
+  it('returns claude/plugin when CLAUDE.md contains the canopy-runtime marker block (plugin install)', () => {
+    const readText = mockReadText({ [path.join(p('repo'), 'CLAUDE.md')]: `# Project\n\n${MARKER_START}\nsome content` });
+    expect(projectTargetAt(p('repo'), () => false, readText)).toEqual({ target: 'claude', installKind: 'plugin' });
+  });
+
+  it('file-based marker takes priority over CLAUDE.md marker', () => {
+    const readText = mockReadText({ [path.join(p('repo'), 'CLAUDE.md')]: `${MARKER_START}` });
+    const exists = mockExists([path.join(p('repo'), '.github', MARKER)]);
+    expect(projectTargetAt(p('repo'), exists, readText)).toEqual({ target: 'copilot', installKind: 'file' });
+  });
+
+  it('returns undefined when CLAUDE.md exists but lacks the marker (plugin not activated)', () => {
+    const readText = mockReadText({ [path.join(p('repo'), 'CLAUDE.md')]: '# My Project\n\nNo canopy here.' });
+    expect(projectTargetAt(p('repo'), () => false, readText)).toBeUndefined();
   });
 });
 
@@ -120,18 +168,25 @@ describe('findProjectUpward', () => {
   it('finds the project when the file is inside a nested skill dir', () => {
     const exists = mockExists([path.join(p('work', 'examples'), '.claude', MARKER)]);
     const found = findProjectUpward(p('work', 'examples', '.claude', 'skills', 'foo'), exists);
-    expect(found).toEqual({ root: p('work', 'examples'), target: 'claude' });
+    expect(found).toEqual({ root: p('work', 'examples'), target: 'claude', installKind: 'file' });
   });
 
   it('finds the project when starting directly at its root', () => {
     const exists = mockExists([path.join(p('work', 'vscode'), '.github', MARKER)]);
     const found = findProjectUpward(p('work', 'vscode'), exists);
-    expect(found).toEqual({ root: p('work', 'vscode'), target: 'copilot' });
+    expect(found).toEqual({ root: p('work', 'vscode'), target: 'copilot', installKind: 'file' });
   });
 
   it('returns undefined when no ancestor has the marker', () => {
     const found = findProjectUpward(p('work', 'elsewhere', 'deep', 'dir'), () => false);
     expect(found).toBeUndefined();
+  });
+
+  it('finds the project via CLAUDE.md marker when walking upward (plugin install)', () => {
+    const root = p('work', 'examples');
+    const readText = mockReadText({ [path.join(root, 'CLAUDE.md')]: `${MARKER_START}` });
+    const found = findProjectUpward(path.join(root, 'src', 'index.ts'), () => false, readText);
+    expect(found).toEqual({ root, target: 'claude', installKind: 'plugin' });
   });
 });
 
@@ -150,13 +205,14 @@ describe('resolveProjectFromPaths', () => {
       [examples, vscode],
       both,
     );
-    expect(got).toEqual([{ root: examples, target: 'claude' }]);
+    expect(got).toEqual([{ root: examples, target: 'claude', installKind: 'file' }]);
   });
 
   it('falls back to scanning workspace folders when hint is absent', () => {
     const got = resolveProjectFromPaths(undefined, [examples, vscode], both);
     expect(got).toHaveLength(2);
     expect(got.map(c => c.root).sort()).toEqual([examples, vscode].sort());
+    expect(got.every(c => c.installKind === 'file')).toBe(true);
   });
 
   it('falls back when the hint is outside every project', () => {
@@ -166,11 +222,28 @@ describe('resolveProjectFromPaths', () => {
       [examples, framework],
       onlyExamples,
     );
-    expect(got).toEqual([{ root: examples, target: 'claude' }]);
+    expect(got).toEqual([{ root: examples, target: 'claude', installKind: 'file' }]);
   });
 
   it('returns [] when nothing matches', () => {
     expect(resolveProjectFromPaths(undefined, [p('a'), p('b')], () => false)).toEqual([]);
+  });
+
+  it('detects a plugin-installed project via CLAUDE.md marker', () => {
+    const readText = mockReadText({ [path.join(examples, 'CLAUDE.md')]: `${MARKER_START}` });
+    const got = resolveProjectFromPaths(undefined, [examples, vscode], () => false, readText);
+    expect(got).toEqual([{ root: examples, target: 'claude', installKind: 'plugin' }]);
+  });
+
+  it('detects plugin project when hinting from a file inside it', () => {
+    const readText = mockReadText({ [path.join(examples, 'CLAUDE.md')]: `${MARKER_START}` });
+    const got = resolveProjectFromPaths(
+      path.join(examples, 'src', 'foo.ts'),
+      [examples],
+      () => false,
+      readText,
+    );
+    expect(got).toEqual([{ root: examples, target: 'claude', installKind: 'plugin' }]);
   });
 });
 
