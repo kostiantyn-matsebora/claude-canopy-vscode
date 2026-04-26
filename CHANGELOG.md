@@ -2,6 +2,12 @@
 
 All notable changes to the Canopy Skills extension are documented here.
 
+## [0.10.1] — 2026-04-26
+
+### Fixed
+
+- **`Install as Claude Code Plugin` step-by-step wizard** — replaces the fragile auto-run terminal flow (staggered `sendText` into Claude's stdin) with a three-step clipboard wizard. Each slash command is copied to clipboard in turn; a modal prompts the user to paste and confirm before advancing to the next step.
+
 ## [0.10.0] — 2026-04-25
 
 ### Added

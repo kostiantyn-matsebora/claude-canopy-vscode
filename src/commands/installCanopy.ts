@@ -598,46 +598,31 @@ export async function installAsPlugin(): Promise<void> {
 
   const repo = canopyRepo();
   const cmds = pluginInstallSlashCommands(repo);
-  await vscode.env.clipboard.writeText(cmds.join('\n'));
 
-  const claudeAvailable = await isCommandAvailable('claude');
-  const message =
-    `Plugin install: three slash commands (copied to clipboard). Run them in order in a Claude Code session:\n\n` +
-    `${cmds.join('\n')}\n\n` +
-    `The third command (\`activate\`) writes the canopy-runtime marker block to this project's CLAUDE.md so user-authored canopy skills under .claude/skills/ load runtime ambiently. Required for the plugin install path.`;
+  const stepLabels = [
+    'Register the Canopy marketplace',
+    'Install the Canopy plugin bundle',
+    'Activate canopy-runtime in this project',
+  ];
+  const stepNotes = [
+    '',
+    '',
+    'This writes the canopy-runtime marker block to CLAUDE.md so skills under .claude/skills/ load runtime ambiently.',
+  ];
 
-  if (claudeAvailable) {
+  for (let i = 0; i < cmds.length; i++) {
+    await vscode.env.clipboard.writeText(cmds[i]);
+    const isLast = i === cmds.length - 1;
     const choice = await vscode.window.showInformationMessage(
-      `${message}\n\nClaude CLI detected — open it in a terminal and auto-run the commands? ` +
-      `If Claude is slow to start and a command lands in the shell instead, the clipboard copy is still primed for manual paste.`,
+      `Canopy plugin install — step ${i + 1} of ${cmds.length}: ${stepLabels[i]}\n\n` +
+      `Copied to clipboard:\n\n  ${cmds[i]}\n\n` +
+      `Open a Claude Code session (or switch to one already running), paste with Ctrl+V / ⌘V, ` +
+      `and wait for it to complete.` +
+      (stepNotes[i] ? `\n\n${stepNotes[i]}` : ''),
       { modal: true },
-      'Open Claude and run commands',
-      'Just keep the clipboard copy',
+      isLast ? 'Done' : 'Next →',
+      'Cancel',
     );
-    if (choice === 'Open Claude and run commands') {
-      const term = vscode.window.createTerminal({ name: 'Canopy Plugin Install' });
-      term.show(true);
-      term.sendText('claude', true);
-      // Wait for claude to boot, then send each slash command to its interactive
-      // prompt. Leading empty newline is a safety floor — if claude hasn't taken
-      // over stdin yet, it lands as a harmless empty shell line rather than
-      // corrupting the next command. Clipboard copy stays primed as fallback.
-      setTimeout(() => {
-        term.sendText('', true);
-        for (const cmd of cmds) {
-          term.sendText(cmd, true);
-        }
-      }, 3000);
-      vscode.window.showInformationMessage(
-        'If the three /plugin commands did not run inside Claude, paste from the clipboard (Ctrl+V) at the Claude prompt.',
-      );
-    }
-    return;
+    if (choice !== (isLast ? 'Done' : 'Next →')) return;
   }
-
-  await vscode.window.showInformationMessage(
-    message,
-    { modal: true },
-    'OK',
-  );
 }
