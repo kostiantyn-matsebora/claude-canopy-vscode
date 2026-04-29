@@ -6,16 +6,18 @@ import { parseDocument } from '../canopyDocument';
 
 /**
  * Integration test: pull real SKILL.md files from claude-canopy and from this
- * repo's installed skills, and verify the extension's parser (and the v0.17.0
- * frontmatter spec) handles them without surprise.
+ * repo's installed skills, and verify the extension's parser (and the v0.18.0
+ * frontmatter spec — agentskills.io alignment) handles them without surprise.
  */
 
 const CANOPY_REPO = path.resolve(__dirname, '..', '..', '..', 'claude-canopy');
 const SELF_REPO = path.resolve(__dirname, '..', '..');
 
+// agentskills.io spec — these are the only fields valid at frontmatter root.
+// `argument-hint` and `user-invocable` are non-spec; canopy v0.18.0 moves them
+// inside `metadata`.
 const FRONTMATTER_ALLOWED = new Set([
-  'name', 'description', 'argument-hint',
-  'license', 'allowed-tools', 'metadata', 'user-invocable',
+  'name', 'description', 'license', 'compatibility', 'metadata', 'allowed-tools',
 ]);
 
 function makeDoc(filePath: string): vscode.TextDocument {
@@ -30,7 +32,7 @@ function makeDoc(filePath: string): vscode.TextDocument {
   } as unknown as vscode.TextDocument;
 }
 
-describe('real SKILL.md files (v0.17.0)', () => {
+describe('real SKILL.md files (v0.18.0)', () => {
   it('canopy/SKILL.md: frontmatter keys are all in FRONTMATTER_ALLOWED', () => {
     const file = path.join(CANOPY_REPO, 'skills', 'canopy', 'SKILL.md');
     if (!fs.existsSync(file)) return;
@@ -44,16 +46,15 @@ describe('real SKILL.md files (v0.17.0)', () => {
     expect(parsed.treeFirstOpName).toBe('EXPLORE');
   });
 
-  it('canopy-runtime/SKILL.md: includes user-invocable; has Tree section but NO Agent section', () => {
+  it('canopy-runtime/SKILL.md: parses cleanly with allowed frontmatter (user-invocable now lives in metadata)', () => {
     const file = path.join(CANOPY_REPO, 'skills', 'canopy-runtime', 'SKILL.md');
     if (!fs.existsSync(file)) return;
     const parsed = parseDocument(makeDoc(file));
     const unknown = parsed.frontmatter.filter(f => !FRONTMATTER_ALLOWED.has(f.key));
     expect(unknown.map(f => f.key)).toEqual([]);
     expect(parsed.frontmatter.map(f => f.key))
-      .toEqual(expect.arrayContaining(['name', 'description', 'license', 'user-invocable', 'metadata']));
+      .toEqual(expect.arrayContaining(['name', 'description', 'metadata']));
     // canopy-runtime is overview text, not a tree-driven skill — no ## Tree expected.
-    // (If this assertion ever flips because the runtime adds a tree, it's still informational.)
   });
 
   it('canopy-debug/SKILL.md: parses cleanly with allowed frontmatter', () => {

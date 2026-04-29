@@ -12,11 +12,13 @@ const SECTION_DOCS: Record<string, string> = {
 const FRONTMATTER_DOCS: Record<string, string> = {
   name: '**`name`** — Kebab-case skill identifier (e.g. `bump-version`). Used in the skill picker.',
   description: '**`description`** — One-line description shown in the skill picker.',
-  'argument-hint': '**`argument-hint`** — Shows the expected arguments. Use `<required>` and `[optional]` notation (e.g. `"<version> [strategy]"`).',
   license: '**`license`** — SPDX license identifier (e.g. `MIT`).',
+  compatibility: '**`compatibility`** — Declares runtime requirements. Canopy-flavored skills (with `## Tree`) declare `requires: [canopy-runtime]` so unsupported agents fail fast.',
   'allowed-tools': '**`allowed-tools`** — Space-separated list of tools the skill may invoke (e.g. `Read Write Edit Glob Grep Bash`).',
-  metadata: '**`metadata`** — Free-form metadata block. Conventional keys: `version` (semver string), `author`.',
-  'user-invocable': '**`user-invocable`** — When `false`, hides the skill from the `/` menu (still loadable by other skills via the Skill tool). Default: `true`.',
+  metadata: '**`metadata`** — Free-form metadata block. Place non-spec fields here (`argument-hint`, `user-invocable`, `version`, `author`, etc.).',
+  // Below are non-spec but commonly seen at root in legacy skills — flagged by diagnostics, but documented here so hover still works.
+  'argument-hint': '**`argument-hint`** *(non-spec at frontmatter root — move into `metadata:`)* — Shows the expected arguments. Use `<required>` and `[optional]` notation.',
+  'user-invocable': '**`user-invocable`** *(non-spec at frontmatter root — move into `metadata:`)* — When `false`, hides the skill from the `/` menu. Default: `true`.',
 };
 
 export class CanopyHoverProvider implements vscode.HoverProvider {
@@ -35,7 +37,7 @@ export class CanopyHoverProvider implements vscode.HoverProvider {
     }
 
     // --- Hover on frontmatter key ---
-    const fmMatch = line.match(/^(name|description|argument-hint|license|allowed-tools|metadata|user-invocable):/);
+    const fmMatch = line.match(/^(name|description|license|compatibility|allowed-tools|metadata|argument-hint|user-invocable):/);
     if (fmMatch) {
       const doc = FRONTMATTER_DOCS[fmMatch[1]];
       if (doc) return new vscode.Hover(new vscode.MarkdownString(doc));

@@ -23,8 +23,19 @@ function hasSkillFile(dir: string): boolean {
 const SKILL_MD_TEMPLATE = (name: string) => `---
 name: ${name}
 description: One-line description.
-argument-hint: "<required-arg>"
+compatibility:
+  requires:
+    - canopy-runtime
+metadata:
+  argument-hint: "<required-arg>"
 ---
+
+> **Safety preamble** — This skill requires canopy-runtime to interpret its \`## Tree\`
+> section. If the active agent does not have canopy-runtime installed (no marker
+> block in \`CLAUDE.md\` or \`.github/copilot-instructions.md\`, no
+> \`canopy-runtime/SKILL.md\` under \`.claude/skills/\` or \`.github/skills/\`), HALT
+> with a message instructing the user to install canopy. Do not attempt to
+> interpret the tree without runtime.
 
 Parse $ARGUMENTS.
 
@@ -36,7 +47,7 @@ Parse $ARGUMENTS.
   * SHOW_PLAN >> what will change
   * ASK << Proceed? | Yes | No
   * OP_NAME << input >> output
-  * VERIFY_EXPECTED << verify/verify-expected.md
+  * VERIFY_EXPECTED << assets/verify/verify-expected.md
 
 ## Rules
 
@@ -159,13 +170,20 @@ function getActiveSkillDir(): string | undefined {
   const fileName = path.basename(filePath);
   const dir = path.dirname(filePath);
   const parentDir = path.dirname(dir);
+  const grandParentDir = path.dirname(parentDir);
 
-  // Direct: SKILL.md or ops.md
-  const lower = fileName.toLowerCase();
-  if (lower === 'skill.md' || lower === 'ops.md') return dir;
+  // Direct: SKILL.md (or legacy lowercase skill.md) at skill root
+  if (fileName === 'SKILL.md' || fileName.toLowerCase() === 'skill.md') return dir;
 
-  // One level deep: inside schemas/, templates/, commands/, etc.
+  // Legacy flat layout: ops.md at skill root
+  if (fileName.toLowerCase() === 'ops.md' && hasSkillFile(dir)) return dir;
+
+  // One level deep: legacy flat layout (schemas/, templates/, commands/, etc.) or
+  // standard layout (scripts/, references/) — sibling SKILL.md exists.
   if (hasSkillFile(parentDir)) return parentDir;
+
+  // Two levels deep: standard layout (assets/<category>/, references/ops/).
+  if (hasSkillFile(grandParentDir)) return grandParentDir;
 
   return undefined;
 }
@@ -268,8 +286,9 @@ export async function newSkill(): Promise<void> {
   }
 
   ensureDir(skillDir);
+  ensureDir(path.join(skillDir, 'references'));
   fs.writeFileSync(path.join(skillDir, 'SKILL.md'), SKILL_MD_TEMPLATE(skillName), 'utf8');
-  fs.writeFileSync(path.join(skillDir, 'ops.md'), OPS_MD_TEMPLATE(skillName), 'utf8');
+  fs.writeFileSync(path.join(skillDir, 'references', 'ops.md'), OPS_MD_TEMPLATE(skillName), 'utf8');
 
   const doc = await vscode.workspace.openTextDocument(vscode.Uri.file(path.join(skillDir, 'SKILL.md')));
   await vscode.window.showTextDocument(doc);
@@ -289,7 +308,7 @@ export async function newVerifyFile(): Promise<void> {
   if (!input) return;
 
   await createAndOpen(
-    path.join(skillDir, 'verify', `${input}.md`),
+    path.join(skillDir, 'assets', 'verify', `${input}.md`),
     VERIFY_TEMPLATE(skillName)
   );
 }
@@ -316,7 +335,7 @@ export async function newTemplate(): Promise<void> {
 
   const content = extPick.label === '.md' ? TEMPLATE_MD_TEMPLATE : TEMPLATE_YAML_TEMPLATE;
   await createAndOpen(
-    path.join(skillDir, 'templates', `${nameInput}${extPick.label}`),
+    path.join(skillDir, 'assets', 'templates', `${nameInput}${extPick.label}`),
     content
   );
 }
@@ -332,7 +351,7 @@ export async function newConstantsFile(): Promise<void> {
   if (!input) return;
 
   await createAndOpen(
-    path.join(skillDir, 'constants', `${input}.md`),
+    path.join(skillDir, 'assets', 'constants', `${input}.md`),
     CONSTANTS_TEMPLATE(input)
   );
 }
@@ -348,7 +367,7 @@ export async function newPolicyFile(): Promise<void> {
   if (!input) return;
 
   await createAndOpen(
-    path.join(skillDir, 'policies', `${input}.md`),
+    path.join(skillDir, 'assets', 'policies', `${input}.md`),
     POLICY_TEMPLATE(input)
   );
 }
@@ -374,7 +393,7 @@ export async function newCommandsFile(): Promise<void> {
 
   const content = typePick.label === '.ps1' ? COMMANDS_PS1_TEMPLATE : COMMANDS_SH_TEMPLATE;
   await createAndOpen(
-    path.join(skillDir, 'commands', `${nameInput}${typePick.label}`),
+    path.join(skillDir, 'scripts', `${nameInput}${typePick.label}`),
     content
   );
 }
@@ -406,7 +425,7 @@ export async function newSchema(): Promise<void> {
   }
 
   await createAndOpen(
-    path.join(skillDir, 'schemas', fileName),
+    path.join(skillDir, 'assets', 'schemas', fileName),
     content
   );
 }

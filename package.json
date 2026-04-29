@@ -1,9 +1,9 @@
 {
   "name": "canopy-skills",
   "displayName": "Canopy Skills",
-  "description": "Write Claude Code AI skills as executable code, not prose — syntax highlighting, IntelliSense, semantic diagnostics, and go-to-definition for Canopy skills: skill.md, ops.md, schemas, templates, commands, constants, policies, checklists, and verify files.",
-  "version": "0.10.1",
-  "canopyVersion": "0.17.1",
+  "description": "Write Claude Code AI skills as executable code, not prose — syntax highlighting, IntelliSense, semantic diagnostics, and go-to-definition for Canopy skills: SKILL.md, references/ops, scripts, and assets (schemas, templates, constants, policies, checklists, verify).",
+  "version": "0.11.0",
+  "canopyVersion": "0.18.0",
   "icon": "images/icon.png",
   "galleryBanner": {
     "color": "#0969da",
@@ -61,10 +61,12 @@
         ],
         "filenamePatterns": [
           "**/.claude/**/SKILL.md",
-          "**/.claude/**/skill.md",
+          "**/.claude/**/references/ops.md",
+          "**/.claude/**/references/ops/*.md",
           "**/.claude/**/ops.md",
           "**/.github/**/SKILL.md",
-          "**/.github/**/skill.md",
+          "**/.github/**/references/ops.md",
+          "**/.github/**/references/ops/*.md",
           "**/.github/**/ops.md"
         ],
         "configuration": "./language-configuration.json"
@@ -76,8 +78,12 @@
           "canopy-verify"
         ],
         "filenamePatterns": [
+          "**/.claude/**/assets/verify/*.md",
+          "**/.claude/**/assets/checklists/*.md",
           "**/.claude/**/verify/*.md",
           "**/.claude/**/checklists/*.md",
+          "**/.github/**/assets/verify/*.md",
+          "**/.github/**/assets/checklists/*.md",
           "**/.github/**/verify/*.md",
           "**/.github/**/checklists/*.md"
         ]
@@ -89,8 +95,12 @@
           "canopy-template"
         ],
         "filenamePatterns": [
+          "**/.claude/**/assets/templates/*.md",
+          "**/.claude/**/assets/templates/*.yaml",
           "**/.claude/**/templates/*.md",
           "**/.claude/**/templates/*.yaml",
+          "**/.github/**/assets/templates/*.md",
+          "**/.github/**/assets/templates/*.yaml",
           "**/.github/**/templates/*.md",
           "**/.github/**/templates/*.yaml"
         ]
@@ -102,25 +112,35 @@
           "canopy-resource"
         ],
         "filenamePatterns": [
+          "**/.claude/**/assets/constants/*.md",
+          "**/.claude/**/assets/policies/*.md",
+          "**/.claude/**/assets/schemas/*.md",
+          "**/.claude/**/references/*.md",
           "**/.claude/**/constants/*.md",
           "**/.claude/**/policies/*.md",
           "**/.claude/**/schemas/*.md",
-          "**/.claude/**/references/*.md",
+          "**/.github/**/assets/constants/*.md",
+          "**/.github/**/assets/policies/*.md",
+          "**/.github/**/assets/schemas/*.md",
+          "**/.github/**/references/*.md",
           "**/.github/**/constants/*.md",
           "**/.github/**/policies/*.md",
-          "**/.github/**/schemas/*.md",
-          "**/.github/**/references/*.md"
+          "**/.github/**/schemas/*.md"
         ]
       },
       {
-        "id": "canopy-commands",
+        "id": "canopy-scripts",
         "aliases": [
-          "Canopy Commands",
-          "canopy-commands"
+          "Canopy Scripts",
+          "canopy-scripts"
         ],
         "filenamePatterns": [
+          "**/.claude/**/scripts/*.ps1",
+          "**/.claude/**/scripts/*.sh",
           "**/.claude/**/commands/*.ps1",
           "**/.claude/**/commands/*.sh",
+          "**/.github/**/scripts/*.ps1",
+          "**/.github/**/scripts/*.sh",
           "**/.github/**/commands/*.ps1",
           "**/.github/**/commands/*.sh"
         ]
@@ -148,9 +168,9 @@
         "path": "./syntaxes/canopy-resource.tmLanguage.json"
       },
       {
-        "language": "canopy-commands",
-        "scopeName": "text.canopy-commands",
-        "path": "./syntaxes/canopy-commands.tmLanguage.json"
+        "language": "canopy-scripts",
+        "scopeName": "text.canopy-scripts",
+        "path": "./syntaxes/canopy-scripts.tmLanguage.json"
       }
     ],
     "snippets": [

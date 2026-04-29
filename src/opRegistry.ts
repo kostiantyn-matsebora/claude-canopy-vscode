@@ -1,8 +1,10 @@
 /**
  * Op Registry — resolves op definitions following the Canopy lookup chain:
- *   1. <skill>/ops.md         (skill-local)
- *   2. shared/project/ops.md  (project-wide)
- *   3. shared/framework/ops.md (framework primitives)
+ *   1. <skill>/references/ops.md             (skill-local, standard layout)
+ *   2. <skill>/references/ops/<name>.md      (skill-local, per-op files)
+ *   3. <skill>/ops.md                        (skill-local, legacy flat layout)
+ *   4. shared/project/ops.md                 (project-wide)
+ *   5. shared/framework/ops.md               (framework primitives)
  *
  * Also exposes static documentation for the built-in framework primitives.
  */
@@ -116,9 +118,8 @@ export class OpRegistry {
 
   /** Resolve an op name given the document that references it. Returns undefined if not found. */
   async resolve(opName: string, fromDocument: vscode.Uri): Promise<ResolvedOp | undefined> {
-    // 1. skill-local ops.md
-    const skillOpsUri = this.siblingOpsUri(fromDocument);
-    if (skillOpsUri) {
+    // 1. skill-local ops (references/ops.md, references/ops/<name>.md, or legacy ops.md)
+    for (const skillOpsUri of this.skillOpsUris(fromDocument)) {
       const defs = await this.loadDefs(skillOpsUri);
       const def = defs.find(d => d.name === opName);
       if (def) return { definition: def, source: 'skill-local' };
@@ -157,8 +158,9 @@ export class OpRegistry {
       }
     };
 
-    const skillOpsUri = this.siblingOpsUri(fromDocument);
-    if (skillOpsUri) collect(await this.loadDefs(skillOpsUri));
+    for (const skillOpsUri of this.skillOpsUris(fromDocument)) {
+      collect(await this.loadDefs(skillOpsUri));
+    }
 
     const projectOpsUri = await this.findSharedOps(fromDocument, 'project');
     if (projectOpsUri) collect(await this.loadDefs(projectOpsUri));
@@ -194,12 +196,74 @@ export class OpRegistry {
   // Path helpers
   // -------------------------------------------------------------------------
 
-  /** For a skill.md, return the sibling ops.md URI. */
-  private siblingOpsUri(docUri: vscode.Uri): vscode.Uri | undefined {
-    const dir = path.dirname(docUri.fsPath);
-    const candidate = path.join(dir, 'ops.md');
-    if (fs.existsSync(candidate)) {
-      return vscode.Uri.file(candidate);
+  /**
+   * For a skill document, return all skill-local ops file URIs in lookup order:
+   *   1. <skill>/references/ops.md          (standard layout, single file)
+   *   2. <skill>/references/ops/*.md        (standard layout, per-op files)
+   *   3. <skill>/ops.md                     (legacy flat layout)
+   *
+   * If the document itself lives under references/ops/ (per-op file) or is
+   * references/ops.md, the skill root resolves to two levels up.
+   */
+  private skillOpsUris(docUri: vscode.Uri): vscode.Uri[] {
+    const skillDir = this.findSkillRoot(docUri.fsPath);
+    if (!skillDir) {
+      // Fallback: same directory as the doc (covers the case when skill root cannot
+      // be determined from a non-canonical layout).
+      const dir = path.dirname(docUri.fsPath);
+      return this.collectOpsInSkillDir(dir);
+    }
+    return this.collectOpsInSkillDir(skillDir);
+  }
+
+  private collectOpsInSkillDir(skillDir: string): vscode.Uri[] {
+    const uris: vscode.Uri[] = [];
+
+    // 1. references/ops.md
+    const refsOps = path.join(skillDir, 'references', 'ops.md');
+    if (fs.existsSync(refsOps)) {
+      uris.push(vscode.Uri.file(refsOps));
+    }
+
+    // 2. references/ops/*.md
+    const refsOpsDir = path.join(skillDir, 'references', 'ops');
+    if (fs.existsSync(refsOpsDir) && fs.statSync(refsOpsDir).isDirectory()) {
+      try {
+        const entries = fs.readdirSync(refsOpsDir);
+        for (const e of entries) {
+          if (e.toLowerCase().endsWith('.md')) {
+            uris.push(vscode.Uri.file(path.join(refsOpsDir, e)));
+          }
+        }
+      } catch { /* ignore */ }
+    }
+
+    // 3. legacy ops.md at skill root
+    const legacyOps = path.join(skillDir, 'ops.md');
+    if (fs.existsSync(legacyOps)) {
+      uris.push(vscode.Uri.file(legacyOps));
+    }
+
+    return uris;
+  }
+
+  /**
+   * Resolve the skill root directory containing `SKILL.md` (or legacy `skill.md`).
+   * Walks up from the given document path. Returns undefined if no SKILL.md is
+   * found within a few levels (skill files normally live at depth ≤ 3 from root:
+   * SKILL.md, references/ops.md, references/ops/<name>.md).
+   */
+  private findSkillRoot(startPath: string): string | undefined {
+    let current = path.dirname(startPath);
+    for (let i = 0; i < 4; i++) {
+      const upper = path.join(current, 'SKILL.md');
+      const lower = path.join(current, 'skill.md');
+      if (fs.existsSync(upper) || fs.existsSync(lower)) {
+        return current;
+      }
+      const parent = path.dirname(current);
+      if (parent === current) break;
+      current = parent;
     }
     return undefined;
   }

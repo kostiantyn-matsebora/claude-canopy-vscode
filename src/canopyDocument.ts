@@ -73,9 +73,14 @@ export function isPrimitive(name: string): boolean {
 
 export function parseDocument(document: vscode.TextDocument): ParsedSkillDocument {
   const uri = document.uri;
-  const fileName = path.basename(uri.fsPath).toLowerCase();
-  const isOpsFile = fileName === 'ops.md';
-  const isSkillFile = fileName === 'skill.md';
+  // agentskills.io spec requires SKILL.md (uppercase). We compare the basename
+  // case-sensitively for SKILL.md but recognise lowercase ops.md and skill.md
+  // for backward compatibility (legacy skills); diagnostics flag lowercase
+  // skill.md as a compliance error.
+  const rawName = path.basename(uri.fsPath);
+  const fileNameLower = rawName.toLowerCase();
+  const isOpsFile = fileNameLower === 'ops.md';
+  const isSkillFile = rawName === 'SKILL.md' || fileNameLower === 'skill.md';
 
   const lines = document.getText().split(/\r?\n/);
   const result: ParsedSkillDocument = {

@@ -1,8 +1,18 @@
 ---
 name: bump-version
 description: Bumps the extension version and adds a changelog entry based on the update skill result or git diff since the last changelog entry. Does not create a git tag — CI creates the tag on push to master.
-argument-hint: ""
+compatibility:
+  requires:
+    - canopy-runtime
+metadata:
+  argument-hint: ""
 ---
+
+> **Safety preamble** — This skill requires canopy-runtime to interpret its `## Tree`
+> section. If the active agent has no canopy-runtime installed (no marker block in
+> `CLAUDE.md` / `.github/copilot-instructions.md`, no `canopy-runtime/SKILL.md` under
+> `.claude/skills/` or `.github/skills/`), HALT with a message instructing the user
+> to install canopy. Do not attempt to interpret the tree without runtime.
 
 ---
 

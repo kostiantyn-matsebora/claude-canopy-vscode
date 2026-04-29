@@ -1,8 +1,18 @@
 ---
 name: release
 description: Pushes to master (directly or via PR) to trigger automated tag creation and GitHub Release. Supports both direct-master and feature-branch PR workflows.
-argument-hint: ""
+compatibility:
+  requires:
+    - canopy-runtime
+metadata:
+  argument-hint: ""
 ---
+
+> **Safety preamble** — This skill requires canopy-runtime to interpret its `## Tree`
+> section. If the active agent has no canopy-runtime installed (no marker block in
+> `CLAUDE.md` / `.github/copilot-instructions.md`, no `canopy-runtime/SKILL.md` under
+> `.claude/skills/` or `.github/skills/`), HALT with a message instructing the user
+> to install canopy. Do not attempt to interpret the tree without runtime.
 
 ## Tree
 

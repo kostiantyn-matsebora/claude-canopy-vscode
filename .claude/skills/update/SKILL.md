@@ -1,8 +1,18 @@
 ---
 name: update
 description: Updates the Canopy subtree to latest, syncs extension implementation and docs, writes and runs unit tests until all pass.
-argument-hint: ""
+compatibility:
+  requires:
+    - canopy-runtime
+metadata:
+  argument-hint: ""
 ---
+
+> **Safety preamble** — This skill requires canopy-runtime to interpret its `## Tree`
+> section. If the active agent has no canopy-runtime installed (no marker block in
+> `CLAUDE.md` / `.github/copilot-instructions.md`, no `canopy-runtime/SKILL.md` under
+> `.claude/skills/` or `.github/skills/`), HALT with a message instructing the user
+> to install canopy. Do not attempt to interpret the tree without runtime.
 
 ---
 
