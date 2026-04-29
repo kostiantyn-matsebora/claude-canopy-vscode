@@ -28,13 +28,15 @@ metadata:
   argument-hint: "<required-arg>"
 ---
 
-> **Runtime required:** This skill uses Canopy tree notation and depends on the
-> canopy-runtime skill. If canopy-runtime is not installed in the active
-> workspace (no \`canopy-runtime/SKILL.md\` under \`.claude/skills/\`,
-> \`.github/skills/\`, or \`.agents/skills/\`, and no canopy-runtime marker block
-> in \`CLAUDE.md\` or \`.github/copilot-instructions.md\`), install it first using
-> any tool available to you (see this skill's \`compatibility\` field for the
-> source). Do not interpret the tree without canopy-runtime active.
+> **Runtime required.** This skill uses Canopy tree notation; canopy-runtime must be active.
+>
+> **Detect canopy-runtime** — present if either:
+> - \`canopy-runtime/SKILL.md\` exists under \`.claude/skills/\`, \`.github/skills/\`, or \`.agents/skills/\`, OR
+> - a canopy-runtime marker block exists in \`CLAUDE.md\` or \`.github/copilot-instructions.md\`.
+>
+> **If neither is present** — install canopy-runtime first (see the \`compatibility\` field for the source and install options), then re-invoke this skill.
+>
+> Do not interpret the \`## Tree\` without canopy-runtime active.
 
 Parse $ARGUMENTS.
 
