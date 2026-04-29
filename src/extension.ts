@@ -22,7 +22,13 @@ const CANOPY_LANG = 'canopy';
 // diagnostics provider flags lowercase skill.md as a compliance error.
 // Op files: prefer references/ops.md and references/ops/<name>.md (standard layout),
 // with legacy <skill>/ops.md still supported.
+// Skills roots recognized: .agents/ (Cross-client), .claude/ (Claude Code), .github/ (Copilot).
 const CANOPY_FILE_RE = [
+  /[/\\]\.agents[/\\].*[/\\]SKILL\.md$/,
+  /[/\\]\.agents[/\\].*[/\\]skill\.md$/,
+  /[/\\]\.agents[/\\].*[/\\]references[/\\]ops\.md$/i,
+  /[/\\]\.agents[/\\].*[/\\]references[/\\]ops[/\\][^/\\]+\.md$/i,
+  /[/\\]\.agents[/\\].*[/\\]ops\.md$/i,
   /[/\\]\.claude[/\\].*[/\\]SKILL\.md$/,
   /[/\\]\.claude[/\\].*[/\\]skill\.md$/,
   /[/\\]\.claude[/\\].*[/\\]references[/\\]ops\.md$/i,

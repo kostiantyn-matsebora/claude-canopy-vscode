@@ -60,6 +60,10 @@
           "canopy"
         ],
         "filenamePatterns": [
+          "**/.agents/**/SKILL.md",
+          "**/.agents/**/references/ops.md",
+          "**/.agents/**/references/ops/*.md",
+          "**/.agents/**/ops.md",
           "**/.claude/**/SKILL.md",
           "**/.claude/**/references/ops.md",
           "**/.claude/**/references/ops/*.md",
@@ -78,6 +82,10 @@
           "canopy-verify"
         ],
         "filenamePatterns": [
+          "**/.agents/**/assets/verify/*.md",
+          "**/.agents/**/assets/checklists/*.md",
+          "**/.agents/**/verify/*.md",
+          "**/.agents/**/checklists/*.md",
           "**/.claude/**/assets/verify/*.md",
           "**/.claude/**/assets/checklists/*.md",
           "**/.claude/**/verify/*.md",
@@ -95,6 +103,10 @@
           "canopy-template"
         ],
         "filenamePatterns": [
+          "**/.agents/**/assets/templates/*.md",
+          "**/.agents/**/assets/templates/*.yaml",
+          "**/.agents/**/templates/*.md",
+          "**/.agents/**/templates/*.yaml",
           "**/.claude/**/assets/templates/*.md",
           "**/.claude/**/assets/templates/*.yaml",
           "**/.claude/**/templates/*.md",
@@ -112,6 +124,13 @@
           "canopy-resource"
         ],
         "filenamePatterns": [
+          "**/.agents/**/assets/constants/*.md",
+          "**/.agents/**/assets/policies/*.md",
+          "**/.agents/**/assets/schemas/*.md",
+          "**/.agents/**/references/*.md",
+          "**/.agents/**/constants/*.md",
+          "**/.agents/**/policies/*.md",
+          "**/.agents/**/schemas/*.md",
           "**/.claude/**/assets/constants/*.md",
           "**/.claude/**/assets/policies/*.md",
           "**/.claude/**/assets/schemas/*.md",
@@ -135,6 +154,10 @@
           "canopy-scripts"
         ],
         "filenamePatterns": [
+          "**/.agents/**/scripts/*.ps1",
+          "**/.agents/**/scripts/*.sh",
+          "**/.agents/**/commands/*.ps1",
+          "**/.agents/**/commands/*.sh",
           "**/.claude/**/scripts/*.ps1",
           "**/.claude/**/scripts/*.sh",
           "**/.claude/**/commands/*.ps1",

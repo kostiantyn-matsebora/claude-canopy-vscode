@@ -269,18 +269,18 @@ export class OpRegistry {
   }
 
   /**
-   * Walk up from the document to find .claude/, then resolve:
-   *   .claude/skills/shared/<kind>/ops.md
+   * Walk up from the document to find an agentskills root, then resolve:
+   *   <root>/skills/shared/<kind>/ops.md
    * OR for canopy submodule:
-   *   .claude/canopy/skills/shared/<kind>/ops.md
+   *   <root>/canopy/skills/shared/<kind>/ops.md
    */
   private async findSharedOps(docUri: vscode.Uri, kind: 'project' | 'framework'): Promise<vscode.Uri | undefined> {
-    const claudeDir = this.findClaudeDir(docUri.fsPath);
-    if (!claudeDir) return undefined;
+    const skillsRoot = this.findSkillsRoot(docUri.fsPath);
+    if (!skillsRoot) return undefined;
 
     const candidates = [
-      path.join(claudeDir, 'skills', 'shared', kind, 'ops.md'),
-      path.join(claudeDir, 'canopy', 'skills', 'shared', kind, 'ops.md'),
+      path.join(skillsRoot, 'skills', 'shared', kind, 'ops.md'),
+      path.join(skillsRoot, 'canopy', 'skills', 'shared', kind, 'ops.md'),
     ];
 
     for (const c of candidates) {
@@ -289,14 +289,23 @@ export class OpRegistry {
     return undefined;
   }
 
-  /** Walk up directory tree to find the parent .claude/ directory. */
-  private findClaudeDir(startPath: string): string | undefined {
+  /**
+   * Walk up directory tree to find the parent agentskills root.
+   * Recognized roots, first match wins:
+   *   .agents/  — Cross-client (gh skill install default since gh 2.91)
+   *   .claude/  — Claude Code
+   *   .github/  — GitHub Copilot
+   */
+  private findSkillsRoot(startPath: string): string | undefined {
+    const ROOT_DIRS = ['.agents', '.claude', '.github'];
     let current = path.dirname(startPath);
     const root = path.parse(current).root;
     while (current !== root) {
-      const candidate = path.join(current, '.claude');
-      if (fs.existsSync(candidate) && fs.statSync(candidate).isDirectory()) {
-        return candidate;
+      for (const d of ROOT_DIRS) {
+        const candidate = path.join(current, d);
+        if (fs.existsSync(candidate) && fs.statSync(candidate).isDirectory()) {
+          return candidate;
+        }
       }
       current = path.dirname(current);
     }
