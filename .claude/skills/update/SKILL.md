@@ -1,18 +1,18 @@
 ---
 name: update
 description: Updates the Canopy subtree to latest, syncs extension implementation and docs, writes and runs unit tests until all pass.
-compatibility:
-  requires:
-    - canopy-runtime
+compatibility: Requires the canopy-runtime skill (published at github.com/kostiantyn-matsebora/claude-canopy). Install with any agentskills.io-compatible tool — e.g. `gh skill install`, `git clone`, the repo's `install.sh`/`install.ps1`, or the Claude Code plugin marketplace. Supports Claude Code and GitHub Copilot.
 metadata:
   argument-hint: ""
 ---
 
-> **Safety preamble** — This skill requires canopy-runtime to interpret its `## Tree`
-> section. If the active agent has no canopy-runtime installed (no marker block in
-> `CLAUDE.md` / `.github/copilot-instructions.md`, no `canopy-runtime/SKILL.md` under
-> `.claude/skills/` or `.github/skills/`), HALT with a message instructing the user
-> to install canopy. Do not attempt to interpret the tree without runtime.
+> **Runtime required:** This skill uses Canopy tree notation and depends on the
+> canopy-runtime skill. If canopy-runtime is not installed in the active
+> workspace (no `canopy-runtime/SKILL.md` under `.claude/skills/`,
+> `.github/skills/`, or `.agents/skills/`, and no canopy-runtime marker block
+> in `CLAUDE.md` or `.github/copilot-instructions.md`), install it first using
+> any tool available to you (see this skill's `compatibility` field for the
+> source). Do not interpret the tree without canopy-runtime active.
 
 ---
 

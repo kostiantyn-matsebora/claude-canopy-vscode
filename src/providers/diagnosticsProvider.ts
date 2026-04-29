@@ -531,26 +531,52 @@ export class CanopyDiagnosticsProvider {
       diagnostics.push(new vscode.Diagnostic(
         new vscode.Range(0, 0, 0, lines[0]?.length ?? 0),
         `Canopy-flavored skills (with '## Tree') must declare a 'compatibility' frontmatter field ` +
-        `requiring canopy-runtime, e.g. 'compatibility: { requires: [canopy-runtime] }'.`,
+        `naming canopy-runtime as a dependency, e.g. 'compatibility: Requires the canopy-runtime skill (published at github.com/...)...'.`,
         vscode.DiagnosticSeverity.Warning
       ));
       return;
     }
-    // The frontmatter parser only captures the top-level value. For nested YAML
-    // (block-style mapping with `requires:` indented), inspect subsequent
-    // indented lines until the next top-level key or frontmatter close.
-    let blockText = compat.value;
+    // Per agentskills.io spec, `compatibility` is free-text (max 500 chars).
+    // Structured shapes like `compatibility: { requires: [...] }` or block-form
+    // YAML maps are non-spec — flag them so /canopy improve can migrate.
+    const compatLine = lines[compat.line] ?? '';
+    const valueOnSameLine = compat.value.trim();
+    const isInlineMapOrList = /^[\[{]/.test(valueOnSameLine);
+    let isBlockMap = false;
+    let collected = compat.value;
     for (let i = compat.line + 1; i < lines.length; i++) {
       const l = lines[i];
       if (l === undefined) break;
       if (l.trim() === '---') break;
       if (/^[a-z][a-z0-9-]*:/.test(l)) break; // next top-level key
-      blockText += '\n' + l;
+      if (l.trim() === '') continue;
+      // Indented line under compatibility means block-form map/list.
+      if (/^\s+\S/.test(l)) {
+        isBlockMap = true;
+      }
+      collected += '\n' + l;
     }
-    if (!/canopy-runtime/.test(blockText)) {
+    if (isInlineMapOrList || isBlockMap) {
       diagnostics.push(new vscode.Diagnostic(
-        new vscode.Range(compat.line, 0, compat.line, lines[compat.line]?.length ?? 0),
-        `'compatibility' field on a canopy-flavored skill should declare canopy-runtime as a required dependency.`,
+        new vscode.Range(compat.line, 0, compat.line, compatLine.length),
+        `'compatibility' must be a YAML string per the agentskills.io spec (max 500 chars). ` +
+        `Structured shapes like '{ requires: [...] }' or block-form maps are non-spec — ` +
+        `rewrite as a free-text string. Run /canopy improve to migrate automatically.`,
+        vscode.DiagnosticSeverity.Warning
+      ));
+    }
+    if (!isInlineMapOrList && !isBlockMap && valueOnSameLine.length > 500) {
+      diagnostics.push(new vscode.Diagnostic(
+        new vscode.Range(compat.line, 0, compat.line, compatLine.length),
+        `'compatibility' exceeds the 500-character limit defined by the agentskills.io spec.`,
+        vscode.DiagnosticSeverity.Warning
+      ));
+    }
+    if (!/canopy-runtime/.test(collected)) {
+      diagnostics.push(new vscode.Diagnostic(
+        new vscode.Range(compat.line, 0, compat.line, compatLine.length),
+        `'compatibility' field on a canopy-flavored skill should name canopy-runtime as a required dependency ` +
+        `and point at a locatable source so an agent can resolve and install it.`,
         vscode.DiagnosticSeverity.Hint
       ));
     }

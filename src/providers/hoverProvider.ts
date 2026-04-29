@@ -13,7 +13,7 @@ const FRONTMATTER_DOCS: Record<string, string> = {
   name: '**`name`** — Kebab-case skill identifier (e.g. `bump-version`). Used in the skill picker.',
   description: '**`description`** — One-line description shown in the skill picker.',
   license: '**`license`** — SPDX license identifier (e.g. `MIT`).',
-  compatibility: '**`compatibility`** — Declares runtime requirements. Canopy-flavored skills (with `## Tree`) declare `requires: [canopy-runtime]` so unsupported agents fail fast.',
+  compatibility: '**`compatibility`** — Free-text environment-requirements blurb (max 500 chars per agentskills.io spec). Canopy-flavored skills (with `## Tree`) name `canopy-runtime` and a locatable source repo so an agent can resolve the dependency from the field alone. Structured shapes like `{ requires: [...] }` are non-spec.',
   'allowed-tools': '**`allowed-tools`** — Space-separated list of tools the skill may invoke (e.g. `Read Write Edit Glob Grep Bash`).',
   metadata: '**`metadata`** — Free-form metadata block. Place non-spec fields here (`argument-hint`, `user-invocable`, `version`, `author`, etc.).',
   // Below are non-spec but commonly seen at root in legacy skills — flagged by diagnostics, but documented here so hover still works.

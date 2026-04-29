@@ -27,7 +27,7 @@ function makeDoc(text: string, fileName = 'SKILL.md') {
  */
 function skill(body: string) {
   return makeDoc(
-    `---\nname: t\ndescription: t\ncompatibility:\n  requires:\n    - canopy-runtime\n---\n\n` +
+    `---\nname: t\ndescription: t\ncompatibility: Requires the canopy-runtime skill (published at github.com/example/canopy). Install with any agentskills.io-compatible tool.\n---\n\n` +
     `> Safety preamble — requires canopy-runtime; halt if not installed.\n\n` +
     body
   );
@@ -131,6 +131,24 @@ describe('diagnostics — frontmatter', () => {
     expect(hasMsg('user-invocable')).toBe(true);
   });
 
+  it('warns when compatibility is a block-form YAML map (non-spec; must be a string)', async () => {
+    await provider.validate(makeDoc(
+      '---\nname: t\ndescription: t\ncompatibility:\n  requires:\n    - canopy-runtime\n---\n\n' +
+      '> safety preamble — requires canopy-runtime; halt if not installed.\n\n' +
+      '## Tree\n\n* EXPLORE >> ctx\n'
+    ));
+    expect(hasMsg('must be a YAML string')).toBe(true);
+  });
+
+  it('warns when compatibility uses inline-flow map shape (non-spec)', async () => {
+    await provider.validate(makeDoc(
+      '---\nname: t\ndescription: t\ncompatibility: { requires: [canopy-runtime] }\n---\n\n' +
+      '> safety preamble — requires canopy-runtime; halt if not installed.\n\n' +
+      '## Tree\n\n* EXPLORE >> ctx\n'
+    ));
+    expect(hasMsg('must be a YAML string')).toBe(true);
+  });
+
   it('warns when canopy-flavored skill (## Tree) is missing compatibility field', async () => {
     await provider.validate(makeDoc(
       '---\nname: t\ndescription: t\n---\n\n' +
@@ -142,7 +160,7 @@ describe('diagnostics — frontmatter', () => {
 
   it('hints when canopy-flavored skill (## Tree) is missing a safety preamble mentioning canopy-runtime', async () => {
     await provider.validate(makeDoc(
-      '---\nname: t\ndescription: t\ncompatibility:\n  requires:\n    - canopy-runtime\n---\n\n' +
+      '---\nname: t\ndescription: t\ncompatibility: Requires the canopy-runtime skill (published at github.com/example/canopy).\n---\n\n' +
       '## Tree\n\n* EXPLORE >> ctx\n'
     ));
     expect(hasMsg('safety preamble')).toBe(true);
@@ -150,7 +168,7 @@ describe('diagnostics — frontmatter', () => {
 
   it('flags lowercase skill.md filename (must be uppercase SKILL.md)', async () => {
     await provider.validate(makeDoc(
-      '---\nname: t\ndescription: t\ncompatibility:\n  requires:\n    - canopy-runtime\n---\n\n' +
+      '---\nname: t\ndescription: t\ncompatibility: Requires the canopy-runtime skill (published at github.com/example/canopy).\n---\n\n' +
       '> safety preamble — requires canopy-runtime; halt if not installed.\n\n' +
       '## Tree\n\n* EXPLORE >> ctx\n',
       'skill.md'
