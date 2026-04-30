@@ -2,7 +2,7 @@
 
 Test suites for the `canopy-skills` VSCode extension (`claude-canopy-vscode`). Suites are the parallelization unit — every suite is fully isolated and may run concurrently with any other suite. Scenarios within a suite generally parallelize too (vitest runs them in parallel by default); exceptions are flagged.
 
-This document covers the extension only. For framework-side tests (install scripts, marker-block parity, autonomous-agent E2E, etc.), see [`claude-canopy/docs/TEST-SCENARIOS.md`](https://github.com/kostiantyn-matsebora/claude-canopy/blob/master/docs/TEST-SCENARIOS.md).
+This document covers the extension only. For framework-side tests (install scripts, marker-block parity, autonomous-agent E2E, etc.), see [`claude-canopy/docs/TEST_SCENARIOS.md`](https://github.com/kostiantyn-matsebora/claude-canopy/blob/master/docs/TEST_SCENARIOS.md).
 
 ## Conventions
 
@@ -32,17 +32,18 @@ This document covers the extension only. For framework-side tests (install scrip
 
 ### C2.1 — Full vitest run
 - **Steps:** `npm test` (runs `vitest run`).
-- **Expected:** all tests pass (current baseline: **276/276** across 9 test files).
-- **Test files (each is internally a suite of `describe` blocks):**
+- **Expected:** all tests pass (current baseline: **323/323** across 32 test files).
+- **Helper-level test files** (each is internally a suite of `describe` blocks):
   - `src/test/canopyDocument.test.ts` — frontmatter parsing, tree node extraction, Read-ref discovery
   - `src/test/diagnosticsProvider.test.ts` — full diagnostic catalog (frontmatter, structure, primitive signatures, ops conformance, compatibility shape)
   - `src/test/opRegistry.test.ts` — op resolution chain (skill-local → consumer → framework primitives)
   - `src/test/realSkills.test.ts` — re-baseline against the bundled framework + example skills
-  - `src/test/installCanopy.test.ts` — install command behavior, marker-block content
+  - `src/test/installCanopy.test.ts` — install helper behavior, marker-block content
   - `src/test/installMethodPicks.test.ts` — install method picker logic (Claude / Copilot / Cross-client / install-script / gh-skill / plugin)
-  - `src/test/canopyAgent.test.ts` — agent command dispatch, framework skill detection
+  - `src/test/canopyAgent.test.ts` — agent prompt construction, framework skill detection, project resolution
   - `src/test/availability.test.ts` — tool availability probing (`git`, `gh skill`, `claude`)
   - `src/test/resourceParser.test.ts` — category file parser (constants, policies, schemas)
+- **Per-command handler test files** (`src/test/cmd-*.test.ts`) — see Suite C8.
 
 ---
 
@@ -155,6 +156,111 @@ Open a known SKILL.md (e.g. an example skill), trigger:
 
 ---
 
+## Suite C8 — Per-command handler tests
+
+**Validates:** every command id contributed in `package.json#contributes.commands` has a vitest test that exercises its registered handler — input prompts, branching, and the dispatch action it produces (terminal `sendText` / `child_process.exec` / clipboard / file write / info message).
+**Parallelizable:** subset of C2; vitest runs all 23 files in parallel. Each file uses inline `vi.spyOn` / property-assignment to extend the shared `vscode` mock (the auto-loaded mock in `src/__mocks__/vscode.ts` is intentionally minimal — see [project_vscode_test_sweep_findings.md] for the lift-into-shared-mock follow-up).
+**Prereqs:** `npm install` completed.
+
+Each scenario lists: **Invocation** (what the user-facing flow looks like), **Seed** (mocked state), **Pass criteria** (what the test asserts).
+
+The test pattern was developed via the parallel-subagent E2E sweep on 2026-04-30 (4 batches × ~6 commands; one focused test file per command; per-command `RESULT.json` aggregated by the parent agent).
+
+### Suite layout
+
+23 test files at `src/test/cmd-<slug>.test.ts`, one per command id. Each declares ≥2 `it(...)` cases — a happy path and a cancel/no-op path, plus extras where the handler has additional branches (e.g. `cmd-agent-scaffold.test.ts` has a `validateInput` case for the kebab-case regex).
+
+### Agent-command handlers (11) — `src/commands/canopyAgent.ts`
+
+These dispatch `/canopy <request>` (Claude target via `claude` CLI in a terminal) or `Follow .github/skills/canopy/SKILL.md and <request>` (Copilot target via `vscode.commands.executeCommand('workbench.action.chat.open')`). Plugin installs use the namespaced `/canopy:canopy` form.
+
+#### C8.1 — `canopy.agentCreate`
+**Invocation:** `showInputBox(description)` → dispatch. **Pass:** sendText carries `/canopy create a skill that <description>`; cancel = no dispatch.
+
+#### C8.2 — `canopy.agentModify`
+**Invocation:** `pickSkill` then `showInputBox(change)` → dispatch. **Pass:** sendText carries `/canopy modify the <skill> skill — <change>`; pickSkill cancel = no dispatch.
+
+#### C8.3 — `canopy.agentScaffold`
+**Invocation:** `showInputBox(name, validateInput=kebab-case)` → dispatch. **Pass:** sendText carries `/canopy scaffold a blank skill named <name>`; `validateInput` returns error for non-kebab and undefined for valid; cancel = no dispatch.
+
+#### C8.4 — `canopy.agentConvertToCanopy`
+**Invocation:** `pickSkill` → dispatch. **Pass:** sendText carries `/canopy convert the <skill> skill to canopy format`.
+
+#### C8.5 — `canopy.agentValidate`
+**Invocation:** `pickSkill` → dispatch. **Pass:** sendText carries `/canopy validate the <skill> skill`.
+
+#### C8.6 — `canopy.agentImprove`
+**Invocation:** `pickSkill` → dispatch. **Pass:** sendText carries `/canopy improve the <skill> skill — align with framework rules`.
+
+#### C8.7 — `canopy.agentAdvise`
+**Invocation:** `showInputBox(question)` → dispatch. **Pass:** sendText carries `/canopy how to <question>`.
+
+#### C8.8 — `canopy.agentRefactorSkills`
+**Invocation:** no input — dispatches a fixed string. **Pass:** sendText carries `/canopy refactor skills — extract common ops and resources`; no-project (no canopy-runtime marker) = no dispatch.
+
+#### C8.9 — `canopy.agentConvertToRegular`
+**Invocation:** `pickSkill` → dispatch. **Pass:** sendText carries `/canopy convert the <skill> skill back to a regular plain skill`.
+
+#### C8.10 — `canopy.agentHelp`
+**Invocation:** no input — dispatches a fixed string. **Pass:** sendText carries `/canopy help — list all operations`; no-project = no dispatch.
+
+#### C8.11 — `canopy.agentDebug`
+**Invocation:** `pickSkill` → dispatch via `buildClaudeCliDebugCommand`. **Pass:** sendText carries `/canopy-debug <skill>` (NOT `/canopy ...`).
+
+### Install-command handlers (4) — `src/commands/installCanopy.ts`
+
+Dispatch surfaces vary by handler — see findings memo for the discrepancy with the documented "all use terminal" model.
+
+#### C8.12 — `canopy.install`
+**Invocation:** `showQuickPick` over install methods (install-script / gh-skill / plugin) → dispatches to the chosen method's handler (currently a direct function call; see findings #2).
+**Pass:** picking gh-skill advances to the gh-install-location picker; cancel = no further pickers, no dispatch.
+
+#### C8.13 — `canopy.installByCopy`
+**Invocation:** `pickWorkspaceFolder`, `pickTarget`, `pickVersion` → runs install script via `child_process.exec` (NOT terminal.sendText).
+**Pass:** captured exec command contains `install.sh` (Unix) or `install.ps1` (Windows) with the chosen target flag; pickTarget cancel = no exec.
+
+#### C8.14 — `canopy.installAsAgentSkill`
+**Invocation:** picks workspace + agent (`claude-code` or `github-copilot`) + skills + version → runs `gh skill install ...` via `child_process.exec`.
+**Pass:** captured exec command contains `gh skill install`, `kostiantyn-matsebora/claude-canopy`, the picked skill, and `--agent <agent>`. No `--pin` when version is empty. First-picker cancel = no exec.
+
+#### C8.15 — `canopy.installAsPlugin`
+**Invocation:** always routes through `vscode.env.clipboard.writeText` (no terminal branch — see findings #2).
+**Pass:** clipboard receives all 3 slash commands — `/plugin marketplace add ...`, `/plugin install canopy@claude-canopy`, `/canopy:canopy activate`. Skill-picker cancel = no clipboard write.
+
+### New-resource-command handlers (7) — `src/commands/newResource.ts`
+
+Each resolves the active skill dir (active editor or workspace pick) and writes a templated file. Pass criteria assert the written path and key content tokens.
+
+#### C8.16 — `canopy.newSkill`
+**Invocation:** `showInputBox(skillName)` → writes 2 files. **Pass:** writeFileSync called with paths ending `<name>/SKILL.md` and `<name>/references/ops.md`, both contents containing the skill name.
+
+#### C8.17 — `canopy.newVerifyFile`
+**Invocation:** `showInputBox(name)` → writes verify file. **Pass:** writeFileSync called with path ending `assets/verify/<name>.md`; content has checklist scaffold (`- [ ]`, `## Changes applied`, `## No regressions`).
+
+#### C8.18 — `canopy.newTemplate`
+**Invocation:** `showInputBox(name)` → `showQuickPick(.md|.yaml)` → writes template. **Pass:** writeFileSync called with path ending `assets/templates/<name>.<ext>`.
+
+#### C8.19 — `canopy.newConstantsFile`
+**Invocation:** `showInputBox(name)` → writes constants file. **Pass:** writeFileSync called with path ending `assets/constants/<name>.md`; content contains `# <name>`, the table header, and the `EXAMPLE` token.
+
+#### C8.20 — `canopy.newPolicyFile`
+**Invocation:** `showInputBox(name)` → writes policy file. **Pass:** writeFileSync called with path ending `assets/policies/<name>.md`; content contains `# <name>`, `## Rules`, `## Constraints`.
+
+#### C8.21 — `canopy.newCommandsFile`
+**Invocation:** `showInputBox(name)` → `showQuickPick(.sh|.ps1)` → writes script. **Pass:** writeFileSync called with path ending `scripts/<name>.<ext>`.
+
+#### C8.22 — `canopy.newSchema`
+**Invocation:** `showQuickPick(type)` first; if `custom`, `showInputBox(name)` → writes JSON file. **Pass:** writeFileSync called with path ending `assets/schemas/<name>.json` (NOT `.md` — see findings #3); type-picker cancel = no input prompt, no write.
+
+### Misc (1) — `src/extension.ts`
+
+#### C8.23 — `canopy.showVersion`
+**Invocation:** registered inline in `activate()` (no exported handler) — reads `context.extension.packageJSON.{version, canopyVersion}` and shows an info message.
+**Pattern:** the test stubs `vscode.commands.registerCommand` to capture the inline handler, then invokes it with a fake `ExtensionContext`.
+**Pass:** message exactly equals `Canopy Skills v<version> — Canopy framework v<canopyVersion>`; missing `canopyVersion` falls back to `vunknown`.
+
+---
+
 ## Suite C7 — Marketplace publish gate (release-only)
 
 **Validates:** the packaged `.vsix` installs cleanly into VS Code from disk; metadata renders correctly on the marketplace.
@@ -175,10 +281,11 @@ Open a known SKILL.md (e.g. an example skill), trigger:
 
 ```
 C1 (compile)             ─┐
-C2 (vitest full)         ─┤── C3 and C4 are subsets of C2; run alone for fast feedback
+C2 (vitest full)         ─┤── C3, C4, and C8 are subsets of C2; run alone for fast feedback
 C3 (compat diagnostics)  ─┤   or as part of C2 for the full suite.
 C4 (real-skills)         ─┤
 C5 (marker parity)       ─┤── all suites parallelize (no shared state)
+C8 (per-command)         ─┤
 C6 (manual smoke) *      ─┤
 C7 (publish gate) **     ─┘
 
@@ -186,4 +293,4 @@ C7 (publish gate) **     ─┘
 ** C7 runs once per release tag.
 ```
 
-CI runs C1 + C2 (which transitively covers C3 + C4) + C5 on every push to a feature branch and every PR. C6 is a pre-PR sanity check by the author. C7 gates the marketplace publish step in `release.yml`.
+CI runs C1 + C2 (which transitively covers C3 + C4 + C8) + C5 on every push to a feature branch and every PR. C6 is a pre-PR sanity check by the author. C7 gates the marketplace publish step in `release.yml`.

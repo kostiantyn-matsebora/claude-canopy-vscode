@@ -94,7 +94,7 @@ The vscode mock (`src/__mocks__/vscode.ts`) is a plain object, so `vi.spyOn` wor
 | `availability.test.ts` | `isCommandAvailable` (per-tool probes), `detectTools` (parallel probe of git/gh/claude) |
 | `realSkills.test.ts` | Integration: real SKILL.md from sibling `claude-canopy/skills/` (canonical publishing layout) and bundled example skills parse with no Errors at the pinned canopy version |
 
-Baseline: **276/276** tests across 9 files. See [TEST-SCENARIOS.md](TEST-SCENARIOS.md) for the parallelizable test-suite breakdown (C1–C7).
+Baseline: **323/323** tests across 32 files. See [TEST_SCENARIOS.md](TEST_SCENARIOS.md) for the parallelizable test-suite breakdown (C1–C8).
 
 ---
 
