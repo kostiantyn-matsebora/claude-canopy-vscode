@@ -233,22 +233,30 @@ All tree line parsing is in `parseTreeLine()` in `canopyDocument.ts`. This funct
 
 ## Release workflow
 
-Releases are tag-based. CI runs on every push to `master`; a GitHub Release with the `.vsix` attached is created automatically on `v*` tag push.
+Releases are tag-based, and tags are **signed by the maintainer**, not by GitHub Actions. The flow:
 
-```bash
-# 1. Bump version in package.json + create local tag
-npm version patch        # or minor / major
+1. Bump `package.json` version (and `.canopy-version` if syncing canopy).
+2. Update `CHANGELOG.md` with a `## [X.Y.Z]` entry — `release.yml` extracts it for the GitHub Release notes.
+3. Open a PR, get CI green, merge to master.
+4. From a clean local master, run **`scripts/release.ps1`** (PowerShell — Windows OpenSSH talks to the Bitwarden SSH agent for the signature).
 
-# 2. If Canopy framework was updated, sync its version
-npm run sync-canopy-version
-
-# 3. Update CHANGELOG.md
-
-# 4. Push branch and tag — triggers .github/workflows/release.yml
-git push origin master --follow-tags
+```pwsh
+git checkout master
+git pull --ff-only
+.\scripts\release.ps1            # validates state, creates signed tag, pushes
+.\scripts\release.ps1 -DryRun    # preview
+.\scripts\release.ps1 -Force     # skip y/N prompt
 ```
 
-The release workflow verifies that the tag matches `package.json version` before packaging. Pushing the same tag twice is rejected by git — duplicate releases are not possible.
+Pushing the signed `vX.Y.Z` tag triggers `.github/workflows/release.yml`, which:
+
+- verifies the tag matches `package.json#version`,
+- runs `npm ci && npm run compile && npm test && npm run package`,
+- attests SLSA build provenance over the `.vsix` via `actions/attest-build-provenance@v2`,
+- creates the GitHub Release with the `.vsix` attached and a verification footer (`git verify-tag` + `gh attestation verify`),
+- publishes to the VS Code Marketplace via `VSCE_PAT`.
+
+The previous auto-tagger (`tag-on-merge.yml`) was removed in favour of `scripts/release.ps1` — it tagged with GitHub's bot identity, which can't sign with the maintainer's key.
 
 ---
 

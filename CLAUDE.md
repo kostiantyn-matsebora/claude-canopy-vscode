@@ -25,7 +25,7 @@ The marker block is already committed to this repo's `CLAUDE.md`, so a fresh che
 `claude-canopy-vscode` is a VS Code extension that provides language support for Canopy skills. It is a sibling repo of `claude-canopy/` in the parent workspace.
 
 - **Package name:** `canopy-skills` — publisher `canopy-ai` (registered on marketplace.visualstudio.com — manage page: https://marketplace.visualstudio.com/manage/publishers/canopy-ai)
-- **Current version:** `0.11.0`
+- **Current version:** `0.11.1`
 - **Tracks canopy:** `0.18.1` (see `.canopy-version`)
 - **Remote:** `https://github.com/kostiantyn-matsebora/claude-canopy-vscode`
 

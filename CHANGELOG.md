@@ -2,6 +2,23 @@
 
 All notable changes to the Canopy Skills extension are documented here.
 
+## [0.11.1] — 2026-04-30
+
+Patch release. No extension behavior changes.
+
+### Changed
+
+- **Marketplace tags trimmed for real.** The 0.11.0 release left language `aliases` populated, which the VS Code Marketplace harvests as user-visible tags — leading to a noisy listing (`Canopy Resource`, `Canopy Scripts`, `Canopy Skill`, `Canopy Template`, `Canopy Verify`, plus `canopy-resource`, `canopy-scripts`, `canopy-template`, `canopy-verify`). Cleanup:
+  - `canopy` language → aliases collapsed from `["Canopy Skill", "canopy"]` to `["Canopy"]`.
+  - `canopy-verify`, `canopy-template`, `canopy-resource`, `canopy-scripts` → aliases set to `[]`. VS Code falls back to the language `id` for the picker.
+- **Release flow signed by the maintainer.** `tag-on-merge.yml` removed; `scripts/release.ps1` is the new entry point. Reads `package.json#version`, validates state, runs `git tag -s` via the Bitwarden SSH agent, pushes the signed tag. `release.yml` (unchanged) still attests SLSA build provenance + GitHub Release + Marketplace publish.
+
+### Notes
+
+- **No `canopyVersion` change** — still tracks canopy `0.18.1`.
+
+---
+
 ## [0.11.0] — 2026-04-30
 
 **Sync with Canopy framework `v0.18.1`** (was `v0.17.1`).
