@@ -2,7 +2,7 @@
   "name": "canopy-skills",
   "displayName": "Canopy Skills",
   "description": "Write Claude Code AI skills as executable code, not prose — syntax highlighting, IntelliSense, semantic diagnostics, and go-to-definition for Canopy skills: SKILL.md, references/ops, scripts, and assets (schemas, templates, constants, policies, checklists, verify).",
-  "version": "0.11.0",
+  "version": "0.11.1",
   "canopyVersion": "0.18.1",
   "icon": "images/icon.png",
   "galleryBanner": {
@@ -44,8 +44,7 @@
       {
         "id": "canopy",
         "aliases": [
-          "Canopy Skill",
-          "canopy"
+          "Canopy"
         ],
         "filenamePatterns": [
           "**/.agents/**/SKILL.md",
@@ -65,10 +64,7 @@
       },
       {
         "id": "canopy-verify",
-        "aliases": [
-          "Canopy Verify",
-          "canopy-verify"
-        ],
+        "aliases": [],
         "filenamePatterns": [
           "**/.agents/**/assets/verify/*.md",
           "**/.agents/**/assets/checklists/*.md",
@@ -86,10 +82,7 @@
       },
       {
         "id": "canopy-template",
-        "aliases": [
-          "Canopy Template",
-          "canopy-template"
-        ],
+        "aliases": [],
         "filenamePatterns": [
           "**/.agents/**/assets/templates/*.md",
           "**/.agents/**/assets/templates/*.yaml",
@@ -107,10 +100,7 @@
       },
       {
         "id": "canopy-resource",
-        "aliases": [
-          "Canopy Resource",
-          "canopy-resource"
-        ],
+        "aliases": [],
         "filenamePatterns": [
           "**/.agents/**/assets/constants/*.md",
           "**/.agents/**/assets/policies/*.md",
@@ -137,10 +127,7 @@
       },
       {
         "id": "canopy-scripts",
-        "aliases": [
-          "Canopy Scripts",
-          "canopy-scripts"
-        ],
+        "aliases": [],
         "filenamePatterns": [
           "**/.agents/**/scripts/*.ps1",
           "**/.agents/**/scripts/*.sh",
