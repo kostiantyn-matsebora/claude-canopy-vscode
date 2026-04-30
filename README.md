@@ -14,7 +14,7 @@
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-compatible-D97757?logo=anthropic&logoColor=white)](https://code.claude.com/docs/en/skills)
 [![GitHub Copilot](https://img.shields.io/badge/GitHub%20Copilot-compatible-000?logo=githubcopilot&logoColor=white)](https://code.visualstudio.com/docs/copilot/customization/agent-skills)
 
-IntelliSense, semantic diagnostics, and go-to-definition for [Canopy](https://github.com/kostiantyn-matsebora/claude-canopy) skills — the declarative, tree-structured execution framework for AI agents. Tracks framework **v0.18.0**.
+IntelliSense, semantic diagnostics, and go-to-definition for [Canopy](https://github.com/kostiantyn-matsebora/claude-canopy) skills — the declarative, tree-structured execution framework for AI agents. Tracks framework **v0.18.1**.
 
 > **Available on the VS Code Marketplace** under the [`canopy-ai`](https://marketplace.visualstudio.com/publishers/canopy-ai) publisher — search for **Canopy Skills** in the Extensions panel, or install via `code --install-extension canopy-ai.canopy-skills`. Pre-Marketplace `.vsix` artifacts are still attached to each [GitHub Release](https://github.com/kostiantyn-matsebora/claude-canopy-vscode/releases/latest) for offline installs.
 

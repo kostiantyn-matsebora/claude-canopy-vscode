@@ -4,7 +4,7 @@ All notable changes to the Canopy Skills extension are documented here.
 
 ## [0.11.0] — 2026-04-30
 
-**Sync with Canopy framework `v0.18.0`** (was `v0.17.1`).
+**Sync with Canopy framework `v0.18.1`** (was `v0.17.1`).
 
 **Headline framework changes absorbed:**
 
@@ -51,14 +51,14 @@ All notable changes to the Canopy Skills extension are documented here.
   - Inserts canonical `compatibility` value.
   - Inserts the structured safety preamble (labeled bullets, not stream-of-consciousness).
   - Uses canonical layout paths (`assets/`, `references/`, `scripts/`).
-- **Marker block** (`installCanopy.ts`, `MARKER_BLOCK` constant) — mirrors canopy v0.18.0:
+- **Marker block** (`installCanopy.ts`, `MARKER_BLOCK` constant) — mirrors canopy v0.18.1:
   - **Restructured** as bulleted lists with nested items.
   - **References all three skills roots** (`.agents/skills/`, `.claude/skills/`, `.github/skills/`).
   - **Parity check** across `marker-block.md` (now in `canopy-runtime/assets/constants/`), `install.sh build_marker_block()`, `install.ps1 Build-MarkerBlock`, and this constant still enforced.
 - **Real-skills test fixtures** (`realSkills.test.ts`):
-  - Re-baselined against bundled framework v0.18.0 and published example skills.
+  - Re-baselined against bundled framework v0.18.1 and published example skills.
   - Skills now expected at `skills/<name>/` (canonical publishing location for `gh skill install`).
-- **Pinned canopy version: `0.18.0`** in `.canopy-version` and `package.json#canopyVersion`.
+- **Pinned canopy version: `0.18.1`** in `.canopy-version` and `package.json#canopyVersion`.
 - **README and CLAUDE.md** updated:
   - `.agents/skills/` references throughout.
   - `compatibility` column added to the Frontmatter completion table.
