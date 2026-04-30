@@ -4,7 +4,10 @@
 
 [![Marketplace Version](https://vsmarketplacebadges.dev/version-short/canopy-ai.canopy-skills.svg)](https://marketplace.visualstudio.com/items?itemName=canopy-ai.canopy-skills)
 [![Installs](https://vsmarketplacebadges.dev/installs-short/canopy-ai.canopy-skills.svg)](https://marketplace.visualstudio.com/items?itemName=canopy-ai.canopy-skills)
+[![Rating](https://vsmarketplacebadges.dev/rating-short/canopy-ai.canopy-skills.svg)](https://marketplace.visualstudio.com/items?itemName=canopy-ai.canopy-skills&ssr=false#review-details)
 [![Latest Release](https://img.shields.io/github/v/release/kostiantyn-matsebora/claude-canopy-vscode?label=release&color=0969da)](https://github.com/kostiantyn-matsebora/claude-canopy-vscode/releases/latest)
+[![CI](https://img.shields.io/github/actions/workflow/status/kostiantyn-matsebora/claude-canopy-vscode/ci.yml?branch=master&label=CI)](https://github.com/kostiantyn-matsebora/claude-canopy-vscode/actions/workflows/ci.yml)
+[![Tracks Canopy](https://img.shields.io/badge/tracks_canopy-v0.18.0-2da44e)](https://github.com/kostiantyn-matsebora/claude-canopy/releases/tag/v0.18.0)
 [![License](https://img.shields.io/badge/license-MIT-0969da)](LICENSE)
 
 IntelliSense, semantic diagnostics, and go-to-definition for [Canopy](https://github.com/kostiantyn-matsebora/claude-canopy) skills — the declarative, tree-structured execution framework for AI agents. Tracks framework **v0.18.0**.
