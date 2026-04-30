@@ -19,7 +19,7 @@
 
 ### Running the extension locally (dev loop)
 
-Press **F5** in VS Code. This launches an **Extension Development Host** with the extension loaded. Open any `.claude/**/SKILL.md` (or legacy `skill.md`) file to activate IntelliSense and diagnostics.
+Press **F5** in VS Code. This launches an **Extension Development Host** with the extension loaded. Open any `SKILL.md` under `.agents/skills/`, `.claude/skills/`, or `.github/skills/` (or legacy `skill.md`) to activate IntelliSense and diagnostics.
 
 Every time you change TypeScript source, re-run `npm run compile` (or keep `npm run watch` running) and reload the Extension Development Host window with **Ctrl+Shift+P → Developer: Reload Window**.
 
@@ -86,13 +86,15 @@ The vscode mock (`src/__mocks__/vscode.ts`) is a plain object, so `vi.spyOn` wor
 |------|--------|
 | `canopyDocument.test.ts` | `parseDocument`, `parseOpDefinitions`, `extractReadRefs`, `extractOpRefs`, `getOpNameAtPosition`, `isPrimitive` |
 | `resourceParser.test.ts` | `extractCommandsSections`, `extractPlaceholders` |
-| `diagnosticsProvider.test.ts` | All `validate()` branches in `CanopyDiagnosticsProvider` |
+| `diagnosticsProvider.test.ts` | All `validate()` branches in `CanopyDiagnosticsProvider`, including the compatibility-shape diagnostic catalog (block-form / inline-flow / >500 chars / missing on `## Tree` skill / missing canopy-runtime mention hint) |
 | `opRegistry.test.ts` | `PRIMITIVE_DOCS`, `OpRegistry.loadDefs`, `invalidate`, `resolve`, `allOpNames` |
 | `canopyAgent.test.ts` | `buildAgentPrompt`, `buildDebugPrompt`, `buildClaudeCliCommand`, `projectTargetAt`, `findProjectUpward`, `resolveProjectFromPaths`, `detectCurrentSkill` |
-| `installCanopy.test.ts` | `parseGithubRepo`, `targetBaseDir`, `buildGhSkillCommand`, `buildInstallScriptCommand`, `pluginInstallSlashCommands`, `applyMarkerBlock`, `ambientInstructionFile`, `FRAMEWORK_SKILLS` |
-| `installMethodPicks.test.ts` | `buildInstallMethodPicks` (icon selection per tool availability, scope detail copy) |
+| `installCanopy.test.ts` | `parseGithubRepo`, `targetBaseDir` (incl. `.agents/skills/` cross-client), `buildGhSkillCommand` (incl. `--dir .agents/skills` cross-client), `buildInstallScriptCommand`, `pluginInstallSlashCommands`, `applyMarkerBlock`, `ambientInstructionFile`, `FRAMEWORK_SKILLS` |
+| `installMethodPicks.test.ts` | `buildInstallMethodPicks` (icon selection per tool availability, scope detail copy, Cross-client target option) |
 | `availability.test.ts` | `isCommandAvailable` (per-tool probes), `detectTools` (parallel probe of git/gh/claude) |
-| `realSkills.test.ts` | Integration: real SKILL.md from sibling `claude-canopy/` and bundled `.claude/skills/` parse with no unknown-frontmatter slips |
+| `realSkills.test.ts` | Integration: real SKILL.md from sibling `claude-canopy/skills/` (canonical publishing layout) and bundled example skills parse with no Errors at the pinned canopy version |
+
+Baseline: **323/323** tests across 32 files. See [TEST_SCENARIOS.md](TEST_SCENARIOS.md) for the parallelizable test-suite breakdown (C1–C8).
 
 ---
 
@@ -146,10 +148,11 @@ parseDocument()          ← canopyDocument.ts (called by every provider)
 
 `OpRegistry.resolve(opName, docUri)` walks the per-skill location and falls back to legacy shared paths (no-ops in v0.17.0+ but kept for back-compat):
 
-1. `<same-dir>/ops.md` (skill-local)
-2. Legacy fallback: `<.claude-root>/skills/shared/<kind>/ops.md` and `<.claude-root>/canopy/skills/shared/<kind>/ops.md`
+1. `<skill>/references/ops.md` or `<skill>/references/ops/<name>.md` (skill-local, canonical agentskills.io layout)
+2. `<skill>/ops.md` at root (skill-local, legacy flat layout — backward compatible)
+3. Legacy fallback: `<.claude-root>/skills/shared/<kind>/ops.md` and `<.claude-root>/canopy/skills/shared/<kind>/ops.md`
 
-Framework primitives (`IF`, `SWITCH`, `FOR_EACH`, `ASK`, `SHOW_PLAN`, `VERIFY_EXPECTED`, `EXPLORE`, …) are defined statically in `PRIMITIVE_DOCS` (in `opRegistry.ts`) — they are **not** loaded from disk. The canonical canopy v0.17.0+ source for primitives is `claude-canopy/skills/canopy-runtime/references/framework-ops.md`; if it diverges, sync `PRIMITIVE_DOCS` per the sync-points table in `CLAUDE.md`.
+Framework primitives (`IF`, `SWITCH`, `FOR_EACH`, `ASK`, `SHOW_PLAN`, `VERIFY_EXPECTED`, `EXPLORE`, …) are defined statically in `PRIMITIVE_DOCS` (in `opRegistry.ts`) — they are **not** loaded from disk. The canonical canopy v0.18.0+ source for primitives is `claude-canopy/skills/canopy-runtime/references/framework-ops.md`; if it diverges, sync `PRIMITIVE_DOCS` per the sync-points table in `CLAUDE.md`.
 
 The registry caches parsed definitions per file path. Call `registry.invalidate(uri)` when an `ops.md` file changes (wired in `extension.ts`).
 

@@ -18,7 +18,16 @@ import { detectTools, isCommandAvailable, ToolAvailability } from '../availabili
 
 const execAsync = promisify(exec);
 
-export type AiTarget = 'claude' | 'copilot';
+/**
+ * Install target for canopy framework skills.
+ *  - 'claude'  — installs to .claude/skills/, marker block in CLAUDE.md
+ *  - 'copilot' — installs to .github/skills/, marker block in .github/copilot-instructions.md
+ *  - 'agents'  — Cross-client install (agentskills.io spec): installs to .agents/skills/.
+ *                canopy-runtime self-identifies the host at runtime, so a single .agents/
+ *                install serves both Claude Code and Copilot. Marker block goes to whichever
+ *                instructions file already exists; CLAUDE.md is created as fallback.
+ */
+export type AiTarget = 'claude' | 'copilot' | 'agents';
 export type GhAgent = 'claude-code' | 'github-copilot';
 
 export const FRAMEWORK_SKILLS = ['canopy', 'canopy-runtime', 'canopy-debug'] as const;
@@ -47,20 +56,32 @@ export const MARKER_BLOCK = [
   '<!-- canopy-runtime-begin -->',
   '## Canopy Runtime',
   '',
-  'Any `SKILL.md` under `.claude/skills/` or `.github/skills/` that declares a `## Tree`',
-  'section is a canopy-flavored skill. Before interpreting it, load',
-  '`<skills-root>/canopy-runtime/SKILL.md` and apply the execution model defined',
-  'there — sections (`## Agent`, `## Tree`, `## Rules`, `## Response:`), tree',
-  'notation (`<<`, `>>`, `|`), control-flow and interaction primitives, op lookup',
-  'chain (skill-local ops.md → consumer project ops → framework primitives),',
-  'category directory semantics (`schemas/`/`templates/`/`commands/`/`constants/`/',
-  '`checklists/`/`policies/`/`verify/`/`references/`), subagent contract',
-  '(`EXPLORE` as first node when `## Agent` declares `**explore**`), and the',
-  'active platform runtime (`references/runtime-claude.md` or',
-  '`references/runtime-copilot.md`).',
+  '**Trigger:** any `SKILL.md` declaring a `## Tree` section is a canopy-flavored skill. Before interpreting it, load `<skills-root>/canopy-runtime/SKILL.md` and apply its execution model.',
   '',
-  '`<skills-root>` resolves to `.claude/skills/` on Claude Code and `.github/skills/`',
-  'on Copilot.',
+  '- **`<skills-root>` resolution** — first match wins:',
+  '  - `.agents/skills/` — cross-agent install (gh skill install default on Copilot and other hosts)',
+  '  - `.claude/skills/` — Claude Code',
+  '  - `.github/skills/` — GitHub Copilot',
+  '- **Platform detection** — at runtime, the agent self-identifies the active host:',
+  '  - Claude Code → apply `<skills-root>/canopy-runtime/references/runtime-claude.md`',
+  '  - GitHub Copilot → apply `<skills-root>/canopy-runtime/references/runtime-copilot.md`',
+  '  - Other hosts → halt with unsupported-platform error',
+  '- **Sections** — `## Agent`, `## Tree`, `## Rules`, `## Response:`',
+  '- **Tree notation** — `<<` input, `>>` output, `|` separator',
+  '- **Primitives** (defined in canopy-runtime\'s `references/framework-ops.md`):',
+  '  - control flow — `IF`, `ELSE_IF`, `ELSE`, `SWITCH`, `CASE`, `DEFAULT`, `FOR_EACH`, `BREAK`, `END`',
+  '  - interaction — `ASK`, `SHOW_PLAN`',
+  '  - execution — `EXPLORE`, `VERIFY_EXPECTED`',
+  '- **Op lookup chain** — first match wins:',
+  '  - skill-local: `<skill>/references/ops.md` or `<skill>/references/ops/<name>.md` (legacy `<skill>/ops.md` at root also supported)',
+  '  - consumer-defined cross-skill ops, if any',
+  '  - framework primitives in canopy-runtime\'s `references/framework-ops.md`',
+  '- **Category layout** (under each skill):',
+  '  - `scripts/` — executable code',
+  '  - `references/` — docs loaded on demand (including ops)',
+  '  - `assets/{templates,constants,schemas,checklists,policies,verify}/` — static resources',
+  '  - Legacy flat layout (these dirs at skill root) remains supported.',
+  '- **Subagent contract** — `EXPLORE` is the first tree node when `## Agent` declares `**explore**`.',
   '<!-- canopy-runtime-end -->',
 ].join('\n');
 
@@ -80,19 +101,36 @@ export function parseGithubRepo(url: string): string | undefined {
 
 /** Base directory under a workspace root for an AI target. */
 export function targetBaseDir(root: string, target: AiTarget): string {
-  return path.join(root, target === 'copilot' ? '.github' : '.claude');
+  switch (target) {
+    case 'copilot': return path.join(root, '.github');
+    case 'agents':  return path.join(root, '.agents');
+    case 'claude':
+    default:        return path.join(root, '.claude');
+  }
 }
 
-/** `gh skill install` command for a single skill. */
+/**
+ * `gh skill install` command for a single skill.
+ *
+ * `loc` is either an `--agent <id>` selector or an explicit `--dir <path>`
+ * (used for Cross-client installs at `.agents/skills/`).
+ */
 export function buildGhSkillCommand(
   repo: string,
   skill: FrameworkSkill,
-  agent: GhAgent,
+  loc: GhInstallChoice | GhAgent,
   version?: string,
   scope: 'project' | 'user' = 'project',
 ): string {
   const pin = version ? ` --pin v${version}` : '';
-  return `gh skill install ${repo} ${skill} --agent ${agent} --scope ${scope}${pin} --force`;
+  // Backward-compat: a bare GhAgent string is treated as { kind: 'agent', agent: ... }
+  const choice: GhInstallChoice = typeof loc === 'string'
+    ? { kind: 'agent', agent: loc }
+    : loc;
+  if (choice.kind === 'dir') {
+    return `gh skill install ${repo} ${skill} --dir ${choice.dir}${pin} --force`;
+  }
+  return `gh skill install ${repo} ${skill} --agent ${choice.agent} --scope ${scope}${pin} --force`;
 }
 
 /** Shell command to invoke install.sh / install.ps1 from a cloned canopy tree. */
@@ -153,7 +191,7 @@ export function buildInstallMethodPicks(tools: ToolAvailability): InstallMethodP
     {
       method: 'install-script',
       label: `${tools.git ? '$(check)' : '$(warning)'} Install (via install script)`,
-      description: 'Claude or Copilot — clone canopy + run install.sh / install.ps1',
+      description: 'Claude / Copilot / Cross-client — clone canopy + run install.sh / install.ps1',
       detail: tools.git
         ? 'git ✓ — recommended for project-local installs with ambient activation'
         : 'git not found on PATH — install git first or pick another method',
@@ -162,7 +200,7 @@ export function buildInstallMethodPicks(tools: ToolAvailability): InstallMethodP
     {
       method: 'gh-skill',
       label: `${tools.gh ? '$(check)' : '$(warning)'} Install as Agent Skill (gh skill)`,
-      description: 'Claude Code or GitHub Copilot — gh skill install per skill',
+      description: 'Claude / Copilot / Cross-client — gh skill install per skill',
       detail: tools.gh
         ? 'gh skill ✓ — version-pinned per-skill installs'
         : 'gh skill subcommand not available — install or upgrade to gh 2.90.0+ (cli.github.com)',
@@ -185,6 +223,24 @@ export function ambientInstructionFile(root: string, agent: GhAgent): string {
   return agent === 'github-copilot'
     ? path.join(root, '.github', 'copilot-instructions.md')
     : path.join(root, 'CLAUDE.md');
+}
+
+/**
+ * Resolve ambient instruction destination(s) for a Cross-client install
+ * (`gh skill install ... --dir .agents/skills`). Cross-client installs serve
+ * both Claude Code and Copilot, so write to whichever instructions files
+ * already exist; fall back to CLAUDE.md if neither exists.
+ */
+export function crossClientAmbientFiles(
+  root: string,
+  exists: (p: string) => boolean,
+): string[] {
+  const claude = path.join(root, 'CLAUDE.md');
+  const copilot = path.join(root, '.github', 'copilot-instructions.md');
+  const out: string[] = [];
+  if (exists(claude)) out.push(claude);
+  if (exists(copilot)) out.push(copilot);
+  return out.length === 0 ? [claude] : out;
 }
 
 export type MarkerBlockResult =
@@ -298,21 +354,43 @@ async function pickTarget(): Promise<AiTarget | undefined> {
     [
       { label: 'Claude', description: '.claude/skills/  — Claude Code', value: 'claude' as AiTarget },
       { label: 'GitHub Copilot', description: '.github/skills/  — GitHub Copilot', value: 'copilot' as AiTarget },
+      {
+        label: 'Cross-client',
+        description: '.agents/skills/  — works on any agentskills.io-compatible host',
+        detail: 'Single install serves both Claude Code and Copilot; runtime auto-detects the host',
+        value: 'agents' as AiTarget,
+      },
     ],
     { placeHolder: 'Select install target' },
   );
   return choice?.value;
 }
 
-async function pickAgent(): Promise<GhAgent | undefined> {
+/**
+ * Result from the gh-skill agent picker.
+ *  - { agent: 'claude-code' }    → gh skill install ... --agent claude-code  (.claude/skills/)
+ *  - { agent: 'github-copilot' } → gh skill install ... --agent github-copilot (.agents/skills/ on gh 2.91+)
+ *  - { dir: '.agents/skills' }   → gh skill install ... --dir .agents/skills (Cross-client, explicit)
+ */
+export type GhInstallChoice =
+  | { kind: 'agent'; agent: GhAgent }
+  | { kind: 'dir'; dir: '.agents/skills' };
+
+async function pickGhInstallChoice(): Promise<GhInstallChoice | undefined> {
   const choice = await vscode.window.showQuickPick(
     [
-      { label: 'Claude Code', description: 'Installs to .claude/skills/', value: 'claude-code' as GhAgent },
-      { label: 'GitHub Copilot', description: 'Installs to .github/skills/', value: 'github-copilot' as GhAgent },
+      { label: 'Claude Code',    description: 'Installs to .claude/skills/',   detail: '--agent claude-code',     value: { kind: 'agent', agent: 'claude-code' as GhAgent } },
+      { label: 'GitHub Copilot', description: 'Installs to .agents/skills/ (gh 2.91+) or .github/skills/ (older gh)', detail: '--agent github-copilot', value: { kind: 'agent', agent: 'github-copilot' as GhAgent } },
+      {
+        label: 'Cross-client',
+        description: '.agents/skills/  — works on any agentskills.io-compatible host',
+        detail: '--dir .agents/skills (single install serves both Claude Code and Copilot)',
+        value: { kind: 'dir', dir: '.agents/skills' as const },
+      },
     ],
-    { placeHolder: 'Select agent target' },
+    { placeHolder: 'Select install location' },
   );
-  return choice?.value;
+  return choice?.value as GhInstallChoice | undefined;
 }
 
 async function pickSkills(): Promise<FrameworkSkill[] | undefined> {
@@ -478,8 +556,8 @@ export async function installAsAgentSkill(): Promise<void> {
 
   const folder = await pickWorkspaceFolder();
   if (!folder) return;
-  const agent = await pickAgent();
-  if (!agent) return;
+  const choice = await pickGhInstallChoice();
+  if (!choice) return;
   const skills = await pickSkills();
   if (!skills) return;
   const version = await pickVersion();
@@ -488,21 +566,28 @@ export async function installAsAgentSkill(): Promise<void> {
   const root = folder.uri.fsPath;
   const repo = canopyRepo();
   const versionLabel = version || 'master';
+  const choiceLabel = choice.kind === 'agent' ? choice.agent : `cross-client (${choice.dir})`;
 
   const out = getOutput();
   out.show(true);
-  log(`\nInstall via gh skill — agent=${agent}, skills=${skills.join(',')}, version=${versionLabel}`);
+  log(`\nInstall via gh skill — ${choiceLabel}, skills=${skills.join(',')}, version=${versionLabel}`);
+
+  // Resolve where to write the ambient marker block. Cross-client installs may
+  // write to multiple files (whichever instructions file the active host reads).
+  const ambientFiles: string[] = choice.kind === 'agent'
+    ? [ambientInstructionFile(root, choice.agent)]
+    : crossClientAmbientFiles(root, fs.existsSync);
 
   await vscode.window.withProgress(
     {
       location: vscode.ProgressLocation.Notification,
-      title: `Installing Canopy as Agent Skill (${agent})…`,
+      title: `Installing Canopy as Agent Skill (${choiceLabel})…`,
       cancellable: false,
     },
     async () => {
       try {
         for (const skill of skills) {
-          const cmd = buildGhSkillCommand(repo, skill, agent, version || undefined);
+          const cmd = buildGhSkillCommand(repo, skill, choice, version || undefined);
           log(`Running: ${cmd}`);
           const { stdout, stderr } = await execAsync(cmd, { cwd: root });
           if (stdout) log(stdout.trim());
@@ -510,10 +595,10 @@ export async function installAsAgentSkill(): Promise<void> {
         }
 
         // gh skill install does NOT write ambient instruction files. Do it ourselves
-        // so canopy-runtime is auto-loaded by the agent.
-        const ambientFile = ambientInstructionFile(root, agent);
-        const result = writeAmbientMarkerBlock(ambientFile);
-        switch (result.kind) {
+        // so canopy-runtime is auto-loaded by the active host.
+        for (const ambientFile of ambientFiles) {
+          const result = writeAmbientMarkerBlock(ambientFile);
+          switch (result.kind) {
           case 'created':
             log(`Wrote canopy-runtime marker block to new file: ${path.relative(root, ambientFile)}`);
             break;
@@ -536,11 +621,12 @@ export async function installAsAgentSkill(): Promise<void> {
               `Canopy skills installed, but ${path.relative(root, ambientFile)} has malformed marker pairs — fix manually.`,
             );
             break;
+          }
         }
 
         log('\nDone.');
         vscode.window.showInformationMessage(
-          `Canopy installed via gh skill (${agent}, ${skills.join(', ')}).`,
+          `Canopy installed via gh skill (${choiceLabel}, ${skills.join(', ')}).`,
         );
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);

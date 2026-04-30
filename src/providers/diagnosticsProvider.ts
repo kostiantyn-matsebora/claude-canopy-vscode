@@ -10,13 +10,25 @@ const RESERVED_PRIMITIVES = new Set([
 ]);
 
 const FRONTMATTER_REQUIRED = ['name', 'description'];
+// agentskills.io spec only allows these fields at frontmatter root.
+// `argument-hint` and `user-invocable` are non-spec and must live inside `metadata`.
 const FRONTMATTER_ALLOWED = new Set([
-  'name', 'description', 'argument-hint',
-  'license', 'allowed-tools', 'metadata', 'user-invocable',
+  'name', 'description', 'license', 'compatibility', 'metadata', 'allowed-tools',
 ]);
+// Non-spec fields that must be moved into `metadata` if they appear at root.
+const FRONTMATTER_NON_SPEC_AT_ROOT = new Set([
+  'argument-hint', 'user-invocable',
+]);
+// Standard agentskills.io layout (preferred for new skills) AND legacy flat layout
+// (still supported for backward compatibility — canopy-runtime resolves Read refs literally).
 const VALID_CATEGORIES = new Set([
+  // Standard layout
+  'scripts/', 'references/',
+  'assets/schemas/', 'assets/templates/', 'assets/constants/',
+  'assets/policies/', 'assets/verify/', 'assets/checklists/',
+  // Legacy flat layout (backward-compatible)
   'schemas/', 'templates/', 'commands/', 'constants/',
-  'policies/', 'verify/', 'checklists/', 'references/',
+  'policies/', 'verify/', 'checklists/',
 ]);
 
 export class CanopyDiagnosticsProvider {
@@ -42,6 +54,7 @@ export class CanopyDiagnosticsProvider {
     // skill.md checks
     // -----------------------------------------------------------------------
     if (parsed.isSkillFile) {
+      this.checkSkillFilenameCase(document, diagnostics);
       this.checkFrontmatter(parsed, lines, diagnostics);
 
       if (!parsed.hasTreeSection) {
@@ -51,6 +64,13 @@ export class CanopyDiagnosticsProvider {
           'skill.md is missing a required ## Tree section.',
           vscode.DiagnosticSeverity.Error
         ));
+      }
+
+      // Canopy-flavored skill compliance: every ## Tree skill must declare
+      // canopy-runtime compatibility and carry a safety preamble.
+      if (parsed.hasTreeSection) {
+        this.checkCompatibility(parsed, lines, diagnostics);
+        this.checkSafetyPreamble(parsed, lines, diagnostics);
       }
 
       if (parsed.hasAgentSection && parsed.hasTreeSection) {
@@ -185,10 +205,16 @@ export class CanopyDiagnosticsProvider {
     }
 
     for (const field of parsed.frontmatter) {
-      if (!FRONTMATTER_ALLOWED.has(field.key)) {
+      if (FRONTMATTER_NON_SPEC_AT_ROOT.has(field.key)) {
         diagnostics.push(new vscode.Diagnostic(
           new vscode.Range(field.line, 0, field.line, lines[field.line]?.length ?? 0),
-          `Unknown frontmatter field '${field.key}'. Allowed: ${[...FRONTMATTER_ALLOWED].join(', ')}.`,
+          `Field '${field.key}' is not in the agentskills.io spec at frontmatter root. Move it inside 'metadata:'.`,
+          vscode.DiagnosticSeverity.Warning
+        ));
+      } else if (!FRONTMATTER_ALLOWED.has(field.key)) {
+        diagnostics.push(new vscode.Diagnostic(
+          new vscode.Range(field.line, 0, field.line, lines[field.line]?.length ?? 0),
+          `Unknown frontmatter field '${field.key}'. Allowed at root: ${[...FRONTMATTER_ALLOWED].join(', ')}. Other fields go inside 'metadata:'.`,
           vscode.DiagnosticSeverity.Warning
         ));
       }
@@ -465,6 +491,121 @@ export class CanopyDiagnosticsProvider {
         new vscode.Range(node.line, col, node.line, col + node.opName.length),
         `Unknown op '${node.opName}' — not found in skill-local, project, or framework ops.md.`,
         severity
+      ));
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // SKILL.md filename case (agentskills.io requires exact uppercase spelling)
+  // -------------------------------------------------------------------------
+
+  private checkSkillFilenameCase(
+    document: vscode.TextDocument,
+    diagnostics: vscode.Diagnostic[],
+  ): void {
+    const basename = path.basename(document.uri.fsPath);
+    if (basename === 'SKILL.md') return;
+    if (basename.toLowerCase() === 'skill.md') {
+      // Lowercase or mixed-case spelling — flag as a compliance issue.
+      diagnostics.push(new vscode.Diagnostic(
+        new vscode.Range(0, 0, 0, 0),
+        `Skill file must be named exactly 'SKILL.md' (uppercase) per the agentskills.io spec. ` +
+        `Found '${basename}'. Case-sensitive filesystems (Linux, macOS APFS) reject lowercase ` +
+        `'skill.md' for 'gh skill install' discovery — rename to 'SKILL.md'.`,
+        vscode.DiagnosticSeverity.Warning
+      ));
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Compatibility field (canopy-runtime declared in frontmatter)
+  // -------------------------------------------------------------------------
+
+  private checkCompatibility(
+    parsed: ReturnType<typeof parseDocument>,
+    lines: string[],
+    diagnostics: vscode.Diagnostic[],
+  ): void {
+    const compat = parsed.frontmatter.find(f => f.key === 'compatibility');
+    if (!compat) {
+      diagnostics.push(new vscode.Diagnostic(
+        new vscode.Range(0, 0, 0, lines[0]?.length ?? 0),
+        `Canopy-flavored skills (with '## Tree') must declare a 'compatibility' frontmatter field ` +
+        `naming canopy-runtime as a dependency, e.g. 'compatibility: Requires the canopy-runtime skill (published at github.com/...)...'.`,
+        vscode.DiagnosticSeverity.Warning
+      ));
+      return;
+    }
+    // Per agentskills.io spec, `compatibility` is free-text (max 500 chars).
+    // Structured shapes like `compatibility: { requires: [...] }` or block-form
+    // YAML maps are non-spec — flag them so /canopy improve can migrate.
+    const compatLine = lines[compat.line] ?? '';
+    const valueOnSameLine = compat.value.trim();
+    const isInlineMapOrList = /^[\[{]/.test(valueOnSameLine);
+    let isBlockMap = false;
+    let collected = compat.value;
+    for (let i = compat.line + 1; i < lines.length; i++) {
+      const l = lines[i];
+      if (l === undefined) break;
+      if (l.trim() === '---') break;
+      if (/^[a-z][a-z0-9-]*:/.test(l)) break; // next top-level key
+      if (l.trim() === '') continue;
+      // Indented line under compatibility means block-form map/list.
+      if (/^\s+\S/.test(l)) {
+        isBlockMap = true;
+      }
+      collected += '\n' + l;
+    }
+    if (isInlineMapOrList || isBlockMap) {
+      diagnostics.push(new vscode.Diagnostic(
+        new vscode.Range(compat.line, 0, compat.line, compatLine.length),
+        `'compatibility' must be a YAML string per the agentskills.io spec (max 500 chars). ` +
+        `Structured shapes like '{ requires: [...] }' or block-form maps are non-spec — ` +
+        `rewrite as a free-text string. Run /canopy improve to migrate automatically.`,
+        vscode.DiagnosticSeverity.Warning
+      ));
+    }
+    if (!isInlineMapOrList && !isBlockMap && valueOnSameLine.length > 500) {
+      diagnostics.push(new vscode.Diagnostic(
+        new vscode.Range(compat.line, 0, compat.line, compatLine.length),
+        `'compatibility' exceeds the 500-character limit defined by the agentskills.io spec.`,
+        vscode.DiagnosticSeverity.Warning
+      ));
+    }
+    if (!/canopy-runtime/.test(collected)) {
+      diagnostics.push(new vscode.Diagnostic(
+        new vscode.Range(compat.line, 0, compat.line, compatLine.length),
+        `'compatibility' field on a canopy-flavored skill should name canopy-runtime as a required dependency ` +
+        `and point at a locatable source so an agent can resolve and install it.`,
+        vscode.DiagnosticSeverity.Hint
+      ));
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Safety preamble (fail-fast guard for unsupported platforms)
+  // -------------------------------------------------------------------------
+
+  private checkSafetyPreamble(
+    parsed: ReturnType<typeof parseDocument>,
+    lines: string[],
+    diagnostics: vscode.Diagnostic[],
+  ): void {
+    // The safety preamble is a guard block in the body BEFORE ## Tree.
+    // It must mention canopy-runtime so an agent without runtime knows to halt.
+    // Look at the preamble section content (between frontmatter and first ## section).
+    const preamble = parsed.sections.find(s => s.kind === 'preamble');
+    if (!preamble) return;
+    const text = preamble.content.toLowerCase();
+    const mentionsRuntime = /canopy-runtime/.test(text);
+    const mentionsHalt = /(halt|stop|abort|require|cannot)/.test(text);
+    if (!mentionsRuntime || !mentionsHalt) {
+      const startLine = preamble.startLine;
+      diagnostics.push(new vscode.Diagnostic(
+        new vscode.Range(startLine, 0, startLine, lines[startLine]?.length ?? 0),
+        `Canopy-flavored skills should include a safety preamble that mentions canopy-runtime ` +
+        `and instructs the agent to halt on unsupported platforms. Missing or incomplete preamble.`,
+        vscode.DiagnosticSeverity.Hint
       ));
     }
   }

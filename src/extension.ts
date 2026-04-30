@@ -17,10 +17,27 @@ import {
 
 const CANOPY_LANG = 'canopy';
 
+// agentskills.io spec requires SKILL.md (uppercase). We match SKILL.md case-sensitively
+// but accept lowercase skill.md for backward compatibility (legacy skills). The
+// diagnostics provider flags lowercase skill.md as a compliance error.
+// Op files: prefer references/ops.md and references/ops/<name>.md (standard layout),
+// with legacy <skill>/ops.md still supported.
+// Skills roots recognized: .agents/ (Cross-client), .claude/ (Claude Code), .github/ (Copilot).
 const CANOPY_FILE_RE = [
-  /[/\\]\.claude[/\\].*[/\\]skill\.md$/i,
+  /[/\\]\.agents[/\\].*[/\\]SKILL\.md$/,
+  /[/\\]\.agents[/\\].*[/\\]skill\.md$/,
+  /[/\\]\.agents[/\\].*[/\\]references[/\\]ops\.md$/i,
+  /[/\\]\.agents[/\\].*[/\\]references[/\\]ops[/\\][^/\\]+\.md$/i,
+  /[/\\]\.agents[/\\].*[/\\]ops\.md$/i,
+  /[/\\]\.claude[/\\].*[/\\]SKILL\.md$/,
+  /[/\\]\.claude[/\\].*[/\\]skill\.md$/,
+  /[/\\]\.claude[/\\].*[/\\]references[/\\]ops\.md$/i,
+  /[/\\]\.claude[/\\].*[/\\]references[/\\]ops[/\\][^/\\]+\.md$/i,
   /[/\\]\.claude[/\\].*[/\\]ops\.md$/i,
-  /[/\\]\.github[/\\].*[/\\]skill\.md$/i,
+  /[/\\]\.github[/\\].*[/\\]SKILL\.md$/,
+  /[/\\]\.github[/\\].*[/\\]skill\.md$/,
+  /[/\\]\.github[/\\].*[/\\]references[/\\]ops\.md$/i,
+  /[/\\]\.github[/\\].*[/\\]references[/\\]ops[/\\][^/\\]+\.md$/i,
   /[/\\]\.github[/\\].*[/\\]ops\.md$/i,
 ];
 

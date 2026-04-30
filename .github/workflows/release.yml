@@ -16,8 +16,12 @@ on:
 jobs:
   release:
     runs-on: ubuntu-latest
+    # id-token + attestations are required by actions/attest-build-provenance
+    # to write a Sigstore-signed provenance record into GitHub Attestations.
     permissions:
       contents: write
+      id-token: write
+      attestations: write
     steps:
       - name: Resolve tag
         id: tag
@@ -56,19 +60,62 @@ jobs:
       - run: npm test
       - run: npm run package
 
+      - name: Locate packaged .vsix
+        id: vsix
+        run: |
+          VSIX=$(ls -1 *.vsix | head -1)
+          if [ -z "$VSIX" ]; then
+            echo "::error::No .vsix found after npm run package"
+            exit 1
+          fi
+          echo "path=$VSIX" >> "$GITHUB_OUTPUT"
+          sha256sum "$VSIX"
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: ${{ steps.vsix.outputs.path }}
+
       - name: Create or update GitHub Release
         run: |
-          if gh release view "${{ steps.tag.outputs.value }}" > /dev/null 2>&1; then
-            gh release upload "${{ steps.tag.outputs.value }}" *.vsix --clobber
+          set -euo pipefail
+          VSIX="${{ steps.vsix.outputs.path }}"
+          TAG="${{ steps.tag.outputs.value }}"
+          # Build a footer that points consumers at the verification commands.
+          FOOTER=$(cat <<EOF
+
+          ---
+
+          ### Verifying this release
+
+          \`\`\`
+          # Verify the signed tag
+          git verify-tag $TAG
+
+          # Verify SLSA build provenance for the .vsix
+          gh attestation verify $VSIX --owner kostiantyn-matsebora
+          \`\`\`
+          EOF
+          )
+
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            gh release upload "$TAG" "$VSIX" --clobber
+            # Append the footer to existing notes
+            CUR=$(gh release view "$TAG" --json body --jq .body)
+            printf '%s\n%s' "$CUR" "$FOOTER" | gh release edit "$TAG" --notes-file -
           else
-            gh release create "${{ steps.tag.outputs.value }}" *.vsix \
-              --title "Canopy Skills ${{ steps.tag.outputs.value }}" \
-              --generate-notes
+            gh release create "$TAG" "$VSIX" \
+              --title "Canopy Skills $TAG" \
+              --generate-notes \
+              --notes-start-tag "$(git tag --sort=-creatordate | grep -v "^${TAG}$" | head -1)"
+            # Append verification footer
+            CUR=$(gh release view "$TAG" --json body --jq .body)
+            printf '%s\n%s' "$CUR" "$FOOTER" | gh release edit "$TAG" --notes-file -
           fi
         env:
           GH_TOKEN: ${{ github.token }}
 
       - name: Publish to VS Code Marketplace
-        run: npx @vscode/vsce publish --packagePath *.vsix
+        run: npx @vscode/vsce publish --packagePath ${{ steps.vsix.outputs.path }}
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}

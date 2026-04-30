@@ -4,10 +4,17 @@
 
 [![Marketplace Version](https://vsmarketplacebadges.dev/version-short/canopy-ai.canopy-skills.svg)](https://marketplace.visualstudio.com/items?itemName=canopy-ai.canopy-skills)
 [![Installs](https://vsmarketplacebadges.dev/installs-short/canopy-ai.canopy-skills.svg)](https://marketplace.visualstudio.com/items?itemName=canopy-ai.canopy-skills)
+[![Rating](https://vsmarketplacebadges.dev/rating-short/canopy-ai.canopy-skills.svg)](https://marketplace.visualstudio.com/items?itemName=canopy-ai.canopy-skills&ssr=false#review-details)
 [![Latest Release](https://img.shields.io/github/v/release/kostiantyn-matsebora/claude-canopy-vscode?label=release&color=0969da)](https://github.com/kostiantyn-matsebora/claude-canopy-vscode/releases/latest)
+[![CI](https://img.shields.io/github/actions/workflow/status/kostiantyn-matsebora/claude-canopy-vscode/ci.yml?branch=master&label=CI)](https://github.com/kostiantyn-matsebora/claude-canopy-vscode/actions/workflows/ci.yml)
+[![Tracks Canopy](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fkostiantyn-matsebora%2Fclaude-canopy-vscode%2Fmaster%2Fpackage.json&query=%24.canopyVersion&prefix=v&label=tracks%20canopy&color=2da44e)](https://github.com/kostiantyn-matsebora/claude-canopy/releases)
 [![License](https://img.shields.io/badge/license-MIT-0969da)](LICENSE)
 
-IntelliSense, semantic diagnostics, and go-to-definition for [Canopy](https://github.com/kostiantyn-matsebora/claude-canopy) skills — the declarative, tree-structured execution framework for AI agents. Tracks framework **v0.17.1**.
+[![agentskills.io](https://img.shields.io/badge/agentskills.io-compatible-0969da)](https://agentskills.io)
+[![Claude Code](https://img.shields.io/badge/Claude%20Code-compatible-D97757?logo=anthropic&logoColor=white)](https://code.claude.com/docs/en/skills)
+[![GitHub Copilot](https://img.shields.io/badge/GitHub%20Copilot-compatible-000?logo=githubcopilot&logoColor=white)](https://code.visualstudio.com/docs/copilot/customization/agent-skills)
+
+IntelliSense, semantic diagnostics, and go-to-definition for [Canopy](https://github.com/kostiantyn-matsebora/claude-canopy) skills — the declarative, tree-structured execution framework for AI agents. Tracks framework **v0.18.1**.
 
 > **Available on the VS Code Marketplace** under the [`canopy-ai`](https://marketplace.visualstudio.com/publishers/canopy-ai) publisher — search for **Canopy Skills** in the Extensions panel, or install via `code --install-extension canopy-ai.canopy-skills`. Pre-Marketplace `.vsix` artifacts are still attached to each [GitHub Release](https://github.com/kostiantyn-matsebora/claude-canopy-vscode/releases/latest) for offline installs.
 
@@ -39,7 +46,7 @@ Key ideas:
 - **Ops** (`ops.md`) define reusable named operations local to a skill or shared across skills.
 - **Framework primitives** (`IF`, `ELSE_IF`, `ELSE`, `SWITCH`, `CASE`, `DEFAULT`, `FOR_EACH`, `BREAK`, `END`, `ASK`, `SHOW_PLAN`, `VERIFY_EXPECTED`, `EXPLORE`) are built-in control-flow + interaction + execution ops provided by the framework.
 - **Resources** (constants, policies, templates, schemas, verify checklists, command scripts, references) are supporting files co-located with each skill.
-- Skills can target **Claude Code** (`.claude/skills/`) or **GitHub Copilot** (`.github/skills/`).
+- Skills install at one of three roots — `.agents/skills/` (cross-client, `gh skill 2.91+` default), `.claude/skills/` (Claude Code), or `.github/skills/` (Copilot). canopy-runtime resolves `<skills-root>` automatically.
 
 Canopy turns AI instructions into something you can read, review, version-control, lint, and refactor — like real code.
 
@@ -60,8 +67,8 @@ Open your project, then run these from the Command Palette (`Ctrl+Shift+P` / `Cm
 
 1. **`Canopy Install: Install...`**
    - Pick an install method: script / `gh skill` / Claude Code plugin
-   - Pick a target: Claude Code or Copilot
-   - Installs the three framework skills and writes the runtime marker block
+   - Pick a target: Claude Code, Copilot, Both, or **Cross-client** (`.agents/skills/`)
+   - Installs the three framework skills. The marker block self-writes on first agent load (canopy-runtime v0.18.0+) — install scripts also write it eagerly.
 2. **Create your first skill** (requires `claude` or `gh copilot` on `PATH`)
    - **`Canopy Skill: Create Skill`** — describe it in plain English; the agent scaffolds and validates
    - **`Canopy Template: New Skill`** — drop a blank `SKILL.md` + `ops.md` and hand-author
@@ -110,9 +117,9 @@ Install the Canopy framework into your project. Each command shows a Quick Pick 
 | Command | What it does |
 |---|---|
 | **Install...** | Unified entry point; presents a Quick Pick of the three install methods with availability badges based on which CLIs (`git`, `gh skill`, `claude`) are on PATH |
-| **Install (via install script)** | Clone canopy and run `install.sh` / `install.ps1`. Picks Claude or Copilot target; writes the canopy-runtime ambient marker block automatically. Requires `git`. |
-| **Install as Agent Skill (gh skill)** | `gh skill install` per checked skill. Picks Claude Code or GitHub Copilot agent. Writes the marker block too (gh skill itself doesn't). Requires `gh` ≥ 2.90.0. |
-| **Install as Claude Code Plugin** | Copies the three `/plugin` slash commands (marketplace add + install + activate) to clipboard for paste in a Claude Code session. Plugin install bundles all three skills. |
+| **Install (via install script)** | Clone canopy and run `install.sh` / `install.ps1`. Picks target (Claude / Copilot / Both / Cross-client `.agents/skills/`); writes the canopy-runtime ambient marker block during install (shell-context, no agent to defer to). Requires `git`. |
+| **Install as Agent Skill (gh skill)** | `gh skill install` per checked skill. Picks target (Claude Code / Copilot / Cross-client; cross-client uses `--dir .agents/skills`). Writes the marker block proactively too. Marker block also self-writes via canopy-runtime's Activation on first agent load. Requires `gh` ≥ 2.90.0. |
+| **Install as Claude Code Plugin** | Copies the three `/plugin` slash commands (marketplace add + install + activate) to clipboard for paste in a Claude Code session. Plugin install bundles all three skills. The `activate` step is a safety net — canopy-runtime self-activates on first agent load since v0.18.0. |
 
 ### ✨ Skill — describe it, let AI write it (`Canopy Skill` category)
 
@@ -153,13 +160,13 @@ Five language IDs cover all Canopy file types:
 
 | Language | Files | Highlights |
 |---|---|---|
-| `canopy` | `SKILL.md`, `ops.md` | Tree notation, `IF`/`ELSE`/`SWITCH`/`CASE`/`DEFAULT`/`FOR_EACH`/`BREAK`/`END`, `ASK`/`SHOW_PLAN`/`VERIFY_EXPECTED`/`EXPLORE`, `<<`/`>>`, op names, binding expressions |
-| `canopy-verify` | `verify/*.md`, `checklists/*.md` | Checkbox items |
-| `canopy-template` | `templates/*.md`, `templates/*.yaml` | `<token>` placeholders |
-| `canopy-resource` | `constants/*.md`, `policies/*.md`, `schemas/*.md`, `references/*.md` | Tables, numbered rules |
-| `canopy-commands` | `commands/*.ps1`, `commands/*.sh` | `# === Section Name ===` headers |
+| `canopy` | `SKILL.md`, `ops.md`, `references/ops.md`, `references/ops/*.md` | Tree notation, `IF`/`ELSE`/`SWITCH`/`CASE`/`DEFAULT`/`FOR_EACH`/`BREAK`/`END`, `ASK`/`SHOW_PLAN`/`VERIFY_EXPECTED`/`EXPLORE`, `<<`/`>>`, op names, binding expressions |
+| `canopy-verify` | `assets/verify/*.md`, `verify/*.md`, `assets/checklists/*.md`, `checklists/*.md` | Checkbox items |
+| `canopy-template` | `assets/templates/*.md`, `templates/*.md`, `assets/templates/*.yaml`, `templates/*.yaml` | `<token>` placeholders |
+| `canopy-resource` | `assets/constants/*.md`, `constants/*.md`, `assets/policies/*.md`, `policies/*.md`, `assets/schemas/*.md`, `schemas/*.md`, `references/*.md` | Tables, numbered rules |
+| `canopy-commands` | `scripts/*.ps1`, `scripts/*.sh`, `commands/*.ps1`, `commands/*.sh` (legacy) | `# === Section Name ===` headers |
 
-All patterns cover both `.claude/` (Claude Code) and `.github/` (GitHub Copilot) targets.
+All patterns cover all three skills roots: `.agents/` (cross-client), `.claude/` (Claude Code), and `.github/` (Copilot). Legacy flat layout (category dirs at the skill root) and the canopy-0.18.0+ standard layout (`assets/`, `scripts/`, `references/`) are both recognised.
 
 ### IntelliSense
 
@@ -169,7 +176,7 @@ Completions in `SKILL.md` and `ops.md`:
 |---|---|
 | Op names | Ops from the current skill, project-level ops, and framework primitives; inserts the correct tree-node prefix (`* ` / `├── `) automatically |
 | Primitives | All framework built-ins with descriptions |
-| Frontmatter | `name`, `description`, `argument-hint`, `license`, `metadata`, `allowed-tools`, `user-invocable` (full agentskills.io spec) |
+| Frontmatter | `name`, `description`, `compatibility`, `license`, `metadata`, `allowed-tools` at root (agentskills.io spec); `argument-hint`, `user-invocable` inside `metadata` |
 | Category resources | ``Read `category/path` `` directives for `constants/`, `policies/`, `templates/`, `schemas/`, `checklists/`, `verify/`, `references/` |
 
 ### Hover documentation
@@ -190,7 +197,8 @@ Real-time squiggles for:
 
 | Check | Catches |
 |---|---|
-| Frontmatter | Missing `name` or `description`, empty values, unknown keys |
+| Frontmatter | Missing `name` or `description`, empty values, unknown keys, `argument-hint`/`user-invocable` at root (must live in `metadata`) |
+| Compatibility shape | Block-form / inline-flow maps flagged with migration hint (`compatibility` must be a free-text string per agentskills.io spec); >500 char values flagged; canopy-runtime mention hint on `## Tree` skills |
 | Tree syntax | `>>` before `<<`, empty operator slots |
 | Primitive signatures | `IF`/`ELSE_IF` without `<<`; `ASK` without `\|` options; `SHOW_PLAN` without `>>`; `VERIFY_EXPECTED` wrong path prefix; `ELSE`/`BREAK` with spurious operators; `EXPLORE` without `>>` |
 | Resource references | ``Read `category/path` `` uses a recognised category and the file exists on disk; `VERIFY_EXPECTED` target file existence |

@@ -6,6 +6,7 @@ import * as fs from 'fs';
 vi.mock('fs', () => ({
   existsSync: vi.fn(),
   statSync: vi.fn().mockReturnValue({ isDirectory: () => false }),
+  readdirSync: vi.fn().mockReturnValue([]),
 }));
 
 afterEach(() => {
@@ -182,6 +183,81 @@ describe('OpRegistry.resolve', () => {
     const reg = new OpRegistry();
     const result = await reg.resolve('MY_OP', vscode.Uri.file('/test/skill/skill.md') as any);
     expect(result).toBeUndefined();
+  });
+
+  it('resolves from <skill>/references/ops.md (standard layout)', async () => {
+    // Skill root: /test/skill/, doc is the SKILL.md, and references/ops.md exists.
+    vi.mocked(fs.existsSync).mockImplementation((p) => {
+      const s = String(p).replace(/\\/g, '/');
+      return s.endsWith('/test/skill/SKILL.md') || s.endsWith('/test/skill/references/ops.md');
+    });
+    vi.spyOn(vscode.workspace.fs, 'readFile').mockResolvedValue(
+      Buffer.from('## STANDARD_OP << input\nbody') as any
+    );
+    const reg = new OpRegistry();
+    const result = await reg.resolve('STANDARD_OP', vscode.Uri.file('/test/skill/SKILL.md') as any);
+    expect(result).toBeDefined();
+    expect(result!.source).toBe('skill-local');
+    expect(result!.definition.name).toBe('STANDARD_OP');
+  });
+
+  it('resolves from <skill>/references/ops/<name>.md (per-op file layout)', async () => {
+    // Skill root has references/ops/ directory with two files.
+    const skillDir = '/test/skill';
+    vi.mocked(fs.existsSync).mockImplementation((p) => {
+      const s = String(p).replace(/\\/g, '/');
+      return s === `${skillDir}/SKILL.md` || s === `${skillDir}/references/ops`;
+    });
+    vi.mocked(fs.statSync).mockReturnValue({ isDirectory: () => true } as any);
+    vi.mocked(fs.readdirSync).mockReturnValue(['create.md', 'modify.md'] as any);
+    vi.spyOn(vscode.workspace.fs, 'readFile').mockImplementation(async (uri: any) => {
+      const p = String(uri.fsPath ?? uri).replace(/\\/g, '/');
+      if (p.endsWith('create.md')) return Buffer.from('## CREATE << input >> output\nbody') as any;
+      if (p.endsWith('modify.md')) return Buffer.from('## MODIFY << input >> output\nbody') as any;
+      return Buffer.from('') as any;
+    });
+    const reg = new OpRegistry();
+    const result = await reg.resolve('CREATE', vscode.Uri.file(`${skillDir}/SKILL.md`) as any);
+    expect(result).toBeDefined();
+    expect(result!.source).toBe('skill-local');
+    expect(result!.definition.name).toBe('CREATE');
+  });
+
+  it('falls back to legacy <skill>/ops.md when references/ops.md is absent', async () => {
+    const skillDir = '/test/legacy-skill';
+    vi.mocked(fs.existsSync).mockImplementation((p) => {
+      const s = String(p).replace(/\\/g, '/');
+      return s === `${skillDir}/SKILL.md` || s === `${skillDir}/ops.md`;
+    });
+    vi.spyOn(vscode.workspace.fs, 'readFile').mockResolvedValue(
+      Buffer.from('## LEGACY_OP\nbody') as any
+    );
+    const reg = new OpRegistry();
+    const result = await reg.resolve('LEGACY_OP', vscode.Uri.file(`${skillDir}/SKILL.md`) as any);
+    expect(result).toBeDefined();
+    expect(result!.source).toBe('skill-local');
+    expect(result!.definition.name).toBe('LEGACY_OP');
+  });
+
+  it('resolves from references/ops/<name>.md when called from a doc inside that subdir', async () => {
+    // Doc is one of the per-op files; findSkillRoot walks up two levels to SKILL.md.
+    const skillDir = '/test/skill';
+    vi.mocked(fs.existsSync).mockImplementation((p) => {
+      const s = String(p).replace(/\\/g, '/');
+      return s === `${skillDir}/SKILL.md` || s === `${skillDir}/references/ops`;
+    });
+    vi.mocked(fs.statSync).mockReturnValue({ isDirectory: () => true } as any);
+    vi.mocked(fs.readdirSync).mockReturnValue(['create.md'] as any);
+    vi.spyOn(vscode.workspace.fs, 'readFile').mockResolvedValue(
+      Buffer.from('## CREATE << input >> output\nbody') as any
+    );
+    const reg = new OpRegistry();
+    const result = await reg.resolve(
+      'CREATE',
+      vscode.Uri.file(`${skillDir}/references/ops/create.md`) as any,
+    );
+    expect(result).toBeDefined();
+    expect(result!.source).toBe('skill-local');
   });
 });
 

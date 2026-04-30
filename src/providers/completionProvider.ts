@@ -2,14 +2,21 @@ import * as vscode from 'vscode';
 import { parseDocument, SectionKind, isPrimitive } from '../canopyDocument';
 import { PRIMITIVE_DOCS, registry } from '../opRegistry';
 
+// agentskills.io spec — only these fields are valid at frontmatter root.
+// `argument-hint` and `user-invocable` are non-spec; they go inside `metadata`.
 const FRONTMATTER_KEYS = [
-  'name', 'description', 'argument-hint',
-  'license', 'allowed-tools', 'metadata', 'user-invocable',
+  'name', 'description', 'license', 'compatibility', 'metadata', 'allowed-tools',
 ];
 const SECTION_NAMES = ['Agent', 'Tree', 'Rules', 'Response:'];
+// Standard agentskills.io layout (preferred) AND legacy flat layout (still supported).
 const CATEGORY_DIRS = [
+  // Standard layout
+  'scripts/', 'references/',
+  'assets/schemas/', 'assets/templates/', 'assets/constants/',
+  'assets/policies/', 'assets/verify/', 'assets/checklists/',
+  // Legacy flat layout (backward-compatible)
   'schemas/', 'templates/', 'commands/', 'constants/',
-  'policies/', 'verify/', 'checklists/', 'references/',
+  'policies/', 'verify/', 'checklists/',
 ];
 
 export class CanopyCompletionProvider implements vscode.CompletionItemProvider {
@@ -34,9 +41,9 @@ export class CanopyCompletionProvider implements vscode.CompletionItemProvider {
     }
 
     // --- Read `category/...` completions ---
-    const readCategoryMatch = prefix.match(/\bRead\s+`([a-z]*)$/);
+    const readCategoryMatch = prefix.match(/\bRead\s+`([a-z][a-z/]*)?$/);
     if (readCategoryMatch) {
-      return this.categoryCompletions(readCategoryMatch[1]);
+      return this.categoryCompletions(readCategoryMatch[1] ?? '');
     }
 
     // --- Verify path after VERIFY_EXPECTED ---

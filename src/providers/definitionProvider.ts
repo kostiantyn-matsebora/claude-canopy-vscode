@@ -45,7 +45,8 @@ export class CanopyDefinitionProvider implements vscode.DefinitionProvider {
     }
 
     // --- Go to VERIFY_EXPECTED file ---
-    const verifyMatch = line.match(/\bVERIFY_EXPECTED\s+<<\s+(verify\/[^\s]+\.md)/);
+    // Standard layout uses 'assets/verify/'; legacy layout uses 'verify/' at skill root.
+    const verifyMatch = line.match(/\bVERIFY_EXPECTED\s+<<\s+((?:assets\/)?verify\/[^\s]+\.md)/);
     if (verifyMatch) {
       const relPath = verifyMatch[1];
       const pathStart = line.indexOf(relPath);
@@ -56,6 +57,18 @@ export class CanopyDefinitionProvider implements vscode.DefinitionProvider {
         if (fs.existsSync(target)) {
           return new vscode.Location(
             vscode.Uri.file(target),
+            new vscode.Position(0, 0)
+          );
+        }
+        // Backward-compatible fallback: if user wrote `verify/...`, try `assets/verify/...`,
+        // and vice versa.
+        const altPath = relPath.startsWith('assets/')
+          ? relPath.slice('assets/'.length)
+          : 'assets/' + relPath;
+        const altTarget = path.join(skillDir, altPath);
+        if (fs.existsSync(altTarget)) {
+          return new vscode.Location(
+            vscode.Uri.file(altTarget),
             new vscode.Position(0, 0)
           );
         }

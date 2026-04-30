@@ -2,6 +2,84 @@
 
 All notable changes to the Canopy Skills extension are documented here.
 
+## [0.11.0] — 2026-04-30
+
+**Sync with Canopy framework `v0.18.1`** (was `v0.17.1`).
+
+**Headline framework changes absorbed:**
+
+- agentskills.io standard skill layout — only `SKILL.md` at the skill root; `scripts/` for executable code; `references/` for docs loaded on demand (incl. `ops.md` / `ops/`); `assets/` for static resources.
+- `compatibility` is a free-text string per spec (was structured object).
+- canopy-runtime activation is agent-mediated (was install-tool-mediated for plugin / `gh skill` paths).
+- Cross-client install target at `.agents/skills/`.
+
+**Extension impact:** language IDs, diagnostics, snippets, and templates rebuilt around the new model. Backward-compatible with legacy flat-layout skills.
+
+### Added
+
+- **Compatibility-shape diagnostics** (`diagnosticsProvider.ts`) — flags non-spec `compatibility` shapes per agentskills.io:
+  - **Warning** on block-form YAML map (`compatibility:\n  requires:\n    - foo`) — migration hint to free-text form.
+  - **Warning** on inline-flow map (`compatibility: { requires: [foo] }`) — same migration hint.
+  - **Warning** on values exceeding 500 characters (spec limit).
+  - **Warning** on `## Tree` skills missing the `compatibility` field entirely.
+  - **Hint** on string-form `compatibility` that doesn't mention `canopy-runtime` (canopy-flavored skills only).
+- **Cross-client install target** in install pickers (`installCanopy.ts`, `installMethodPicks.ts`):
+  - **Quick Pick:** Cross-client (`.agents/skills/`) added alongside Claude Code / Copilot / Both.
+  - **`gh skill install` flow:** uses `--dir .agents/skills`.
+  - **Install-script flow:** passes `--target agents` / `-Target agents`.
+- **`.agents/skills/` in language ID file patterns** — patterns now match all three roots (`.agents/skills/`, `.claude/skills/`, `.github/skills/`).
+- **agentskills.io standard-layout patterns** in all five language IDs:
+  - **`canopy`** matches `**/references/ops.md`, `**/references/ops/*.md` (in addition to legacy `**/ops.md`).
+  - **`canopy-verify`** matches `**/assets/verify/*.md`, `**/assets/checklists/*.md`.
+  - **`canopy-template`** matches `**/assets/templates/*.md`, `**/assets/templates/*.yaml`.
+  - **`canopy-resource`** matches `**/assets/constants/*.md`, `**/assets/policies/*.md`, `**/assets/schemas/*.md`.
+  - **`canopy-commands`** matches `**/scripts/*.ps1`, `**/scripts/*.sh` (legacy `commands/` still recognised).
+- **Test baseline: 276/276** (was 254/254). Two new tests in `diagnosticsProvider.test.ts` cover block-form and inline-flow `compatibility` rejection.
+- **`Canopy Template: New Skill`** scaffolds the canonical layout:
+  - `references/ops.md`
+  - `assets/{templates,constants,schemas,checklists,policies,verify}/`
+  - Spec-compliant frontmatter (free-text `compatibility`, `metadata.argument-hint`)
+  - Structured safety preamble.
+
+### Changed
+
+- **`compatibility` hover doc** (`hoverProvider.ts`) — rewritten:
+  - Describes the canonical free-text form (≤500 chars, names canopy-runtime + source repo, lists install tools as alternatives).
+  - Warns about the YAML colon-space gotcha.
+  - Points at `/canopy improve` for migrating structured shapes.
+- **`SKILL.md` template** (`commands/newResource.ts`):
+  - Inserts canonical `compatibility` value.
+  - Inserts the structured safety preamble (labeled bullets, not stream-of-consciousness).
+  - Uses canonical layout paths (`assets/`, `references/`, `scripts/`).
+- **Marker block** (`installCanopy.ts`, `MARKER_BLOCK` constant) — mirrors canopy v0.18.1:
+  - **Restructured** as bulleted lists with nested items.
+  - **References all three skills roots** (`.agents/skills/`, `.claude/skills/`, `.github/skills/`).
+  - **Parity check** across `marker-block.md` (now in `canopy-runtime/assets/constants/`), `install.sh build_marker_block()`, `install.ps1 Build-MarkerBlock`, and this constant still enforced.
+- **Real-skills test fixtures** (`realSkills.test.ts`):
+  - Re-baselined against bundled framework v0.18.1 and published example skills.
+  - Skills now expected at `skills/<name>/` (canonical publishing location for `gh skill install`).
+- **Pinned canopy version: `0.18.1`** in `.canopy-version` and `package.json#canopyVersion`.
+- **README and CLAUDE.md** updated:
+  - `.agents/skills/` references throughout.
+  - `compatibility` column added to the Frontmatter completion table.
+  - Language ID file-pattern table lists canonical and legacy patterns side-by-side.
+- **`docs/DEVELOPMENT.md`** — test coverage map now lists 9 files (added `installMethodPicks.test.ts`, `availability.test.ts`, `resourceParser.test.ts`).
+- **Marketplace tags trimmed** from 19 keywords to 7 (`canopy`, `claude-code`, `copilot`, `agentskills`, `skills`, `declarative`, `vscode-extension`). Drops generic terms (`ai`, `automation`, `framework`, `llm`, `workflow`, `prompt-engineering`) and prefix duplicates (`claude-cli`, `claude-skills`, `copilot-chat`, `copilot-cli`); keeps one per concept.
+
+### Security / supply chain
+
+- **`.github/CODEOWNERS`** added — default reviewer for the repo.
+- **Release pipeline produces SLSA build provenance.** Every `v*` tag now generates a Sigstore-signed provenance attestation via `actions/attest-build-provenance@v2` over the packaged `.vsix`. Verify with `gh attestation verify <vsix> --owner kostiantyn-matsebora`.
+- **Tags are SSH-signed** — same key already registered as a Signing Key on GitHub. Verify with `git verify-tag vX.Y.Z`.
+- **Release notes** now include a verification footer with both commands inline.
+
+### Notes
+
+- **Backward-compatible.** Legacy flat-layout skills (category dirs at the skill root: `schemas/`, `templates/`, `commands/`, etc.) continue to highlight, validate, and complete correctly. Diagnostics flag them with a "consider migrating" hint but never error.
+- **Activation, who writes the marker block:**
+  - **`Install as Agent Skill (gh skill)` command** — writes proactively (so a fresh-checkout-then-edit flow doesn't need an agent invocation first).
+  - **canopy-runtime self-write** — safety net on first agent load (covers plugin-marketplace and bare `gh skill install`).
+
 ## [0.10.1] — 2026-04-26
 
 ### Fixed
