@@ -45,8 +45,8 @@ describe('canopy.agentScaffold', () => {
     const opts = showInputBox.mock.calls[0][0] as vscode.InputBoxOptions;
     expect(typeof opts.validateInput).toBe('function');
     const validate = opts.validateInput!;
-    const badResult = validate('Bad Name', undefined as never);
-    const goodResult = validate('good-name', undefined as never);
+    const badResult = validate('Bad Name');
+    const goodResult = validate('good-name');
     expect(typeof badResult).toBe('string');
     expect(badResult as string).toMatch(/kebab-case/);
     expect(goodResult).toBeUndefined();
