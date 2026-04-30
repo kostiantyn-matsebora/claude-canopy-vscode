@@ -64,6 +64,14 @@ All notable changes to the Canopy Skills extension are documented here.
   - `compatibility` column added to the Frontmatter completion table.
   - Language ID file-pattern table lists canonical and legacy patterns side-by-side.
 - **`docs/DEVELOPMENT.md`** — test coverage map now lists 9 files (added `installMethodPicks.test.ts`, `availability.test.ts`, `resourceParser.test.ts`).
+- **Marketplace tags trimmed** from 19 keywords to 7 (`canopy`, `claude-code`, `copilot`, `agentskills`, `skills`, `declarative`, `vscode-extension`). Drops generic terms (`ai`, `automation`, `framework`, `llm`, `workflow`, `prompt-engineering`) and prefix duplicates (`claude-cli`, `claude-skills`, `copilot-chat`, `copilot-cli`); keeps one per concept.
+
+### Security / supply chain
+
+- **`.github/CODEOWNERS`** added — default reviewer for the repo.
+- **Release pipeline produces SLSA build provenance.** Every `v*` tag now generates a Sigstore-signed provenance attestation via `actions/attest-build-provenance@v2` over the packaged `.vsix`. Verify with `gh attestation verify <vsix> --owner kostiantyn-matsebora`.
+- **Tags are SSH-signed** — same key already registered as a Signing Key on GitHub. Verify with `git verify-tag vX.Y.Z`.
+- **Release notes** now include a verification footer with both commands inline.
 
 ### Notes
 
