@@ -2,6 +2,41 @@
 
 All notable changes to the Canopy Skills extension are documented here.
 
+## [0.11.2] — 2026-05-05
+
+Bug-fix release. Cleans up the last legacy-flat-layout artifacts left over from the v0.11.0 sync to canopy v0.18.1 — every real canopy v0.18.0+ skill now validates without false positives.
+
+### Fixed
+
+- **`assets/<sub>/` Read-ref category extraction** (`canopyDocument.ts`): the parser now recognizes two-segment categories (`assets/policies/`, `assets/constants/`, `assets/schemas/`, `assets/templates/`, `assets/checklists/`, `assets/verify/`). Previously every Read path under the v0.18.0 standard layout collapsed to single-segment `assets/` and triggered an "Unknown resource category 'assets/'" warning on every line.
+- **`VERIFY_EXPECTED` accepts both prefixes** (`diagnosticsProvider.ts`): `VERIFY_EXPECTED << assets/verify/<file>.md` no longer triggers a "must start with 'verify/'" warning. Both legacy `verify/` and agentskills `assets/verify/` are valid.
+- **Plain ` ``` ` fence in `## Tree` allowed** (`diagnosticsProvider.ts`): box-drawing trees wrapped in a plain code fence — the canonical syntax per `docs/FRAMEWORK.md` — no longer trigger "should not contain inline code blocks". The warning is now scoped to fences with an explicit info string (` ```yaml `, ` ```json `, etc.) — the actual structural-content case it's meant to flag.
+
+### Changed
+
+- **`PRIMITIVE_DOCS.VERIFY_EXPECTED`** (`opRegistry.ts`): hover signature/example show `assets/verify/<file>.md` (preferred); description notes legacy `verify/` is also accepted.
+- **`## Agent` hover docs** (`hoverProvider.ts`): output-contract reference updated from `schemas/explore-schema.json` to `assets/schemas/explore-schema.json` (with legacy fallback noted).
+- **`verifyMatch` completion regex** (`completionProvider.ts`): matches both `verify/` and `assets/verify/` after `VERIFY_EXPECTED <<`.
+- **Snippets modernized** (`snippets/canopy.json`):
+  - `skill` / `skill-explore` expansions now produce spec-compliant frontmatter (free-text `compatibility`, `metadata.argument-hint`, structured safety preamble) and use `assets/verify/verify-expected.md`.
+  - `verify` snippet defaults to `assets/verify/`.
+  - `read` snippet's category dropdown lists agentskills paths first (`assets/schemas`, `assets/templates`, `assets/constants`, `assets/policies`, `assets/verify`, `assets/checklists`, `scripts`, `references`), legacy paths after.
+- **TextMate `frontmatter-known-key`** (`syntaxes/canopy.tmLanguage.json`): highlights all canonical agentskills.io root keys (`name`, `description`, `license`, `compatibility`, `metadata`, `allowed-tools`) plus legacy `argument-hint` / `user-invocable` for visual parity. Diagnostics still flag the latter as needing to live inside `metadata`.
+- **Command title rename**: `canopy.newCommandsFile` title is now "New Script File" (was "New Commands File"). The function already wrote to `scripts/`; only the user-visible label was stale. Command id unchanged — keybindings preserved.
+
+### Tests
+
+- **Test baseline: 337/337** (was 323/323). 14 new tests:
+  - 6 in `canopyDocument.test.ts` for `assets/<sub>/` category extraction across all six sub-directories.
+  - 8 in `diagnosticsProvider.test.ts`: 6 for agentskills-path category-acceptance, 1 for plain-fence allowance, 1 for agentskills `VERIFY_EXPECTED` prefix; the original code-block test was rewritten to assert against ` ```yaml ` instead of plain ` ``` `.
+- **New scenarios in `docs/TEST_SCENARIOS.md`**: Suite C9 (Layout-migration diagnostics) and C6.6 (Layout-migration UX manual smoke).
+
+### Notes
+
+- **No `canopyVersion` change** — still tracks canopy `0.18.1`.
+
+---
+
 ## [0.11.1] — 2026-04-30
 
 Patch release. No extension behavior changes.

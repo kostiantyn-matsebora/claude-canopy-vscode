@@ -188,10 +188,27 @@ describe('diagnostics — structure', () => {
     expect(hasSeverity(vscode.DiagnosticSeverity.Error)).toBe(true);
   });
 
-  it('warns on code block inside ## Tree section', async () => {
-    await provider.validate(skill('## Tree\n\n```\nsome code\n```\n'));
+  it('warns on a fenced language code block inside ## Tree section', async () => {
+    await provider.validate(skill('## Tree\n\n```yaml\nfoo: bar\n```\n'));
     expect(hasMsg('code block')).toBe(true);
     expect(hasSeverity(vscode.DiagnosticSeverity.Warning)).toBe(true);
+  });
+
+  // Box-drawing tree syntax wraps the tree in a plain ``` fence per
+  // docs/FRAMEWORK.md. Plain fences must NOT trigger the structural-content
+  // warning, because the fence content IS the tree.
+  it('does not warn on plain ``` fence wrapping a box-drawing tree', async () => {
+    await provider.validate(skill(
+      '## Tree\n\n' +
+      '```\n' +
+      'skill-name\n' +
+      '├── EXPLORE >> ctx\n' +
+      '├── IF << condition\n' +
+      '│   └── do something\n' +
+      '└── DEFAULT\n' +
+      '```\n'
+    ));
+    expect(hasMsg('code block')).toBe(false);
   });
 });
 
@@ -327,14 +344,19 @@ describe('diagnostics — primitive signatures: VERIFY_EXPECTED', () => {
     expect(hasSeverity(vscode.DiagnosticSeverity.Error)).toBe(true);
   });
 
-  it('warns when VERIFY_EXPECTED path does not start with verify/', async () => {
+  it('warns when VERIFY_EXPECTED path does not start with verify/ or assets/verify/', async () => {
     await provider.validate(skill('## Tree\n\n* VERIFY_EXPECTED << schemas/check.md\n'));
-    expect(hasMsg("must start with 'verify/'")).toBe(true);
+    expect(hasMsg("'assets/verify/'")).toBe(true);
   });
 
-  it('no path warning when VERIFY_EXPECTED uses verify/ prefix', async () => {
+  it('no path warning when VERIFY_EXPECTED uses legacy verify/ prefix', async () => {
     await provider.validate(skill('## Tree\n\n* VERIFY_EXPECTED << verify/check.md\n'));
-    expect(msgs().filter(m => m.includes("must start with 'verify/'"))).toHaveLength(0);
+    expect(msgs().filter(m => m.includes("'assets/verify/'"))).toHaveLength(0);
+  });
+
+  it('no path warning when VERIFY_EXPECTED uses agentskills assets/verify/ prefix', async () => {
+    await provider.validate(skill('## Tree\n\n* VERIFY_EXPECTED << assets/verify/check.md\n'));
+    expect(msgs().filter(m => m.includes("'assets/verify/'"))).toHaveLength(0);
   });
 });
 
@@ -437,6 +459,22 @@ describe('diagnostics — resource refs', () => {
     vi.mocked(fs.existsSync).mockReturnValue(true);
     await provider.validate(skill('## Tree\n\nRead `schemas/foo.json` for something\n'));
     expect(hasMsg('not found')).toBe(false);
+  });
+
+  // agentskills.io layout — `assets/<sub>/` is recognized as a valid
+  // category, not flagged as 'Unknown resource category 'assets/''.
+  it.each([
+    'assets/constants/values.md',
+    'assets/policies/rules.md',
+    'assets/templates/file.md',
+    'assets/schemas/shape.json',
+    'assets/checklists/items.md',
+    'assets/verify/check.md',
+  ])('accepts agentskills "%s" path as a valid category', async (p) => {
+    vi.mocked(fs.existsSync).mockReturnValue(true);
+    await provider.validate(skill(`## Tree\n\nRead \`${p}\` for something\n`));
+    expect(hasMsg('Unknown resource category')).toBe(false);
+    expect(hasMsg('no category directory')).toBe(false);
   });
 });
 

@@ -123,7 +123,21 @@ describe('extractReadRefs', () => {
     ['Read `constants/values.md` for x', 'constants/'],
     ['Read `policies/rules.md` for x', 'policies/'],
     ['Read `checklists/items.md` for x', 'checklists/'],
-  ])('extracts category from "%s"', (line, expected) => {
+  ])('extracts legacy flat category from "%s"', (line, expected) => {
+    expect(extractReadRefs([line])[0].category).toBe(expected);
+  });
+
+  // agentskills.io layout — `assets/<sub>/` is a two-segment category prefix.
+  // Without two-segment extraction, all of these collapse to `assets/` and
+  // the diagnostics provider reports "Unknown resource category 'assets/'".
+  it.each([
+    ['Read `assets/templates/foo.md` for x', 'assets/templates/'],
+    ['Read `assets/verify/foo.md` for x', 'assets/verify/'],
+    ['Read `assets/constants/values.md` for x', 'assets/constants/'],
+    ['Read `assets/policies/rules.md` for x', 'assets/policies/'],
+    ['Read `assets/schemas/shape.json` for x', 'assets/schemas/'],
+    ['Read `assets/checklists/items.md` for x', 'assets/checklists/'],
+  ])('extracts agentskills assets/<sub>/ category from "%s"', (line, expected) => {
     expect(extractReadRefs([line])[0].category).toBe(expected);
   });
 

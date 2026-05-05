@@ -378,8 +378,8 @@ export async function newCommandsFile(): Promise<void> {
   if (!skillDir) return;
 
   const nameInput = await vscode.window.showInputBox({
-    prompt: 'Commands file name (without extension)',
-    placeHolder: 'commands',
+    prompt: 'Script file name (without extension)',
+    placeHolder: 'scripts',
   });
   if (!nameInput) return;
 

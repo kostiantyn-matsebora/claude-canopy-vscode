@@ -1,13 +1,25 @@
 {
   "New Skill": {
     "prefix": "skill",
-    "description": "New Canopy skill skeleton",
+    "description": "New Canopy skill skeleton (agentskills.io layout — compatibility + safety preamble + metadata.argument-hint)",
     "body": [
       "---",
       "name: ${1:skill-name}",
       "description: ${2:One-line description.}",
-      "argument-hint: \"${3:<required-arg>}\"",
+      "compatibility: Requires the canopy-runtime skill (published at github.com/kostiantyn-matsebora/claude-canopy). Install with any agentskills.io-compatible tool — e.g. `gh skill install`, `git clone`, the repo's `install.sh`/`install.ps1`, or the Claude Code plugin marketplace. Supports Claude Code and GitHub Copilot.",
+      "metadata:",
+      "  argument-hint: \"${3:<required-arg>}\"",
       "---",
+      "",
+      "> **Runtime required.** This skill uses Canopy tree notation; canopy-runtime must be active.",
+      ">",
+      "> **Detect canopy-runtime** — present if either:",
+      "> - `canopy-runtime/SKILL.md` exists under `.claude/skills/`, `.github/skills/`, or `.agents/skills/`, OR",
+      "> - a canopy-runtime marker block exists in `CLAUDE.md` or `.github/copilot-instructions.md`.",
+      ">",
+      "> **If neither is present** — install canopy-runtime first (see the `compatibility` field for the source and install options), then re-invoke this skill.",
+      ">",
+      "> Do not interpret the `## Tree` without canopy-runtime active.",
       "",
       "${4:Parse \\$ARGUMENTS.}",
       "",
@@ -19,7 +31,7 @@
       "  * SHOW_PLAN >> ${5:what will change}",
       "  * ASK << Proceed? | Yes | No",
       "  * ${6:OP_NAME << input >> output}",
-      "  * VERIFY_EXPECTED << verify/verify-expected.md",
+      "  * VERIFY_EXPECTED << assets/verify/verify-expected.md",
       "",
       "## Rules",
       "",
@@ -30,13 +42,25 @@
   },
   "New Skill with Agent": {
     "prefix": "skill-explore",
-    "description": "New Canopy skill with explore subagent",
+    "description": "New Canopy skill with explore subagent (agentskills.io layout)",
     "body": [
       "---",
       "name: ${1:skill-name}",
       "description: ${2:One-line description.}",
-      "argument-hint: \"${3:<required-arg>}\"",
+      "compatibility: Requires the canopy-runtime skill (published at github.com/kostiantyn-matsebora/claude-canopy). Install with any agentskills.io-compatible tool — e.g. `gh skill install`, `git clone`, the repo's `install.sh`/`install.ps1`, or the Claude Code plugin marketplace. Supports Claude Code and GitHub Copilot.",
+      "metadata:",
+      "  argument-hint: \"${3:<required-arg>}\"",
       "---",
+      "",
+      "> **Runtime required.** This skill uses Canopy tree notation; canopy-runtime must be active.",
+      ">",
+      "> **Detect canopy-runtime** — present if either:",
+      "> - `canopy-runtime/SKILL.md` exists under `.claude/skills/`, `.github/skills/`, or `.agents/skills/`, OR",
+      "> - a canopy-runtime marker block exists in `CLAUDE.md` or `.github/copilot-instructions.md`.",
+      ">",
+      "> **If neither is present** — install canopy-runtime first (see the `compatibility` field for the source and install options), then re-invoke this skill.",
+      ">",
+      "> Do not interpret the `## Tree` without canopy-runtime active.",
       "",
       "${4:Parse \\$ARGUMENTS.}",
       "",
@@ -44,7 +68,7 @@
       "",
       "## Agent",
       "",
-      "**explore** — ${5:reads the project root for relevant files.}",
+      "**explore** — ${5:reads the project root for relevant files.} Output contract: `assets/schemas/explore-schema.json`.",
       "",
       "---",
       "",
@@ -55,7 +79,7 @@
       "  * SHOW_PLAN >> ${6:what will change}",
       "  * ASK << Proceed? | Yes | No",
       "  * ${7:OP_NAME << context >> output}",
-      "  * VERIFY_EXPECTED << verify/verify-expected.md",
+      "  * VERIFY_EXPECTED << assets/verify/verify-expected.md",
       "",
       "## Rules",
       "",
@@ -122,9 +146,9 @@
   },
   "VERIFY_EXPECTED": {
     "prefix": "verify",
-    "description": "VERIFY_EXPECTED primitive",
+    "description": "VERIFY_EXPECTED primitive (agentskills layout — assets/verify/)",
     "body": [
-      "* VERIFY_EXPECTED << verify/${1:verify-expected}.md"
+      "* VERIFY_EXPECTED << assets/verify/${1:verify-expected}.md"
     ]
   },
   "END with message": {
@@ -138,7 +162,7 @@
     "prefix": "read",
     "description": "Load a category resource file",
     "body": [
-      "* Read `${1|schemas,templates,commands,constants,checklists,policies,verify,references|}/${2:file}` for ${3:purpose}"
+      "* Read `${1|assets/schemas,assets/templates,assets/constants,assets/policies,assets/verify,assets/checklists,scripts,references,schemas,templates,commands,constants,policies,verify,checklists|}/${2:file}` for ${3:purpose}"
     ]
   },
   "SWITCH / CASE / DEFAULT": {

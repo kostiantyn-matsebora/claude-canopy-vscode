@@ -68,9 +68,9 @@ export const PRIMITIVE_DOCS: Record<string, PrimitiveDoc> = {
   },
   VERIFY_EXPECTED: {
     name: 'VERIFY_EXPECTED',
-    signature: 'VERIFY_EXPECTED << verify/<file>.md',
-    description: 'Check the current working state against the expected-state checklist in the referenced verify/ file.',
-    example: 'VERIFY_EXPECTED << verify/verify-expected.md',
+    signature: 'VERIFY_EXPECTED << assets/verify/<file>.md',
+    description: 'Check the current working state against the expected-state checklist in the referenced verify file. Path is `assets/verify/<file>.md` for agentskills layout (preferred); `verify/<file>.md` is also accepted for legacy flat layout.',
+    example: 'VERIFY_EXPECTED << assets/verify/verify-expected.md',
   },
   EXPLORE: {
     name: 'EXPLORE',

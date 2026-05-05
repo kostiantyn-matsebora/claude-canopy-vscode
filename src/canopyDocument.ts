@@ -290,13 +290,33 @@ export function extractReadRefs(lines: string[]): ReadRef[] {
     let m: RegExpExecArray | null;
     while ((m = re.exec(line)) !== null) {
       const fullPath = m[1];
-      const slashIdx = fullPath.indexOf('/');
-      const category = slashIdx !== -1 ? fullPath.slice(0, slashIdx + 1) : '';
+      const category = extractCategory(fullPath);
       const backtickStart = m.index + m[0].indexOf('`') + 1;
       refs.push({ line: i, path: fullPath, category, colStart: backtickStart, colEnd: backtickStart + fullPath.length });
     }
   }
   return refs;
+}
+
+/**
+ * Extract the category prefix from a Read path. Supports both:
+ *   - legacy flat layout — `constants/foo.md`     → `constants/`
+ *   - agentskills layout — `assets/constants/foo.md` → `assets/constants/`
+ *
+ * Two-segment categories live under `assets/`. All other prefixes are
+ * single-segment.
+ */
+function extractCategory(fullPath: string): string {
+  const firstSlash = fullPath.indexOf('/');
+  if (firstSlash === -1) return '';
+  const firstSeg = fullPath.slice(0, firstSlash + 1);
+  if (firstSeg === 'assets/') {
+    const secondSlash = fullPath.indexOf('/', firstSlash + 1);
+    if (secondSlash !== -1) {
+      return fullPath.slice(0, secondSlash + 1);
+    }
+  }
+  return firstSeg;
 }
 
 /** Get the ALL_CAPS word at a given position in a line, if any. */

@@ -42,7 +42,8 @@
       ]
     },
     "frontmatter-known-key": {
-      "match": "^(name|description|argument-hint)(:)(.*)$",
+      "comment": "agentskills.io spec root keys + legacy keys (argument-hint, user-invocable) for highlighting parity even though diagnostics flag them as needing to live inside metadata.",
+      "match": "^(name|description|license|compatibility|metadata|allowed-tools|argument-hint|user-invocable)(:)(.*)$",
       "captures": {
         "1": { "name": "support.type.property-name.canopy" },
         "2": { "name": "punctuation.separator.key-value.canopy" },
