@@ -3,7 +3,7 @@ import { getOpNameAtPosition, isPrimitive } from '../canopyDocument';
 import { PRIMITIVE_DOCS, registry } from '../opRegistry';
 
 const SECTION_DOCS: Record<string, string> = {
-  Agent: '**`## Agent`** — Declare an `**explore**` subagent. When present, the first tree node must be `EXPLORE >> context`. Output contract is always `schemas/explore-schema.json`.',
+  Agent: '**`## Agent`** — Declare an `**explore**` subagent. When present, the first tree node must be `EXPLORE >> context`. Output contract is `assets/schemas/explore-schema.json` (agentskills layout) or `schemas/explore-schema.json` (legacy flat layout).',
   Tree: '**`## Tree`** *(required)* — The sequential execution pipeline. Nodes run top-to-bottom. Use `IF`/`ELSE_IF`/`ELSE` for branching. Two equivalent syntaxes: markdown list (`*`) or box-drawing (`├──`).',
   Rules: '**`## Rules`** — Skill-wide invariants as a bullet list. These are checked throughout execution.',
   Response: '**`## Response:`** — Declare the output format as pipe-separated field names (e.g. `## Response: version | files updated`).',

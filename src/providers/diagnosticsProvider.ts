@@ -31,6 +31,10 @@ const VALID_CATEGORIES = new Set([
   'policies/', 'verify/', 'checklists/',
 ]);
 
+function isVerifyPath(p: string): boolean {
+  return p.startsWith('assets/verify/') || p.startsWith('verify/');
+}
+
 export class CanopyDiagnosticsProvider {
   private collection: vscode.DiagnosticCollection;
 
@@ -103,13 +107,20 @@ export class CanopyDiagnosticsProvider {
         let inCodeBlock = false;
         for (let i = treeSection.startLine; i <= treeSection.endLine; i++) {
           const l = lines[i] ?? '';
-          if (l.trim().startsWith('```')) {
+          const fenceMatch = l.match(/^\s*```(\S*)/);
+          if (fenceMatch) {
             inCodeBlock = !inCodeBlock;
-            if (inCodeBlock) {
+            // Plain ``` (no info string) is valid for box-drawing trees per
+            // docs/FRAMEWORK.md. Only fences with a language tag (```yaml,
+            // ```json, ```python, etc.) carry structured content that belongs
+            // in a category resource file.
+            if (inCodeBlock && fenceMatch[1] !== '') {
               const range = new vscode.Range(i, 0, i, l.length);
               diagnostics.push(new vscode.Diagnostic(
                 range,
-                'skill.md should not contain inline code blocks in the Tree section. Move structured content to category resource files.',
+                `skill.md Tree section should not contain a fenced '${fenceMatch[1]}' code block. ` +
+                `Move structured content to a category resource file. ` +
+                `(Plain '\`\`\`' fences for box-drawing trees are allowed.)`,
                 vscode.DiagnosticSeverity.Warning
               ));
             }
@@ -349,13 +360,14 @@ export class CanopyDiagnosticsProvider {
           if (!node.hasInput) {
             diagnostics.push(new vscode.Diagnostic(
               range,
-              `'VERIFY_EXPECTED' requires a path: 'VERIFY_EXPECTED << verify/<file>.md'.`,
+              `'VERIFY_EXPECTED' requires a path: 'VERIFY_EXPECTED << assets/verify/<file>.md'.`,
               vscode.DiagnosticSeverity.Error
             ));
-          } else if (node.input && !node.input.startsWith('verify/')) {
+          } else if (node.input && !isVerifyPath(node.input)) {
             diagnostics.push(new vscode.Diagnostic(
               range,
-              `'VERIFY_EXPECTED' path must start with 'verify/': found '${node.input}'.`,
+              `'VERIFY_EXPECTED' path must start with 'assets/verify/' (agentskills layout) ` +
+              `or 'verify/' (legacy flat layout): found '${node.input}'.`,
               vscode.DiagnosticSeverity.Warning
             ));
           }
@@ -412,7 +424,7 @@ export class CanopyDiagnosticsProvider {
 
     // VERIFY_EXPECTED file existence (cross-check after syntax is validated above)
     for (const node of parsed.treeNodes) {
-      if (node.opName !== 'VERIFY_EXPECTED' || !node.hasInput || !node.input?.startsWith('verify/')) continue;
+      if (node.opName !== 'VERIFY_EXPECTED' || !node.hasInput || !node.input || !isVerifyPath(node.input)) continue;
       if (!fs.existsSync(path.join(skillDir, node.input))) {
         const line = lines[node.line] ?? '';
         diagnostics.push(new vscode.Diagnostic(

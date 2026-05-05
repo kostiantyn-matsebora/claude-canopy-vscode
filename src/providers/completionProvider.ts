@@ -47,7 +47,8 @@ export class CanopyCompletionProvider implements vscode.CompletionItemProvider {
     }
 
     // --- Verify path after VERIFY_EXPECTED ---
-    const verifyMatch = prefix.match(/\bVERIFY_EXPECTED\s+<<\s+verify\/(\w*)$/);
+    // Both `verify/` (legacy flat layout) and `assets/verify/` (agentskills) are valid.
+    const verifyMatch = prefix.match(/\bVERIFY_EXPECTED\s+<<\s+(?:assets\/)?verify\/(\w*)$/);
     if (verifyMatch) {
       return []; // could list verify/ files — skipped for now
     }

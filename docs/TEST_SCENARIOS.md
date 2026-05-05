@@ -32,7 +32,7 @@ This document covers the extension only. For framework-side tests (install scrip
 
 ### C2.1 — Full vitest run
 - **Steps:** `npm test` (runs `vitest run`).
-- **Expected:** all tests pass (current baseline: **323/323** across 32 test files).
+- **Expected:** all tests pass (current baseline: **337/337** across 32 test files).
 - **Helper-level test files** (each is internally a suite of `describe` blocks):
   - `src/test/canopyDocument.test.ts` — frontmatter parsing, tree node extraction, Read-ref discovery
   - `src/test/diagnosticsProvider.test.ts` — full diagnostic catalog (frontmatter, structure, primitive signatures, ops conformance, compatibility shape)
@@ -112,7 +112,7 @@ Background: per [agentskills.io spec](https://agentskills.io/specification), `co
 **Prereqs:** local clone of `claude-canopy` at the same canopy version this extension tracks.
 
 ### C5.1 — Four-way parity check
-- **Steps:** run `python <claude-canopy>/install-test/check_parity.py` (the canopy framework owns the script; the extension's `MARKER_BLOCK` constant is one of the four sources it compares).
+- **Steps:** run `python install-test/check_parity.py` from the canopy workspace root (the canopy framework owns the script; the extension's `MARKER_BLOCK` constant is one of the four sources it compares).
 - **Expected:** four `OK` lines (`canonical`, `vscode-ts`, `install.sh`, `install.ps1`).
 - **Failure modes:** drift between extension `MARKER_BLOCK` and `claude-canopy/skills/canopy-runtime/assets/constants/marker-block.md`. Update the extension constant verbatim from the canonical source and re-run.
 
@@ -153,6 +153,15 @@ Open a known SKILL.md (e.g. an example skill), trigger:
 ### C6.5 — New-resource scaffold commands
 - Run `Canopy Template: New Skill` from a folder.
 - **Expected:** scaffolds a complete skill with spec-compliant frontmatter (free-text `compatibility`, `metadata.argument-hint`, structured safety preamble) and the standard layout (`scripts/`, `references/`, `assets/{templates,constants,schemas,checklists,policies,verify}/`).
+
+### C6.6 — Layout-migration UX (snippets, hover, completion)
+Validates the v0.18.0 agentskills.io alignment is reflected in user-visible surfaces.
+- Type `skill` in a new `SKILL.md` → snippet expansion contains a `compatibility:` field, a safety preamble mentioning canopy-runtime, `metadata:` block with `argument-hint:` inside, and `VERIFY_EXPECTED << assets/verify/verify-expected.md`.
+- Hover `## Agent` heading → docs mention `assets/schemas/explore-schema.json`.
+- Hover `VERIFY_EXPECTED` token → signature shows `VERIFY_EXPECTED << assets/verify/<file>.md`.
+- Type `read` snippet trigger → "Read resource" dropdown lists agentskills paths first (`assets/schemas`, `assets/templates`, `assets/constants`, `assets/policies`, `assets/verify`, `assets/checklists`, `scripts`, `references`) followed by legacy paths.
+- Open command palette → `Canopy Template: New Script File` is visible (was "New Commands File" before v0.18.0 alignment); selecting it writes to `scripts/`.
+- Frontmatter highlighting on a SKILL.md → `compatibility:`, `metadata:`, `allowed-tools:`, `license:` keys all rendered as recognized fields (same style as `name:` / `description:`).
 
 ---
 
@@ -261,6 +270,38 @@ Each resolves the active skill dir (active editor or workspace pick) and writes 
 
 ---
 
+## Suite C9 — Layout-migration diagnostics
+
+**Validates:** the diagnostics provider, parser, and registries recognize both the agentskills.io `assets/<sub>/` standard layout AND the legacy flat layout, without false positives.
+**Parallelizable:** subset of C2; runs alone via `vitest run -t 'agentskills'` or as part of the full `npm test`.
+**Prereqs:** `npm install` completed.
+
+Background: canopy v0.18.0 adopted the agentskills.io standard layout (`scripts/`, `references/`, `assets/{templates,constants,schemas,checklists,policies,verify}/`). The extension must accept both layouts during the migration window — legacy skills continue to validate cleanly, agentskills skills produce no false positives. See `claude-canopy/skills/canopy/assets/constants/category-dirs.md` for the canonical legacy ↔ standard mapping.
+
+### C9.1 — `assets/<sub>/` Read-ref category extraction
+- **Input:** `` Read `assets/policies/foo.md` for X `` (and the five other agentskills sub-categories).
+- **Expected:** category resolves to two-segment `assets/policies/`, not single-segment `assets/`. No "Unknown resource category" diagnostic.
+- **Failure mode:** parser collapsing every path to its first slash → all real canopy v0.18.0+ skills get flagged with "Unknown resource category 'assets/'" on every Read line.
+
+### C9.2 — `VERIFY_EXPECTED` accepts both prefixes
+- **Inputs:**
+  - `* VERIFY_EXPECTED << verify/check.md` (legacy flat layout)
+  - `* VERIFY_EXPECTED << assets/verify/check.md` (agentskills layout)
+- **Expected:** no path-prefix warning on either input.
+- **Failure mode:** hardcoded `startsWith('verify/')` rejecting the agentskills form (which is what canopy `/improve` migrates to).
+
+### C9.3 — Plain ``` fence in `## Tree` is allowed (box-drawing)
+- **Input:** Tree section wrapped in a plain ``` fence containing a box-drawing tree (`├──`, `└──`, etc.) — the canonical box-drawing form per `docs/FRAMEWORK.md`.
+- **Expected:** no "should not contain inline code blocks" warning.
+- **Failure mode:** every fenced block in `## Tree` flagged regardless of content → users can't use the box-drawing syntax documented in the framework spec.
+
+### C9.4 — Fenced language code blocks in `## Tree` still warn
+- **Input:** Tree section containing ` ```yaml ... ``` ` or ` ```json ... ``` ` block (structural content that belongs in a category resource file).
+- **Expected:** Warning that names the language tag (e.g. "should not contain a fenced 'yaml' code block").
+- **Failure mode:** allowing structured content in SKILL.md Tree (violates SKILL.md constraints documented in `claude-canopy/CLAUDE.md` "SKILL.md Constraints").
+
+---
+
 ## Suite C7 — Marketplace publish gate (release-only)
 
 **Validates:** the packaged `.vsix` installs cleanly into VS Code from disk; metadata renders correctly on the marketplace.
@@ -281,11 +322,12 @@ Each resolves the active skill dir (active editor or workspace pick) and writes 
 
 ```
 C1 (compile)             ─┐
-C2 (vitest full)         ─┤── C3, C4, and C8 are subsets of C2; run alone for fast feedback
-C3 (compat diagnostics)  ─┤   or as part of C2 for the full suite.
+C2 (vitest full)         ─┤── C3, C4, C8, and C9 are subsets of C2; run alone for fast
+C3 (compat diagnostics)  ─┤   feedback or as part of C2 for the full suite.
 C4 (real-skills)         ─┤
 C5 (marker parity)       ─┤── all suites parallelize (no shared state)
 C8 (per-command)         ─┤
+C9 (layout migration)    ─┤
 C6 (manual smoke) *      ─┤
 C7 (publish gate) **     ─┘
 
@@ -293,4 +335,4 @@ C7 (publish gate) **     ─┘
 ** C7 runs once per release tag.
 ```
 
-CI runs C1 + C2 (which transitively covers C3 + C4 + C8) + C5 on every push to a feature branch and every PR. C6 is a pre-PR sanity check by the author. C7 gates the marketplace publish step in `release.yml`.
+CI runs C1 + C2 (which transitively covers C3 + C4 + C8 + C9) + C5 on every push to a feature branch and every PR. C6 is a pre-PR sanity check by the author. C7 gates the marketplace publish step in `release.yml`.
