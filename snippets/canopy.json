@@ -1,7 +1,7 @@
 {
   "New Skill": {
     "prefix": "skill",
-    "description": "New Canopy skill skeleton (agentskills.io layout — compatibility + safety preamble + metadata.argument-hint)",
+    "description": "New Canopy skill skeleton (agentskills.io layout — compatibility + safety preamble + metadata.argument-hint + canopy-features manifest)",
     "body": [
       "---",
       "name: ${1:skill-name}",
@@ -9,6 +9,7 @@
       "compatibility: Requires the canopy-runtime skill (published at github.com/kostiantyn-matsebora/claude-canopy). Install with any agentskills.io-compatible tool — e.g. `gh skill install`, `git clone`, the repo's `install.sh`/`install.ps1`, or the Claude Code plugin marketplace. Supports Claude Code and GitHub Copilot.",
       "metadata:",
       "  argument-hint: \"${3:<required-arg>}\"",
+      "  canopy-features: [interaction, verify]",
       "---",
       "",
       "> **Runtime required.** This skill uses Canopy tree notation; canopy-runtime must be active.",
@@ -42,7 +43,7 @@
   },
   "New Skill with Agent": {
     "prefix": "skill-explore",
-    "description": "New Canopy skill with explore subagent (agentskills.io layout)",
+    "description": "New Canopy skill with explore subagent (agentskills.io layout — includes canopy-features manifest)",
     "body": [
       "---",
       "name: ${1:skill-name}",
@@ -50,6 +51,7 @@
       "compatibility: Requires the canopy-runtime skill (published at github.com/kostiantyn-matsebora/claude-canopy). Install with any agentskills.io-compatible tool — e.g. `gh skill install`, `git clone`, the repo's `install.sh`/`install.ps1`, or the Claude Code plugin marketplace. Supports Claude Code and GitHub Copilot.",
       "metadata:",
       "  argument-hint: \"${3:<required-arg>}\"",
+      "  canopy-features: [interaction, explore, verify]",
       "---",
       "",
       "> **Runtime required.** This skill uses Canopy tree notation; canopy-runtime must be active.",

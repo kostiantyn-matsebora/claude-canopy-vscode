@@ -16,11 +16,27 @@ import { parseOpDefinitions, OpDefinition } from './canopyDocument';
 // ---------------------------------------------------------------------------
 // Framework primitive documentation (static, never overridden)
 // ---------------------------------------------------------------------------
+export type PrimitiveSlice =
+  | 'core'
+  | 'interaction'
+  | 'control-flow'
+  | 'parallel'
+  | 'subagent'
+  | 'explore'
+  | 'verify';
+
 export interface PrimitiveDoc {
   name: string;
   signature: string;
   description: string;
   example: string;
+  /**
+   * S2.5: which canopy-runtime slice file this primitive lives in.
+   * `core` is implicit-always-loaded; the other slices are loaded by the
+   * runtime per the skill's `metadata.canopy-features` manifest.
+   * Mirrors `canopy-runtime/references/ops.md`.
+   */
+  slice: PrimitiveSlice;
 }
 
 export const PRIMITIVE_DOCS: Record<string, PrimitiveDoc> = {
@@ -29,84 +45,98 @@ export const PRIMITIVE_DOCS: Record<string, PrimitiveDoc> = {
     signature: 'IF << condition',
     description: 'Branch on a boolean condition. Children execute if the condition is true.',
     example: 'IF << $ARGUMENTS is not valid semver\n  └── END Invalid version',
+    slice: 'core',
   },
   ELSE_IF: {
     name: 'ELSE_IF',
     signature: 'ELSE_IF << condition',
     description: 'Continue an IF chain. Evaluated only if all prior IF/ELSE_IF conditions were false.',
     example: 'ELSE_IF << file is a pyproject.toml\n  └── UPDATE_PYPROJECT',
+    slice: 'core',
   },
   ELSE: {
     name: 'ELSE',
     signature: 'ELSE',
     description: 'Final branch of an IF chain. Executes if all prior conditions were false.',
     example: 'ELSE\n  └── natural language fallback action',
+    slice: 'core',
   },
   BREAK: {
     name: 'BREAK',
     signature: 'BREAK',
     description: 'Exit the current op and resume the caller\'s next tree node (non-fatal).',
     example: 'IF << no commits found\n  └── BREAK',
+    slice: 'core',
   },
   END: {
     name: 'END',
     signature: 'END [message]',
     description: 'Halt the entire skill immediately. Displays an optional message to the user.',
     example: 'END Version argument is not valid semver — expected MAJOR.MINOR.PATCH',
+    slice: 'core',
   },
   ASK: {
     name: 'ASK',
     signature: 'ASK << question [| option1 | option2 ...]',
     description: 'Prompt the user with a question. Skill halts until the user responds. Two modes: multiple-choice (provide options separated by `|`) or free-form (no options — accepts whatever the user types).',
     example: 'ASK << Proceed? | Yes | No\nASK << What name should the new skill have?',
+    slice: 'interaction',
   },
   SHOW_PLAN: {
     name: 'SHOW_PLAN',
     signature: 'SHOW_PLAN >> field1 | field2 | ...',
     description: 'Display a structured plan summary before executing changes. Fields become labeled rows in the output.',
     example: 'SHOW_PLAN >> current version | new version | files to update | changelog action',
+    slice: 'interaction',
   },
   VERIFY_EXPECTED: {
     name: 'VERIFY_EXPECTED',
     signature: 'VERIFY_EXPECTED << assets/verify/<file>.md',
     description: 'Check the current working state against the expected-state checklist in the referenced verify file. Path is `assets/verify/<file>.md` for agentskills layout (preferred); `verify/<file>.md` is also accepted for legacy flat layout.',
     example: 'VERIFY_EXPECTED << assets/verify/verify-expected.md',
+    slice: 'verify',
   },
   EXPLORE: {
     name: 'EXPLORE',
     signature: 'EXPLORE >> context',
     description: 'Run the explore subagent declared in ## Agent. Must be the first tree node when ## Agent is present. Output is bound to the context variable.',
     example: 'EXPLORE >> context',
+    slice: 'explore',
   },
   FOR_EACH: {
     name: 'FOR_EACH',
     signature: 'FOR_EACH << item in collection',
     description: 'Iterate over a collection. The body executes once per element. An empty collection skips the body entirely. BREAK inside exits the loop early.',
     example: 'FOR_EACH << change in context.changes_detected\n  └── APPLY_CHANGE << change',
+    slice: 'control-flow',
   },
   SWITCH: {
     name: 'SWITCH',
     signature: 'SWITCH << expression',
     description: 'Evaluate an expression once and execute the first matching CASE block. Use DEFAULT as the fallback when no CASE matches. Replaces long IF/ELSE_IF chains that branch on a single value.',
     example: 'SWITCH << bump_type\n  CASE << major\n    └── ...\n  DEFAULT\n    └── ...',
+    slice: 'control-flow',
   },
   CASE: {
     name: 'CASE',
     signature: 'CASE << value',
     description: 'A branch inside a SWITCH block. Executes when the SWITCH expression matches this value.',
     example: 'CASE << minor\n  └── Increment minor segment',
+    slice: 'control-flow',
   },
   DEFAULT: {
     name: 'DEFAULT',
     signature: 'DEFAULT',
     description: 'Fallback branch inside a SWITCH block. Executes when no CASE matched.',
     example: 'DEFAULT\n  └── Set bump_type to "patch"',
+    slice: 'control-flow',
   },
   PARALLEL: {
     name: 'PARALLEL',
     signature: 'PARALLEL',
     description: 'Heterogeneous parallel block — emit children as parallel subagent invocations in a single agent turn. Each child runs in its own context window; bind results via each child\'s >>. PARALLEL itself takes no input or output. Use for ≥2 independent fan-out tasks. Failure semantics: Promise.allSettled (sibling failures don\'t abort).',
     example: 'PARALLEL\n  ├── EXPLORE_FRONTEND >> fe_ctx\n  ├── EXPLORE_BACKEND  >> be_ctx\n  └── EXPLORE_TESTS    >> tests_ctx',
+    slice: 'parallel',
   },
 };
 

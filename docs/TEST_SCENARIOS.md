@@ -4,6 +4,8 @@ Test suites for the `canopy-skills` VSCode extension (`claude-canopy-vscode`). S
 
 This document covers the extension only. For framework-side tests (install scripts, marker-block parity, autonomous-agent E2E, etc.), see [`claude-canopy/docs/TEST_SCENARIOS.md`](https://github.com/kostiantyn-matsebora/claude-canopy/blob/master/docs/TEST_SCENARIOS.md).
 
+**Tracks canopy v0.21.0** — sliced primitive spec (`core` / `interaction` / `control-flow` / `parallel` / `subagent` / `explore` / `verify`), per-skill `metadata.canopy-features` manifest, slim 5-line marker block.
+
 ## Conventions
 
 - **Result format** — each scenario lists Steps, Expected, Failure modes. Pass = all Expected hold; any drift in Failure modes = fail.
@@ -32,7 +34,7 @@ This document covers the extension only. For framework-side tests (install scrip
 
 ### C2.1 — Full vitest run
 - **Steps:** `npm test` (runs `vitest run`).
-- **Expected:** all tests pass (current baseline: **337/337** across 32 test files).
+- **Expected:** all tests pass (current baseline: **371/371** across 32 test files).
 - **Helper-level test files** (each is internally a suite of `describe` blocks):
   - `src/test/canopyDocument.test.ts` — frontmatter parsing, tree node extraction, Read-ref discovery
   - `src/test/diagnosticsProvider.test.ts` — full diagnostic catalog (frontmatter, structure, primitive signatures, ops conformance, compatibility shape)
@@ -302,6 +304,114 @@ Background: canopy v0.18.0 adopted the agentskills.io standard layout (`scripts/
 
 ---
 
+## Suite C10 — `metadata.canopy-features` manifest drift diagnostics (v0.21.0+)
+
+**Validates:** the diagnostic provider surfaces the five drift cases for the per-skill slice manifest. vscode-side severity is `Error` for the four "wrong" cases; `Warning` for the "absent" case (back-compat). Framework `/canopy validate` emits `Warning` on all five — the extension is intentionally stricter at author-time.
+**Parallelizable:** subset of C2; runs alone via `vitest run -t 'canopy-features'`.
+**Prereqs:** `npm install` completed; framework v0.21.0 pinned.
+
+Background: v0.21.0 introduced the optional `metadata.canopy-features: [...]` manifest declaring which primitive families a skill uses (`interaction`, `control-flow`, `parallel`, `subagent`, `explore`, `verify`). The runtime lazy-loads only the named slices. `core` is always loaded and must NOT be declared.
+
+### C10.1 — Manifest absent on a `## Tree` skill (back-compat)
+- **Input:** SKILL.md with `## Tree` and `metadata:` block but no `canopy-features` field.
+- **Expected:** **Warning** at the frontmatter, message includes "missing `metadata.canopy-features` manifest". No Error. Skill is still recognized as canopy-flavored.
+- **Failure modes:** Error severity (would break v0.20.x skills that haven't been retrofitted); silent acceptance (no nudge for new authors to add the manifest).
+
+### C10.2 — Manifest declares slice the tree doesn't use
+- **Input:** `canopy-features: [interaction, parallel]` but no `PARALLEL` node anywhere in the tree.
+- **Expected:** **Error** anchored at the `canopy-features` line, message includes "declares 'parallel' but the skill's tree does not use it".
+- **Failure modes:** false positive on a skill whose manifest correctly matches; no diagnostic when drift is real.
+
+### C10.3 — Tree uses slice the manifest omits
+- **Input:** `canopy-features: [interaction]` but tree contains `* **OP** << x >> y` (subagent dispatch).
+- **Expected:** **Error**, message includes "Tree uses 'subagent' but `metadata.canopy-features` does not declare it".
+- **Failure modes:** missed when the used slice is an indirect signal (subagent dispatch via bold call-site, `## Agent` declaring explore).
+
+### C10.4 — Manifest lists `core`
+- **Input:** `canopy-features: [core, interaction]`.
+- **Expected:** **Error**, message includes "`metadata.canopy-features` lists 'core'" and "`core` is always loaded — remove it from the manifest".
+- **Failure modes:** no diagnostic (lets `core` slip through and pollute the drift signal).
+
+### C10.5 — Manifest lists unknown value
+- **Input:** `canopy-features: [interaction, dispatch-magic]`.
+- **Expected:** **Error**, message includes "unknown value 'dispatch-magic'" and lists the 6 valid slice names.
+- **Failure modes:** silent acceptance of typos like `parralel` or `controlflow`.
+
+### C10.6 — Hover on `metadata.canopy-features` key
+- **Steps:** Hover the `canopy-features` key inside a `metadata:` block.
+- **Expected:** Hover popup explains the field, lists the 6 valid values, notes that `core` is always loaded, and mentions the drift diagnostics.
+- **Failure modes:** no hover (regressed when the metadata-block hover handler is reordered).
+
+### C10.7 — Completion inside `canopy-features: [...]`
+- **Steps:** Inside the array literal, trigger completion (Ctrl+Space).
+- **Expected:** Six completion items — `interaction`, `control-flow`, `parallel`, `subagent`, `explore`, `verify`. Already-listed values are filtered out (no duplicate suggestions).
+- **Failure modes:** suggestions outside the array, or `core` listed.
+
+---
+
+## Suite C11 — Subagent dispatch surface (v0.20.0+)
+
+**Validates:** the v0.20.0 subagent dispatch model is surfaced uniformly across parser, diagnostics, hover, definition, snippets, and grammar.
+**Parallelizable:** subset of C2; some F5-only sub-scenarios noted.
+**Prereqs:** `npm install` completed.
+
+Background: v0.20.0 introduced per-op marker blockquotes (`> **Subagent.** Output contract: ...`) at the op definition site, plus bold-wrapped op names (`* **OP** << ... >> ...`) at the tree call site. The extension recognizes both forms and surfaces them via diagnostics, snippets, and hover.
+
+### C11.1 — Subagent marker recognition at op definition
+- **Input:** ops.md entry with a `> **Subagent.** Output contract: \`assets/schemas/foo-output.json\`.` line directly under the heading.
+- **Expected:** parser sets `isSubagent: true` and captures `outputContract` on the op definition. Hover on a call site shows ", subagent dispatch".
+- **Failure modes:** marker missed (parser regex too strict on whitespace / wrap); contract path not captured.
+
+### C11.2 — Bold call-site detection in tree
+- **Input:** `* **MY_OP** << input >> output` inside `## Tree`.
+- **Expected:** parser sets `subagentCall: true` on the tree node. Diagnostics flag it as Error if the resolved op definition lacks a subagent marker.
+- **Failure modes:** plain `* MY_OP << ...` flagged as subagent (regex too loose); bold call-site missed (regex too strict).
+
+### C11.3 — Snippet expansion
+- **Steps:** Type `op-subagent` then `call-subagent` in an empty SKILL.md.
+- **Expected:** `op-subagent` expands to a heading + `> **Subagent.** Output contract: ...` blockquote + tree body. `call-subagent` expands to `* **OP_NAME** << input >> output`.
+- **Failure modes:** snippet references the old `## Agents` section (removed in v0.20.0).
+
+### C11.4 — Definition jump on contract path
+- **Steps:** F12 / Ctrl+Click on the `assets/schemas/foo-output.json` path in a marker blockquote.
+- **Expected:** opens the schema file (resolved relative to the skill dir).
+- **Failure modes:** "no definition" (path resolution skipping the marker blockquote context).
+
+### C11.5 — Grammar coverage (manual, F5)
+- **Steps:** Open a SKILL.md containing both forms in an Extension Development Host.
+- **Expected:** the marker blockquote `> **Subagent.**` and the call-site `**OP**` render with the dedicated subagent scopes (`subagent-call`, `subagent-marker`).
+- **Failure modes:** marker / call-site falls back to default markdown highlighting.
+
+---
+
+## Suite C12 — `PARALLEL` block highlighting (v0.19.0+)
+
+**Validates:** the `PARALLEL` primitive is recognized as a control-flow op by parser, diagnostics, completion, hover, and grammar.
+**Parallelizable:** subset of C2.
+**Prereqs:** `npm install` completed.
+
+### C12.1 — Parser recognition
+- **Input:** `* PARALLEL` followed by N `* op-call >> ctx_X` children.
+- **Expected:** parser tags the node as primitive `PARALLEL`. `computeUsedFeatures` returns `parallel` in the result set.
+- **Failure modes:** PARALLEL treated as a custom op (manifest-drift diagnostics then misfire).
+
+### C12.2 — Hover surfaces `Slice: parallel`
+- **Steps:** Hover the `PARALLEL` token.
+- **Expected:** hover popup includes `Slice: parallel` line under the signature.
+- **Failure modes:** no slice line (PRIMITIVE_DOCS entry missing the `slice` field).
+
+### C12.3 — Completion in tree node start position
+- **Steps:** On a fresh tree node line, trigger completion.
+- **Expected:** `PARALLEL` appears in the suggestions list with detail "control-flow primitive".
+- **Failure modes:** absent from completions; or duplicated as both keyword and function.
+
+### C12.4 — Grammar scope (manual, F5)
+- **Steps:** Open a SKILL.md with `PARALLEL` in an Extension Development Host.
+- **Expected:** `PARALLEL` renders with the `primitive-control` (or equivalent) scope colorization.
+- **Failure modes:** falls back to default text color.
+
+---
+
 ## Suite C7 — Marketplace publish gate (release-only)
 
 **Validates:** the packaged `.vsix` installs cleanly into VS Code from disk; metadata renders correctly on the marketplace.
@@ -322,12 +432,15 @@ Background: canopy v0.18.0 adopted the agentskills.io standard layout (`scripts/
 
 ```
 C1 (compile)             ─┐
-C2 (vitest full)         ─┤── C3, C4, C8, and C9 are subsets of C2; run alone for fast
-C3 (compat diagnostics)  ─┤   feedback or as part of C2 for the full suite.
+C2 (vitest full)         ─┤── C3, C4, C8, C9, C10, C11, C12 are subsets of C2;
+C3 (compat diagnostics)  ─┤   run alone for fast feedback or via the full C2.
 C4 (real-skills)         ─┤
 C5 (marker parity)       ─┤── all suites parallelize (no shared state)
 C8 (per-command)         ─┤
 C9 (layout migration)    ─┤
+C10 (manifest drift)     ─┤── v0.21.0+
+C11 (subagent dispatch)  ─┤── v0.20.0+
+C12 (PARALLEL)           ─┤── v0.19.0+
 C6 (manual smoke) *      ─┤
 C7 (publish gate) **     ─┘
 
@@ -335,4 +448,4 @@ C7 (publish gate) **     ─┘
 ** C7 runs once per release tag.
 ```
 
-CI runs C1 + C2 (which transitively covers C3 + C4 + C8 + C9) + C5 on every push to a feature branch and every PR. C6 is a pre-PR sanity check by the author. C7 gates the marketplace publish step in `release.yml`.
+CI runs C1 + C2 (which transitively covers C3 + C4 + C8–C12) + C5 on every push to a feature branch and every PR. C6 is a pre-PR sanity check by the author. C7 gates the marketplace publish step in `release.yml`.
