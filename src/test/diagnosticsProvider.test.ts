@@ -22,12 +22,18 @@ function makeDoc(text: string, fileName = 'SKILL.md') {
 
 /**
  * Minimal valid SKILL.md wrapper around a body string. Includes compatibility
- * field + safety preamble required for canopy-flavored (## Tree) skills under
- * the agentskills.io spec (v0.18.0+).
+ * field + safety preamble + canopy-features manifest required for canopy-flavored
+ * (## Tree) skills under the agentskills.io spec + v0.21.0 context-optimization
+ * conventions.
+ *
+ * Default manifest is `[explore]` — matches the baseline `* EXPLORE >> ctx` body
+ * used by the baseline test. Tests that exercise different feature sets pass
+ * `features` to override.
  */
-function skill(body: string) {
+function skill(body: string, features: string = '[explore]') {
+  const featuresLine = features ? `\n  canopy-features: ${features}` : '';
   return makeDoc(
-    `---\nname: t\ndescription: t\ncompatibility: Requires the canopy-runtime skill (published at github.com/example/canopy). Install with any agentskills.io-compatible tool.\n---\n\n` +
+    `---\nname: t\ndescription: t\ncompatibility: Requires the canopy-runtime skill (published at github.com/example/canopy). Install with any agentskills.io-compatible tool.\nmetadata:${featuresLine}\n---\n\n` +
     `> Safety preamble — requires canopy-runtime; halt if not installed.\n\n` +
     body
   );
@@ -623,5 +629,54 @@ describe('diagnostics — subagent op-def marker (S2)', () => {
   it('plain op without marker has no S2 diagnostics', async () => {
     await provider.validate(ops('## MY_OP << x >> y\n\nDoes a thing.\n'));
     expect(hasMsg('Subagent')).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// S2.5 — `metadata.canopy-features` manifest drift checks
+// ---------------------------------------------------------------------------
+
+describe('diagnostics — canopy-features manifest (S2.5)', () => {
+  it('clean — manifest matches tree usage', async () => {
+    await provider.validate(skill('## Tree\n\n* SHOW_PLAN >> what\n* ASK << Proceed? | Yes | No\n', '[interaction]'));
+    expect(hasMsg('canopy-features')).toBe(false);
+    expect(hasMsg('manifest')).toBe(false);
+  });
+
+  it('manifest absent → warning (back-compat)', async () => {
+    // Override the helper's default by passing empty string for `features`
+    await provider.validate(skill('## Tree\n\n* EXPLORE >> ctx\n', ''));
+    expect(hasMsg("missing 'metadata.canopy-features' manifest")).toBe(true);
+    expect(hasSeverity(vscode.DiagnosticSeverity.Warning)).toBe(true);
+  });
+
+  it("declared but unused → error", async () => {
+    await provider.validate(skill('## Tree\n\n* SHOW_PLAN >> x\n', '[interaction, parallel]'));
+    expect(hasMsg("declares 'parallel' but the skill's tree does not use it")).toBe(true);
+    expect(hasSeverity(vscode.DiagnosticSeverity.Error)).toBe(true);
+  });
+
+  it("used but undeclared → error", async () => {
+    await provider.validate(skill('## Tree\n\n* SHOW_PLAN >> x\n* **FOO** << "y" >> result\n', '[interaction]'));
+    expect(hasMsg("Tree uses 'subagent' but 'metadata.canopy-features' does not declare it")).toBe(true);
+    expect(hasSeverity(vscode.DiagnosticSeverity.Error)).toBe(true);
+  });
+
+  it("'core' listed → error", async () => {
+    await provider.validate(skill('## Tree\n\n* SHOW_PLAN >> x\n', '[core, interaction]'));
+    expect(hasMsg("'metadata.canopy-features' lists 'core'")).toBe(true);
+    expect(hasMsg("implicit-always-loaded")).toBe(true);
+    expect(hasSeverity(vscode.DiagnosticSeverity.Error)).toBe(true);
+  });
+
+  it('unknown feature value → error', async () => {
+    await provider.validate(skill('## Tree\n\n* SHOW_PLAN >> x\n', '[interaction, dispatch-magic]'));
+    expect(hasMsg("unknown value 'dispatch-magic'")).toBe(true);
+    expect(hasSeverity(vscode.DiagnosticSeverity.Error)).toBe(true);
+  });
+
+  it('non-Tree skill (no ## Tree) → manifest check skipped', async () => {
+    await provider.validate(makeDoc('---\nname: t\ndescription: t\n---\n\nJust prose.\n'));
+    expect(hasMsg('canopy-features')).toBe(false);
   });
 });

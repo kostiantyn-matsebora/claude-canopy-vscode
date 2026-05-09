@@ -8,6 +8,11 @@ const FRONTMATTER_KEYS = [
   'name', 'description', 'license', 'compatibility', 'metadata', 'allowed-tools',
 ];
 const SECTION_NAMES = ['Agent', 'Tree', 'Rules', 'Response:'];
+// Valid values for `metadata.canopy-features` (the per-skill slice manifest).
+// `core` is always loaded and must NOT be declared.
+const CANOPY_FEATURE_NAMES = [
+  'interaction', 'control-flow', 'parallel', 'subagent', 'explore', 'verify',
+];
 // Standard agentskills.io layout (preferred) AND legacy flat layout (still supported).
 const CATEGORY_DIRS = [
   // Standard layout
@@ -30,6 +35,11 @@ export class CanopyCompletionProvider implements vscode.CompletionItemProvider {
 
     // --- Frontmatter field names ---
     if (this.isInFrontmatter(document, position)) {
+      // Inside `canopy-features: [...]` array — offer the 6 valid slice names.
+      const featuresMatch = prefix.match(/^\s+canopy-features:\s*\[([^\]]*)$/);
+      if (featuresMatch) {
+        return this.canopyFeatureCompletions(featuresMatch[1]);
+      }
       if (/^\s*$/.test(prefix) || /^[a-z-]*$/.test(prefix.trim())) {
         return this.frontmatterCompletions();
       }
@@ -109,6 +119,24 @@ export class CanopyCompletionProvider implements vscode.CompletionItemProvider {
       item.sortText = '0' + key;
       return item;
     });
+  }
+
+  private canopyFeatureCompletions(typedSoFar: string): vscode.CompletionItem[] {
+    const alreadyListed = new Set(
+      typedSoFar.split(',').map(v => v.trim().replace(/^["']|["']$/g, ''))
+    );
+    return CANOPY_FEATURE_NAMES
+      .filter(name => !alreadyListed.has(name))
+      .map(name => {
+        const item = new vscode.CompletionItem(name, vscode.CompletionItemKind.EnumMember);
+        item.detail = 'Canopy primitive slice';
+        item.documentation = new vscode.MarkdownString(
+          `Slice \`${name}\` — declared in \`metadata.canopy-features\`. ` +
+          `When listed, the runtime loads this primitive family. ` +
+          `\`core\` is always loaded and must NOT be declared.`
+        );
+        return item;
+      });
   }
 
   private sectionCompletions(): vscode.CompletionItem[] {

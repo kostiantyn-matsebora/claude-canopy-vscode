@@ -183,6 +183,40 @@ describe('ambientInstructionFile', () => {
 // applyMarkerBlock — idempotent ambient-block transform
 // ---------------------------------------------------------------------------
 
+describe('MARKER_BLOCK content', () => {
+  // Pinned copy of the canonical block — byte-identical with:
+  //   - claude-canopy/skills/canopy-runtime/assets/constants/marker-block.md
+  //   - claude-canopy/install.sh build_marker_block()
+  //   - claude-canopy/install.ps1 Build-MarkerBlock
+  // If the framework changes the slim marker block, update this constant first
+  // (it documents the exact bytes the parity check expects), then update
+  // MARKER_BLOCK to match.
+  const CANONICAL_MARKER_BLOCK_V0_21_0 = [
+    '<!-- canopy-runtime-begin -->',
+    '## Canopy Runtime',
+    '',
+    'Any `SKILL.md` declaring a `## Tree` section is canopy-flavored. To interpret, load `<skills-root>/canopy-runtime/SKILL.md` (where `<skills-root>` is the first match of `.agents/skills/`, `.claude/skills/`, `.github/skills/`). The runtime SKILL.md handles platform detection, op lookup, and lazy-loads only the spec slices the skill actually uses (per `metadata.canopy-features`).',
+    '<!-- canopy-runtime-end -->',
+  ].join('\n');
+
+  it('is byte-identical with the canonical v0.21.0 slim marker block', () => {
+    expect(MARKER_BLOCK).toBe(CANONICAL_MARKER_BLOCK_V0_21_0);
+  });
+
+  it('is the slim 5-line form (begin marker, header, blank, body, end marker)', () => {
+    const lines = MARKER_BLOCK.split('\n');
+    expect(lines).toHaveLength(5);
+    expect(lines[0]).toBe(MARKER_START);
+    expect(lines[1]).toBe('## Canopy Runtime');
+    expect(lines[2]).toBe('');
+    expect(lines[4]).toBe(MARKER_END);
+  });
+
+  it('mentions metadata.canopy-features (the v0.21.0 lazy-loading hook)', () => {
+    expect(MARKER_BLOCK).toContain('metadata.canopy-features');
+  });
+});
+
 describe('applyMarkerBlock', () => {
   it('starts the block content with MARKER_START and ends with MARKER_END', () => {
     expect(MARKER_BLOCK.startsWith(MARKER_START)).toBe(true);

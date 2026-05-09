@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import { parseDocument, isPrimitive, extractReadRefs } from '../canopyDocument';
+import { parseDocument, isPrimitive, extractReadRefs, computeUsedFeatures, CANOPY_FEATURE_VALUES, CanopyFeature } from '../canopyDocument';
 import { registry } from '../opRegistry';
 
 const RESERVED_PRIMITIVES = new Set([
@@ -11,13 +11,13 @@ const RESERVED_PRIMITIVES = new Set([
 
 const FRONTMATTER_REQUIRED = ['name', 'description'];
 // agentskills.io spec only allows these fields at frontmatter root.
-// `argument-hint` and `user-invocable` are non-spec and must live inside `metadata`.
+// `argument-hint`, `user-invocable`, and `canopy-features` are non-spec and must live inside `metadata`.
 const FRONTMATTER_ALLOWED = new Set([
   'name', 'description', 'license', 'compatibility', 'metadata', 'allowed-tools',
 ]);
 // Non-spec fields that must be moved into `metadata` if they appear at root.
 const FRONTMATTER_NON_SPEC_AT_ROOT = new Set([
-  'argument-hint', 'user-invocable',
+  'argument-hint', 'user-invocable', 'canopy-features',
 ]);
 // Standard agentskills.io layout (preferred for new skills) AND legacy flat layout
 // (still supported for backward compatibility — canopy-runtime resolves Read refs literally).
@@ -99,6 +99,7 @@ export class CanopyDiagnosticsProvider {
       if (parsed.hasTreeSection) {
         this.checkCompatibility(parsed, lines, diagnostics);
         this.checkSafetyPreamble(parsed, lines, diagnostics);
+        this.checkCanopyFeaturesManifest(parsed, lines, diagnostics);
       }
 
       if (parsed.hasAgentSection && parsed.hasTreeSection) {
@@ -775,6 +776,99 @@ export class CanopyDiagnosticsProvider {
       current = parent;
     }
     return undefined;
+  }
+
+  // -------------------------------------------------------------------------
+  // S2.5: `metadata.canopy-features` manifest drift detection
+  // -------------------------------------------------------------------------
+
+  /**
+   * For canopy-flavored skills (`## Tree` present), check the
+   * `metadata.canopy-features` manifest against the actual tree usage.
+   *
+   * Per `canopy-runtime/references/skill-resources.md` → "Per-skill manifest"
+   * and the framework's `canopy/assets/constants/validate-checks.md`:
+   *
+   * - Manifest absent → **Warning** (back-compat — runtime falls back to
+   *   load-everything; `/canopy improve` proposes adding it).
+   * - Declared feature not used in tree → **Error** (drift; remove unused).
+   * - Used feature not declared → **Error** (drift; add missing entry).
+   * - `core` listed → **Error** (implicit-always-loaded).
+   * - Unknown feature value → **Error**.
+   *
+   * The framework's `/canopy validate` reports these as warnings everywhere
+   * (its runtime is permissive). The vscode extension is stricter at
+   * author-time — drift surfaces as Error so the IDE squiggle is visible.
+   */
+  private checkCanopyFeaturesManifest(
+    parsed: ReturnType<typeof parseDocument>,
+    lines: string[],
+    diagnostics: vscode.Diagnostic[],
+  ): void {
+    const manifestLine = parsed.canopyFeaturesLine;
+
+    if (parsed.canopyFeatures === undefined) {
+      // No `metadata.canopy-features` declared — back-compat fallback.
+      // Anchor the warning to line 0 (frontmatter top).
+      diagnostics.push(new vscode.Diagnostic(
+        new vscode.Range(0, 0, 0, lines[0]?.length ?? 0),
+        `'## Tree' skill missing 'metadata.canopy-features' manifest — runtime falls back to loading every spec slice. ` +
+        `Add a manifest to load only what the skill uses. Run /canopy improve to add it automatically.`,
+        vscode.DiagnosticSeverity.Warning,
+      ));
+      return;
+    }
+
+    const declared = new Set(parsed.canopyFeatures);
+    const used = computeUsedFeatures(parsed);
+    const lineNo = manifestLine ?? 0;
+    const lineText = lines[lineNo] ?? '';
+    const range = new vscode.Range(lineNo, 0, lineNo, lineText.length);
+
+    // Check 1: `core` listed (implicit-always-loaded)
+    if (declared.has('core')) {
+      diagnostics.push(new vscode.Diagnostic(
+        range,
+        `'metadata.canopy-features' lists 'core' — the core slice (IF/ELSE_IF/ELSE/END/BREAK) is implicit-always-loaded. Remove it.`,
+        vscode.DiagnosticSeverity.Error,
+      ));
+    }
+
+    // Check 2: Unknown values
+    for (const v of declared) {
+      if (v === 'core') continue;
+      if (!CANOPY_FEATURE_VALUES.has(v as CanopyFeature)) {
+        diagnostics.push(new vscode.Diagnostic(
+          range,
+          `'metadata.canopy-features' lists unknown value '${v}'. Valid values: ${[...CANOPY_FEATURE_VALUES].join(', ')}.`,
+          vscode.DiagnosticSeverity.Error,
+        ));
+      }
+    }
+
+    // Check 3: Declared-but-unused (drift)
+    for (const v of declared) {
+      if (v === 'core') continue;
+      if (!CANOPY_FEATURE_VALUES.has(v as CanopyFeature)) continue; // already flagged
+      if (!used.has(v as CanopyFeature)) {
+        diagnostics.push(new vscode.Diagnostic(
+          range,
+          `'metadata.canopy-features' declares '${v}' but the skill's tree does not use it. Drift — remove unused entries.`,
+          vscode.DiagnosticSeverity.Error,
+        ));
+      }
+    }
+
+    // Check 4: Used-but-undeclared (drift)
+    for (const v of used) {
+      if (!declared.has(v)) {
+        diagnostics.push(new vscode.Diagnostic(
+          range,
+          `Tree uses '${v}' but 'metadata.canopy-features' does not declare it. Drift — add the missing entry.`,
+          vscode.DiagnosticSeverity.Error,
+        ));
+      }
+    }
   }
 
   private parseSeverity(s: string): vscode.DiagnosticSeverity | undefined {

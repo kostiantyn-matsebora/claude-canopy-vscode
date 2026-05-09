@@ -58,6 +58,9 @@ export interface ParsedSkillDocument {
   isOpsFile: boolean;
   isSkillFile: boolean;
   frontmatter: FrontmatterField[];
+  metadataFields: FrontmatterField[]; // fields nested under `metadata:` block
+  canopyFeatures?: string[];          // parsed from metadata.canopy-features (S2.5)
+  canopyFeaturesLine?: number;        // line number for diagnostic anchoring
   sections: Section[];
   treeNodes: TreeNode[];
   opDefinitions: OpDefinition[];   // populated for ops.md, or the ## OP_NAME headers in skill.md context
@@ -65,6 +68,20 @@ export interface ParsedSkillDocument {
   hasTreeSection: boolean;
   treeFirstOpName?: string;
 }
+
+// S2.5: feature slice names — matches `canopy-runtime/references/skill-resources.md`
+// → "Per-skill manifest". `core` is implicit-always-loaded; never declared.
+export type CanopyFeature =
+  | 'interaction'
+  | 'control-flow'
+  | 'parallel'
+  | 'subagent'
+  | 'explore'
+  | 'verify';
+
+export const CANOPY_FEATURE_VALUES: ReadonlySet<CanopyFeature> = new Set<CanopyFeature>([
+  'interaction', 'control-flow', 'parallel', 'subagent', 'explore', 'verify',
+]);
 
 const PRIMITIVES = new Set([
   'IF', 'ELSE_IF', 'ELSE', 'SWITCH', 'CASE', 'DEFAULT', 'FOR_EACH', 'PARALLEL',
@@ -95,6 +112,7 @@ export function parseDocument(document: vscode.TextDocument): ParsedSkillDocumen
     isOpsFile,
     isSkillFile,
     frontmatter: [],
+    metadataFields: [],
     sections: [],
     treeNodes: [],
     opDefinitions: [],
@@ -106,10 +124,41 @@ export function parseDocument(document: vscode.TextDocument): ParsedSkillDocumen
   let lineIdx = 0;
   if (lines[0]?.trim() === '---') {
     lineIdx = 1;
+    let inMetadataBlock = false;
     while (lineIdx < lines.length && lines[lineIdx]?.trim() !== '---') {
-      const match = lines[lineIdx].match(/^([a-z][a-z0-9-]*):\s*(.*)$/);
-      if (match) {
-        result.frontmatter.push({ key: match[1], value: match[2].trim(), line: lineIdx });
+      const line = lines[lineIdx];
+      const rootMatch = line.match(/^([a-z][a-z0-9-]*):\s*(.*)$/);
+      const indentedMatch = line.match(/^\s+([a-z][a-z0-9-]*):\s*(.*)$/);
+      if (rootMatch) {
+        result.frontmatter.push({ key: rootMatch[1], value: rootMatch[2].trim(), line: lineIdx });
+        // Entering or leaving the metadata block. `metadata:` with no value
+        // (followed by indented children) opens a block. Any other root key
+        // closes it.
+        inMetadataBlock = rootMatch[1] === 'metadata' && rootMatch[2].trim() === '';
+      } else if (inMetadataBlock && indentedMatch) {
+        const value = indentedMatch[2].trim();
+        result.metadataFields.push({
+          key: indentedMatch[1],
+          value,
+          line: lineIdx,
+        });
+        // S2.5: extract `canopy-features` array. Values are bracketed,
+        // comma-separated: `[interaction, verify]`. Empty list `[]` is valid
+        // (declares the skill uses only `core`).
+        if (indentedMatch[1] === 'canopy-features') {
+          result.canopyFeaturesLine = lineIdx;
+          const arrayMatch = value.match(/^\[(.*)\]$/);
+          if (arrayMatch) {
+            result.canopyFeatures = arrayMatch[1]
+              .split(',')
+              .map(v => v.trim().replace(/^["']|["']$/g, ''))
+              .filter(v => v.length > 0);
+          } else {
+            // Malformed value (not a YAML flow-sequence). Record empty so
+            // diagnostics can flag it; the line index is still captured.
+            result.canopyFeatures = [];
+          }
+        }
       }
       lineIdx++;
     }
@@ -428,4 +477,64 @@ export function getOpNameAtPosition(line: string, character: number): string | u
     }
   }
   return undefined;
+}
+
+// ---------------------------------------------------------------------------
+// S2.5 — Compute the set of canopy features actually used by a skill's tree
+// + op definitions. Mapping mirrors `canopy-runtime/references/skill-resources.md`
+// → "Per-skill manifest" / `canopy/references/ops/validate.md` step 3.
+//
+// Used by:
+//   - diagnosticsProvider.checkCanopyFeaturesManifest (drift detection)
+//   - completionProvider (no — completion uses the static valid-set)
+// ---------------------------------------------------------------------------
+
+/** Compute which `canopy-features` slices are used by the parsed skill. */
+export function computeUsedFeatures(parsed: ParsedSkillDocument): Set<CanopyFeature> {
+  const used = new Set<CanopyFeature>();
+
+  // Tree-node primitive usage
+  for (const node of parsed.treeNodes) {
+    if (!node.opName) continue;
+    if (node.subagentCall) {
+      // `**OP_NAME**` (bold) — subagent dispatch
+      used.add('subagent');
+    }
+    switch (node.opName) {
+      case 'ASK':
+      case 'SHOW_PLAN':
+        used.add('interaction');
+        break;
+      case 'SWITCH':
+      case 'CASE':
+      case 'DEFAULT':
+      case 'FOR_EACH':
+        used.add('control-flow');
+        break;
+      case 'PARALLEL':
+        used.add('parallel');
+        break;
+      case 'EXPLORE':
+        used.add('explore');
+        break;
+      case 'VERIFY_EXPECTED':
+        used.add('verify');
+        break;
+      // IF / ELSE_IF / ELSE / END / BREAK live in `core` — implicit, never declared
+    }
+  }
+
+  // Legacy `## Agent` + `**explore**` is sugar for an EXPLORE subagent op
+  if (parsed.hasAgentSection) {
+    used.add('explore');
+  }
+
+  // Op definitions carrying the `> **Subagent.**` marker imply subagent dispatch
+  for (const def of parsed.opDefinitions) {
+    if (def.isSubagent) {
+      used.add('subagent');
+    }
+  }
+
+  return used;
 }

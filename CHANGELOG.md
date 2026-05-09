@@ -2,6 +2,45 @@
 
 All notable changes to the Canopy Skills extension are documented here.
 
+## [0.14.0] — 2026-05-09
+
+Sync to canopy v0.21.0. Adds language-server support for the **sliced primitive spec** and the per-skill `metadata.canopy-features` manifest, slims the marker block to the v0.21.0 5-line form (4-source parity restored), and adds smoke-test scenarios for PARALLEL / subagent dispatch / manifest drift.
+
+### Added
+
+- **`metadata.canopy-features` parser** (`canopyDocument.ts`):
+  - `ParsedSkillDocument` gains `metadataFields` (typed entries under the `metadata:` block), `canopyFeatures` (the parsed slice list), and `canopyFeaturesLine` (anchor for diagnostics).
+  - New `CanopyFeature` type + `CANOPY_FEATURE_VALUES` set covering the six valid slices (`interaction`, `control-flow`, `parallel`, `subagent`, `explore`, `verify`). `core` is intentionally excluded — it is always loaded.
+  - New `computeUsedFeatures(parsed)` helper walks the tree and returns the set of slices actually used (`ASK`/`SHOW_PLAN` → interaction, `SWITCH`/`CASE`/`DEFAULT`/`FOR_EACH` → control-flow, `PARALLEL` → parallel, bold-wrapped call-sites + subagent op definitions → subagent, `EXPLORE` + `## Agent` section → explore, `VERIFY_EXPECTED` → verify).
+- **Primitive slice metadata** (`opRegistry.ts`):
+  - New `PrimitiveSlice` type (`core` / `interaction` / `control-flow` / `parallel` / `subagent` / `explore` / `verify`).
+  - Each `PRIMITIVE_DOCS` entry gains a `slice` field, surfaced as a `Slice: <name>` line in hover popups.
+- **Manifest-drift diagnostics** (`diagnosticsProvider.ts`, new `checkCanopyFeaturesManifest`):
+  - Manifest absent on a `## Tree` skill → **Warning** ("missing `metadata.canopy-features` manifest"). Back-compat preserved — pre-v0.21.0 skills still validate.
+  - Manifest declares a slice the tree doesn't use → **Error**.
+  - Tree uses a slice the manifest omits → **Error**.
+  - Manifest lists `core` → **Error** (always-loaded; must not be declared).
+  - Manifest lists an unknown value → **Error** (lists the six valid names in the message).
+  - Note: vscode-side severity is intentionally stricter than framework `/canopy validate` (which warns at runtime). Author-time errors prevent drift from shipping.
+- **Hover for `metadata.canopy-features`** (`hoverProvider.ts`): explains the field, lists valid values, notes `core` exclusion, and points at the drift diagnostics.
+- **Completion inside `canopy-features: [...]`** (`completionProvider.ts`): offers the six valid slice names; filters out values already in the array.
+- **`MARKER_BLOCK` parity tests** (`installCanopy.test.ts`): three new tests pin the slim 5-line block byte-for-byte against the canonical `marker-block.md` shape, and assert the v0.21.0 lazy-loading hook (`metadata.canopy-features`) is mentioned.
+- **Smoke-test scenarios** (`docs/TEST_SCENARIOS.md`):
+  - **Suite C10** — manifest-drift diagnostics (7 scenarios covering each drift case + hover + completion).
+  - **Suite C11** — subagent dispatch surface (5 scenarios; promotes the v0.20.0 dispatch model from per-feature notes to a first-class suite).
+  - **Suite C12** — PARALLEL block highlighting (4 scenarios).
+- **New rule** `.claude/rules/test-scenarios-sync.md` — sibling of the framework-side rule. Auto-loads on `src/**`, `package.json`, `snippets/**`, `syntaxes/**`, `docs/TEST_SCENARIOS.md`. Codifies the requirement that user-observable changes update the smoke-test surface in the same PR.
+
+### Changed
+
+- **Slim marker block** — `MARKER_BLOCK` constant in `src/commands/installCanopy.ts` trimmed from ~30 lines (full primitives + lookup-chain + category-layout dump) to the v0.21.0 5-line trigger + pointer block. Restores 4-source byte-identity with `claude-canopy/skills/canopy-runtime/assets/constants/marker-block.md`, `install.sh build_marker_block`, and `install.ps1 Build-MarkerBlock`. The runtime spec is now lazy-loaded only when canopy-runtime is actually engaged, instead of every session paying for it ambiently. The marker block at the bottom of this repo's `CLAUDE.md` is updated to match.
+- **New Skill snippet** (`snippets/canopy.json`) — emits `metadata.canopy-features: [interaction, verify]` matching its default body. New Skill with Agent emits `[interaction, explore, verify]`.
+- **`canopyVersion`** in `package.json`: `0.20.0` → `0.21.0`.
+- **Extension version**: `0.13.0` → `0.14.0` (minor — new feature support).
+- **`.canopy-version`**: `0.20.0` → `0.21.0`.
+- **README "Tracks framework v…" line**: `v0.20.0` → `v0.21.0`.
+- **`.claude/rules/keep-in-sync.md`** — two new rows: "Primitive slice spec restructure" and "`metadata.canopy-features` manifest added".
+
 ## [0.13.0] — 2026-05-09
 
 Sync to canopy v0.20.0. Adds language-server support for the new **subagent dispatch model** — per-op markers + bold call-sites that flag a tree node for out-of-context subagent execution.

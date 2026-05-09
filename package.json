@@ -2,8 +2,8 @@
   "name": "canopy-skills",
   "displayName": "Canopy Skills",
   "description": "Write Claude Code AI skills as executable code, not prose — syntax highlighting, IntelliSense, semantic diagnostics, and go-to-definition for Canopy skills: SKILL.md, references/ops, scripts, and assets (schemas, templates, constants, policies, checklists, verify).",
-  "version": "0.13.0",
-  "canopyVersion": "0.20.0",
+  "version": "0.14.0",
+  "canopyVersion": "0.21.0",
   "icon": "images/icon.png",
   "galleryBanner": {
     "color": "#0969da",

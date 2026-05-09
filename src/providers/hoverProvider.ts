@@ -2,6 +2,14 @@ import * as vscode from 'vscode';
 import { getOpNameAtPosition, isPrimitive } from '../canopyDocument';
 import { PRIMITIVE_DOCS, registry } from '../opRegistry';
 
+const CANOPY_FEATURES_DOC =
+  '**`canopy-features`** *(under `metadata:`)* — Slice manifest declaring which primitive families this skill uses. ' +
+  'Valid values: `interaction`, `control-flow`, `parallel`, `subagent`, `explore`, `verify`. ' +
+  '(`core` is always loaded and must NOT be listed.) ' +
+  'When present, the runtime loads only the named slices, reducing context. ' +
+  'When absent, all slices are loaded for back-compat. ' +
+  'Diagnostics surface drift: declared-but-unused, used-but-undeclared, unknown values, or `core` listed.';
+
 const SECTION_DOCS: Record<string, string> = {
   Agent: '**`## Agent`** — Declare an `**explore**` subagent. When present, the first tree node must be `EXPLORE >> context`. Output contract is `assets/schemas/explore-schema.json` (agentskills layout) or `schemas/explore-schema.json` (legacy flat layout).',
   Tree: '**`## Tree`** *(required)* — The sequential execution pipeline. Nodes run top-to-bottom. Use `IF`/`ELSE_IF`/`ELSE` for branching. Two equivalent syntaxes: markdown list (`*`) or box-drawing (`├──`).',
@@ -43,6 +51,12 @@ export class CanopyHoverProvider implements vscode.HoverProvider {
       if (doc) return new vscode.Hover(new vscode.MarkdownString(doc));
     }
 
+    // --- Hover on metadata.canopy-features (indented under metadata:) ---
+    const featuresMatch = line.match(/^\s+canopy-features:/);
+    if (featuresMatch) {
+      return new vscode.Hover(new vscode.MarkdownString(CANOPY_FEATURES_DOC));
+    }
+
     // --- Hover on ALL_CAPS op name ---
     const opName = getOpNameAtPosition(line, position.character);
     if (!opName) return undefined;
@@ -53,6 +67,7 @@ export class CanopyHoverProvider implements vscode.HoverProvider {
       if (doc) {
         const md = new vscode.MarkdownString();
         md.appendMarkdown(`**\`${doc.signature}\`** *(framework primitive)*\n\n`);
+        md.appendMarkdown(`Slice: \`${doc.slice}\`\n\n`);
         md.appendMarkdown(doc.description + '\n\n');
         md.appendCodeblock(doc.example, 'canopy');
         return new vscode.Hover(md);
