@@ -68,7 +68,18 @@ export class CanopyHoverProvider implements vscode.HoverProvider {
         source === 'project' ? 'project-wide op' : 'framework op';
 
       const md = new vscode.MarkdownString();
-      md.appendMarkdown(`**\`${definition.signature}\`** *(${sourceLabel})*\n\n`);
+      const dispatchSuffix = definition.isSubagent ? ', subagent dispatch' : '';
+      md.appendMarkdown(`**\`${definition.signature}\`** *(${sourceLabel}${dispatchSuffix})*\n\n`);
+      if (definition.isSubagent) {
+        const lines: string[] = ['_Subagent op._'];
+        if (definition.outputContract) {
+          lines.push(`Output contract: \`${definition.outputContract}\``);
+        }
+        if (definition.inputContract) {
+          lines.push(`Input contract: \`${definition.inputContract}\``);
+        }
+        md.appendMarkdown(lines.join('  \n') + '\n\n');
+      }
       if (definition.bodyText) {
         // Show first non-empty paragraph of body
         const firstParagraph = definition.bodyText.split(/\n\n/)[0].trim();

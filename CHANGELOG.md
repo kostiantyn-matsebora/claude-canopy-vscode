@@ -2,6 +2,56 @@
 
 All notable changes to the Canopy Skills extension are documented here.
 
+## [0.13.0] — 2026-05-09
+
+Sync to canopy v0.20.0. Adds language-server support for the new **subagent dispatch model** — per-op markers + bold call-sites that flag a tree node for out-of-context subagent execution.
+
+### Added
+
+- **Bold-wrapped op call recognition** (`canopyDocument.ts`):
+  - `parseTreeLine` detects `**OP_NAME**` at the start of a tree node and sets `subagentCall = true` on the resulting `TreeNode`. The bold wrapping is stripped before downstream parsing so `<<` / `>>` extraction and op-name resolution work uniformly with the inline form.
+  - List-bullet stripper tightened (`/^\s*\*(?:\s|$)/`) so it no longer eats one of the `**` markers in a leading bold-wrapped op name.
+- **Subagent op-def marker parsing** (`canopyDocument.ts`):
+  - `parseOpDefinitions` now invokes `parseSubagentMarker()` to detect a `> **Subagent.**` blockquote as the first non-blank content under an op heading. The blockquote may span multiple lines and carries `Output contract: \`<schema-path>\`` (mandatory) and optionally `Input contract: \`<schema-path>\``.
+  - New optional fields on `OpDefinition`: `isSubagent`, `outputContract`, `inputContract`, `markerLine`.
+- **S2 diagnostics** (`diagnosticsProvider.ts`):
+  - **Bold marker on framework primitive → warning.** `**EXPLORE** >> ctx` etc. surfaces as misuse — primitives have fixed dispatch.
+  - **Call-site bold without op-def marker → warning.** A bold-wrapped op invocation whose definition has no `> **Subagent.**` marker triggers a "definition has no marker" warning, asking the author to either add the marker or drop the bold wrapping.
+  - **Subagent marker missing Output contract → warning.** Subagent ops must declare an output schema.
+  - **Output / Input contract file does not exist → warning.** Schema paths resolve relative to the skill root (walked up from the ops file).
+- **Subagent-aware hover** (`hoverProvider.ts`):
+  - Op tooltip annotates subagent dispatch (`(skill-local op, subagent dispatch)`).
+  - Includes the contract paths inline when present.
+- **Goto-definition for schema references** (`definitionProvider.ts`):
+  - Cursor on the path inside `Output contract: \`...\`` or `Input contract: \`...\`` jumps to the JSON schema file (resolved relative to the skill root).
+- **TextMate grammar scopes** (`syntaxes/canopy.tmLanguage.json`):
+  - `subagent-call` — highlights `**OP_NAME**` distinctly from inline op calls.
+  - `subagent-marker` — highlights the `> **Subagent.**` blockquote on op definitions.
+- **Snippets** (`snippets/canopy.json`):
+  - `op-subagent` — full subagent op-def skeleton (heading + marker blockquote + tree-form body).
+  - `call-subagent` — bold-wrapped call-site one-liner.
+
+### Changed
+
+- **`canopyVersion`** in `package.json`: `0.19.0` → `0.20.0`.
+- **Extension version**: `0.12.0` → `0.13.0` (minor — new feature support).
+- **`.canopy-version`**: `0.18.1` → `0.20.0`.
+- **README "Tracks framework v…" line**: `v0.18.1` → `v0.20.0`. Stale README copy was the trigger for the new rule entry in `.claude/rules/keep-in-sync.md` calling out all three version-tracking strings (canopyVersion, .canopy-version, README sentence) as a group.
+
+### Tests
+
+- 11 new tests in `canopyDocument.test.ts`:
+  - 5 for call-site bold detection (plain vs. bold, with/without operators, box-drawing form, lowercase `**explore**` is NOT a bold-op-call).
+  - 5 for op-def marker detection (no marker, marker + Output contract, marker + both contracts, marker not first non-blank, non-canonical marker text).
+- 8 new tests in `diagnosticsProvider.test.ts`:
+  - 3 for call-site checks (primitive misuse, primitive without bold is clean, unknown-op stays silent for marker mismatch).
+  - 5 for op-def marker checks (missing Output contract, missing schema file, valid schema, missing Input file, plain op without marker).
+
+### Notes
+
+- **Marker block parity** — content unchanged in framework v0.20.0; the `MARKER_BLOCK` constant in `installCanopy.ts` is in sync without modification.
+- **Soft-compat with `## Agent` + `EXPLORE`** — legacy skills using the `## Agent` section continue to validate; nothing forces migration. The lowercase `**explore**` body marker is intentionally distinct from the uppercase `**OP_NAME**` subagent-call regex.
+
 ## [0.12.0] — 2026-05-09
 
 Sync to canopy v0.19.0. Adds language-server support for the new `PARALLEL` block primitive — heterogeneous parallel-subagent fan-out as a real grammar element.

@@ -15,6 +15,8 @@
     { "include": "#list-bullet" },
     { "include": "#read-statement" },
     { "include": "#bind-statement" },
+    { "include": "#subagent-marker" },
+    { "include": "#subagent-call" },
     { "include": "#primitive-control" },
     { "include": "#primitive-action" },
     { "include": "#op-call" },
@@ -138,6 +140,24 @@
       "comment": "Custom ALL_CAPS op names (non-primitive)",
       "match": "\\b(?!IF\\b|ELSE_IF\\b|ELSE\\b|SWITCH\\b|CASE\\b|DEFAULT\\b|FOR_EACH\\b|PARALLEL\\b|BREAK\\b|END\\b|ASK\\b|SHOW_PLAN\\b|VERIFY_EXPECTED\\b|EXPLORE\\b)[A-Z][A-Z0-9_]{1,}\\b",
       "name": "entity.name.function.canopy"
+    },
+    "subagent-call": {
+      "comment": "Bold-wrapped op name in tree node — subagent dispatch (S2): `**OP_NAME**`",
+      "match": "(\\*\\*)([A-Z][A-Z0-9_]{1,})(\\*\\*)",
+      "captures": {
+        "1": { "name": "punctuation.definition.bold.canopy" },
+        "2": { "name": "entity.name.function.subagent.canopy" },
+        "3": { "name": "punctuation.definition.bold.canopy" }
+      }
+    },
+    "subagent-marker": {
+      "comment": "Subagent dispatch marker on op definition (S2): `> **Subagent.** Output contract: <path>`",
+      "match": "^(>\\s+)(\\*\\*Subagent\\.?\\*\\*)(.*)$",
+      "captures": {
+        "1": { "name": "punctuation.definition.quote.canopy" },
+        "2": { "name": "keyword.declaration.subagent.canopy" },
+        "3": { "name": "meta.subagent-marker.canopy" }
+      }
     },
     "input-operator": {
       "match": "<<",

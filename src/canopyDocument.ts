@@ -27,6 +27,7 @@ export interface TreeNode {
   input?: string;                // trimmed content after <<
   output?: string;               // trimmed content after >>
   inputOutputReversed: boolean;  // >> appears before <<
+  subagentCall?: boolean;        // op name was wrapped in ** (bold) — request subagent dispatch (S2)
 }
 
 export interface ReadRef {
@@ -44,6 +45,12 @@ export interface OpDefinition {
   endLine: number;
   bodyText: string;
   sourceUri: vscode.Uri;
+  // S2: subagent dispatch marker (`> **Subagent.** Output contract: <path>` blockquote
+  // immediately under the heading). Absence of marker == inline op.
+  isSubagent?: boolean;
+  outputContract?: string; // schema path from `Output contract: <path>`
+  inputContract?: string;  // optional schema path from `Input contract: <path>`
+  markerLine?: number;     // line index of the `> **Subagent.**` line (for diagnostics)
 }
 
 export interface ParsedSkillDocument {
@@ -193,12 +200,24 @@ export function parseDocument(document: vscode.TextDocument): ParsedSkillDocumen
 }
 
 function parseTreeLine(line: string, lineIdx: number): TreeNode | null {
-  const stripped = line.replace(/[│├└─]/g, '').replace(/^\s*\*\s*/, '').trim();
+  // Strip box-drawing chars then the list-bullet `*` — but only when followed
+  // by whitespace (so the regex doesn't eat one of the `**` markers in
+  // `**OP_NAME**` subagent-call syntax, S2).
+  const stripped = line.replace(/[│├└─]/g, '').replace(/^\s*\*(?:\s|$)/, '').trim();
   if (!stripped) return null;
   const indent = line.search(/[^\s│├└─*\t]/);
 
-  const inputIdx = stripped.indexOf('<<');
-  const outputIdx = stripped.indexOf('>>');
+  // S2: detect `**OP_NAME**` (bold-wrapped) at line start — subagent dispatch
+  // request. Strip the `**` for the rest of parsing so input/output/op-name
+  // extraction works uniformly with the inline form.
+  const boldOpMatch = stripped.match(/^\*\*([A-Z][A-Z0-9_]{1,})\*\*(?=\s|<<|>>|$)/);
+  const subagentCall = !!boldOpMatch;
+  const normalized = subagentCall
+    ? stripped.replace(/^\*\*([A-Z][A-Z0-9_]{1,})\*\*/, '$1')
+    : stripped;
+
+  const inputIdx = normalized.indexOf('<<');
+  const outputIdx = normalized.indexOf('>>');
   const hasInput = inputIdx !== -1;
   const hasOutput = outputIdx !== -1;
   const inputOutputReversed = hasInput && hasOutput && outputIdx < inputIdx;
@@ -206,18 +225,18 @@ function parseTreeLine(line: string, lineIdx: number): TreeNode | null {
   let input: string | undefined;
   let output: string | undefined;
   if (hasInput && hasOutput && !inputOutputReversed) {
-    input = stripped.slice(inputIdx + 2, outputIdx).trim();
-    output = stripped.slice(outputIdx + 2).trim();
+    input = normalized.slice(inputIdx + 2, outputIdx).trim();
+    output = normalized.slice(outputIdx + 2).trim();
   } else if (hasInput) {
-    input = stripped.slice(inputIdx + 2).trim();
+    input = normalized.slice(inputIdx + 2).trim();
   } else if (hasOutput) {
-    output = stripped.slice(outputIdx + 2).trim();
+    output = normalized.slice(outputIdx + 2).trim();
   }
 
   // Op name lives before any << or >>
   const beforeOps = hasInput
-    ? stripped.slice(0, inputIdx)
-    : hasOutput ? stripped.slice(0, outputIdx) : stripped;
+    ? normalized.slice(0, inputIdx)
+    : hasOutput ? normalized.slice(0, outputIdx) : normalized;
   const opMatch = beforeOps.trim().match(/^([A-Z][A-Z0-9_]{1,})\b/);
 
   const node: TreeNode = {
@@ -236,6 +255,10 @@ function parseTreeLine(line: string, lineIdx: number): TreeNode | null {
     node.isPrimitive = isPrimitive(opMatch[1]);
   }
 
+  if (subagentCall) {
+    node.subagentCall = true;
+  }
+
   return node;
 }
 
@@ -251,23 +274,97 @@ export function parseOpDefinitions(lines: string[], uri: vscode.Uri): OpDefiniti
       const startLine = i;
       i++;
       const bodyLines: string[] = [];
+      const bodyLineNumbers: number[] = [];
       while (i < lines.length && !lines[i].match(/^##\s+/)) {
         bodyLines.push(lines[i]);
+        bodyLineNumbers.push(i);
         i++;
       }
-      defs.push({
+      const def: OpDefinition = {
         name,
         signature,
         startLine,
         endLine: i - 1,
         bodyText: bodyLines.join('\n').trim(),
         sourceUri: uri,
-      });
+      };
+
+      // S2: detect subagent marker `> **Subagent.** Output contract: <path>` as the
+      // first non-blank content under the heading. The marker may span multiple
+      // blockquote lines (with `Inputs:` bullets and/or `Input contract:`).
+      const markerInfo = parseSubagentMarker(bodyLines, bodyLineNumbers);
+      if (markerInfo.isSubagent) {
+        def.isSubagent = true;
+        def.markerLine = markerInfo.markerLine;
+        if (markerInfo.outputContract) def.outputContract = markerInfo.outputContract;
+        if (markerInfo.inputContract) def.inputContract = markerInfo.inputContract;
+      }
+
+      defs.push(def);
     } else {
       i++;
     }
   }
   return defs;
+}
+
+interface SubagentMarkerInfo {
+  isSubagent: boolean;
+  markerLine?: number;
+  outputContract?: string;
+  inputContract?: string;
+}
+
+/**
+ * Detect a subagent marker in an op body. The marker is a blockquote starting
+ * with `> **Subagent.**` (or `> **Subagent**`) as the first non-blank line of
+ * the body, and may span multiple consecutive blockquote lines carrying
+ * `Output contract: \`<path>\`` and optionally `Input contract: \`<path>\``.
+ */
+function parseSubagentMarker(
+  bodyLines: string[],
+  bodyLineNumbers: number[],
+): SubagentMarkerInfo {
+  let firstNonBlankIdx = -1;
+  for (let j = 0; j < bodyLines.length; j++) {
+    if (bodyLines[j].trim()) {
+      firstNonBlankIdx = j;
+      break;
+    }
+  }
+  if (firstNonBlankIdx < 0) return { isSubagent: false };
+
+  const firstLine = bodyLines[firstNonBlankIdx].trim();
+  if (!/^>\s+\*\*Subagent\.?\*\*/.test(firstLine)) {
+    return { isSubagent: false };
+  }
+
+  // Collect consecutive blockquote lines starting at firstNonBlankIdx — that's
+  // the marker block. Continue until a non-blockquote, non-blank line is hit.
+  const markerText: string[] = [];
+  for (let j = firstNonBlankIdx; j < bodyLines.length; j++) {
+    const t = bodyLines[j].trim();
+    if (t.startsWith('>')) {
+      markerText.push(t);
+    } else if (!t) {
+      // blank line — stops the marker block (markdown blockquote rules vary,
+      // but treating blank as terminator is the simple, predictable choice)
+      break;
+    } else {
+      break;
+    }
+  }
+
+  const joined = markerText.join('\n');
+  const outputMatch = joined.match(/Output contract:\s*`([^`]+)`/);
+  const inputMatch = joined.match(/Input contract:\s*`([^`]+)`/);
+
+  return {
+    isSubagent: true,
+    markerLine: bodyLineNumbers[firstNonBlankIdx],
+    outputContract: outputMatch?.[1],
+    inputContract: inputMatch?.[1],
+  };
 }
 
 /** Extract all ALL_CAPS op name references from a line (excluding primitives optionally). */

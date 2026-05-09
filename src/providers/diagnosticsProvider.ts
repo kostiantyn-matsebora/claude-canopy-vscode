@@ -155,6 +155,7 @@ export class CanopyDiagnosticsProvider {
       this.checkTreeNodeSyntax(parsed, lines, diagnostics);
       this.checkPrimitiveSignatures(parsed, lines, diagnostics);
       this.checkResourceRefs(parsed, lines, diagnostics, skillDir);
+      await this.checkSubagentCallSites(document, parsed, lines, diagnostics);
 
       const unknownSeverityStr = config.get<string>('unknownOps', 'warning');
       const unknownSeverity = this.parseSeverity(unknownSeverityStr);
@@ -208,6 +209,7 @@ export class CanopyDiagnosticsProvider {
       }
 
       this.checkResourceRefs(parsed, lines, diagnostics, skillDir);
+      this.checkSubagentMarkerDefs(parsed, lines, diagnostics, skillDir);
     }
 
     this.collection.set(document.uri, diagnostics);
@@ -659,6 +661,120 @@ export class CanopyDiagnosticsProvider {
         vscode.DiagnosticSeverity.Hint
       ));
     }
+  }
+
+  // -------------------------------------------------------------------------
+  // S2: subagent-dispatch marker (call-site `**OP_NAME**`)
+  // -------------------------------------------------------------------------
+
+  /**
+   * For every tree node in a skill file flagged as `subagentCall`, resolve
+   * the op via the registry and verify the definition carries the matching
+   * subagent marker. Mismatch → warning.
+   */
+  private async checkSubagentCallSites(
+    document: vscode.TextDocument,
+    parsed: ReturnType<typeof parseDocument>,
+    lines: string[],
+    diagnostics: vscode.Diagnostic[],
+  ): Promise<void> {
+    for (const node of parsed.treeNodes) {
+      if (!node.subagentCall || !node.opName) continue;
+
+      // Bold-wrapping a primitive makes no sense — primitives have fixed dispatch.
+      if (node.isPrimitive) {
+        const line = lines[node.line] ?? '';
+        diagnostics.push(new vscode.Diagnostic(
+          new vscode.Range(node.line, 0, node.line, line.length),
+          `Subagent dispatch marker '**${node.opName}**' applied to a framework primitive. Primitives are not user-defined ops — remove the bold wrapping.`,
+          vscode.DiagnosticSeverity.Warning,
+        ));
+        continue;
+      }
+
+      const resolved = await registry.resolve(node.opName, document.uri);
+      if (!resolved) continue; // unknown-op check covers this
+
+      if (!resolved.definition.isSubagent) {
+        const line = lines[node.line] ?? '';
+        diagnostics.push(new vscode.Diagnostic(
+          new vscode.Range(node.line, 0, node.line, line.length),
+          `Op '${node.opName}' is invoked as a subagent (bold call-site) but its definition has no '> **Subagent.**' marker. ` +
+          `Add the marker to the op heading body (with 'Output contract: \`<schema-path>\`'), or remove the bold wrapping to dispatch inline.`,
+          vscode.DiagnosticSeverity.Warning,
+        ));
+      }
+    }
+  }
+
+  /**
+   * For every op definition in an ops.md file that carries the subagent marker,
+   * verify the schema files referenced by `Output contract:` (and optional
+   * `Input contract:`) exist relative to the skill dir.
+   */
+  private checkSubagentMarkerDefs(
+    parsed: ReturnType<typeof parseDocument>,
+    lines: string[],
+    diagnostics: vscode.Diagnostic[],
+    skillDir: string,
+  ): void {
+    // Resolve schemas relative to the skill root, not the ops file's dir.
+    // `skillDir` here is the dir of the ops file (e.g. `<skill>/references/`);
+    // walk up until we find a SKILL.md to locate the skill root.
+    const skillRoot = this.findSkillRoot(skillDir);
+    const refRoot = skillRoot ?? skillDir;
+
+    for (const def of parsed.opDefinitions) {
+      if (!def.isSubagent) continue;
+
+      const markerLine = def.markerLine ?? def.startLine;
+      const markerLineText = lines[markerLine] ?? '';
+      const markerRange = new vscode.Range(markerLine, 0, markerLine, markerLineText.length);
+
+      if (!def.outputContract) {
+        diagnostics.push(new vscode.Diagnostic(
+          markerRange,
+          `Subagent marker on op '${def.name}' is missing 'Output contract: \`<schema-path>\`'. ` +
+          `Subagent ops must declare an output schema so callers can rely on the shape.`,
+          vscode.DiagnosticSeverity.Warning,
+        ));
+      } else {
+        const target = path.join(refRoot, def.outputContract);
+        if (!fs.existsSync(target)) {
+          diagnostics.push(new vscode.Diagnostic(
+            markerRange,
+            `Subagent output contract file '${def.outputContract}' (op '${def.name}') not found relative to skill root.`,
+            vscode.DiagnosticSeverity.Warning,
+          ));
+        }
+      }
+
+      if (def.inputContract) {
+        const target = path.join(refRoot, def.inputContract);
+        if (!fs.existsSync(target)) {
+          diagnostics.push(new vscode.Diagnostic(
+            markerRange,
+            `Subagent input contract file '${def.inputContract}' (op '${def.name}') not found relative to skill root.`,
+            vscode.DiagnosticSeverity.Warning,
+          ));
+        }
+      }
+    }
+  }
+
+  /** Walk up from `startDir` until a directory containing `SKILL.md` is found. */
+  private findSkillRoot(startDir: string): string | undefined {
+    let current = startDir;
+    for (let i = 0; i < 4; i++) {
+      if (fs.existsSync(path.join(current, 'SKILL.md')) ||
+          fs.existsSync(path.join(current, 'skill.md'))) {
+        return current;
+      }
+      const parent = path.dirname(current);
+      if (parent === current) break;
+      current = parent;
+    }
+    return undefined;
   }
 
   private parseSeverity(s: string): vscode.DiagnosticSeverity | undefined {

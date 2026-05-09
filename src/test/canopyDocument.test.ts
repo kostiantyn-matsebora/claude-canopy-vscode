@@ -433,3 +433,106 @@ describe('parseDocument — ops.md', () => {
     expect(opDefinitions).toHaveLength(0);
   });
 });
+
+// ---------------------------------------------------------------------------
+// parseDocument — S2 subagent dispatch (call-site bold)
+// ---------------------------------------------------------------------------
+
+describe('parseDocument — subagent call-site', () => {
+  it('plain `OP_NAME` is not a subagent call', () => {
+    const nodes = parseDocument(treeDoc('* MY_OP << x >> y') as any).treeNodes;
+    const n = nodes.find(nn => nn.opName === 'MY_OP')!;
+    expect(n.opName).toBe('MY_OP');
+    expect(n.subagentCall).toBeUndefined();
+  });
+
+  it('`**OP_NAME**` flags subagentCall and strips the bold', () => {
+    const nodes = parseDocument(treeDoc('* **MY_OP** << x >> y') as any).treeNodes;
+    const n = nodes.find(nn => nn.opName === 'MY_OP')!;
+    expect(n.opName).toBe('MY_OP');
+    expect(n.subagentCall).toBe(true);
+    expect(n.input).toBe('x');
+    expect(n.output).toBe('y');
+  });
+
+  it('`**OP_NAME**` without operators still parses', () => {
+    const nodes = parseDocument(treeDoc('* **MY_OP**') as any).treeNodes;
+    const n = nodes.find(nn => nn.opName === 'MY_OP')!;
+    expect(n.opName).toBe('MY_OP');
+    expect(n.subagentCall).toBe(true);
+  });
+
+  it('`**OP_NAME**` inside box-drawing tree', () => {
+    const nodes = parseDocument(treeDoc('├── **REVIEW** << aspect >> findings') as any).treeNodes;
+    const n = nodes.find(nn => nn.opName === 'REVIEW')!;
+    expect(n.subagentCall).toBe(true);
+    expect(n.input).toBe('aspect');
+    expect(n.output).toBe('findings');
+  });
+
+  it('lowercase **explore** is NOT treated as bold-op-call (legacy ## Agent body marker)', () => {
+    // The bold-op regex demands [A-Z][A-Z0-9_]+ — lowercase `explore` doesn't match.
+    const doc = makeDoc(
+      '---\nname: x\ndescription: y\n---\n\n## Agent\n\n**explore** — does things.\n\n## Tree\n\n* EXPLORE >> ctx\n'
+    );
+    const nodes = parseDocument(doc as any).treeNodes;
+    const n = nodes.find(nn => nn.opName === 'EXPLORE')!;
+    expect(n.subagentCall).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// parseDocument — S2 subagent dispatch (op-def marker)
+// ---------------------------------------------------------------------------
+
+describe('parseDocument — subagent op-def marker', () => {
+  it('op without marker has isSubagent undefined', () => {
+    const doc = makeDoc('## MY_OP << x >> y\n\nDoes a thing.\n', 'ops.md');
+    const { opDefinitions } = parseDocument(doc as any);
+    expect(opDefinitions[0].isSubagent).toBeUndefined();
+    expect(opDefinitions[0].outputContract).toBeUndefined();
+  });
+
+  it('op with marker + Output contract sets isSubagent + outputContract', () => {
+    const doc = makeDoc(
+      '## MY_OP << x >> y\n\n> **Subagent.** Output contract: `assets/schemas/my-op-output.json`.\n\nBody.\n',
+      'ops.md'
+    );
+    const { opDefinitions } = parseDocument(doc as any);
+    expect(opDefinitions[0].isSubagent).toBe(true);
+    expect(opDefinitions[0].outputContract).toBe('assets/schemas/my-op-output.json');
+    expect(opDefinitions[0].markerLine).toBeDefined();
+  });
+
+  it('op with marker + both Input and Output contract', () => {
+    const doc = makeDoc(
+      '## MY_OP << x >> y\n\n' +
+        '> **Subagent.** Output contract: `assets/schemas/my-output.json`.\n' +
+        '> Input contract: `assets/schemas/my-input.json`.\n\n' +
+        'Body.\n',
+      'ops.md'
+    );
+    const { opDefinitions } = parseDocument(doc as any);
+    expect(opDefinitions[0].isSubagent).toBe(true);
+    expect(opDefinitions[0].outputContract).toBe('assets/schemas/my-output.json');
+    expect(opDefinitions[0].inputContract).toBe('assets/schemas/my-input.json');
+  });
+
+  it('marker not as first non-blank line is ignored', () => {
+    const doc = makeDoc(
+      '## MY_OP << x >> y\n\nBody first.\n\n> **Subagent.** Output contract: `s.json`.\n',
+      'ops.md'
+    );
+    const { opDefinitions } = parseDocument(doc as any);
+    expect(opDefinitions[0].isSubagent).toBeUndefined();
+  });
+
+  it('non-canonical marker text is ignored', () => {
+    const doc = makeDoc(
+      '## MY_OP\n\n> **Some other note.** Just a blockquote.\n',
+      'ops.md'
+    );
+    const { opDefinitions } = parseDocument(doc as any);
+    expect(opDefinitions[0].isSubagent).toBeUndefined();
+  });
+});
