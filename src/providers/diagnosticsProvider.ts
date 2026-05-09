@@ -370,16 +370,12 @@ export class CanopyDiagnosticsProvider {
           if (!node.hasInput) {
             diagnostics.push(new vscode.Diagnostic(
               range,
-              `'ASK' requires: 'ASK << question | option1 | option2'.`,
+              `'ASK' requires a question: 'ASK << question' (free-form) or 'ASK << question | option1 | option2' (multiple-choice).`,
               vscode.DiagnosticSeverity.Error
             ));
-          } else if (node.input && !node.input.includes('|')) {
-            diagnostics.push(new vscode.Diagnostic(
-              range,
-              `'ASK' requires at least one option separated by '|': 'ASK << question | option'.`,
-              vscode.DiagnosticSeverity.Warning
-            ));
           }
+          // ASK without `|` options is valid — free-form input. The runtime
+          // renders the question and accepts whatever the user types.
           break;
 
         case 'SHOW_PLAN':

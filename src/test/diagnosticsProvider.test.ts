@@ -307,10 +307,12 @@ describe('diagnostics — primitive signatures: ASK', () => {
     expect(hasSeverity(vscode.DiagnosticSeverity.Error)).toBe(true);
   });
 
-  it('warns when ASK input has no | option separator', async () => {
-    await provider.validate(skill('## Tree\n\n* ASK << proceed?\n'));
-    expect(hasMsg("'|'")).toBe(true);
-    expect(hasSeverity(vscode.DiagnosticSeverity.Warning)).toBe(true);
+  it('no warning when ASK has free-form input (no options)', async () => {
+    // Free-form ASK is valid — the runtime renders the question and accepts
+    // whatever the user types. The previous "missing `|`" warning was overly
+    // strict.
+    await provider.validate(skill('## Tree\n\n* ASK << What name should the new skill have?\n'));
+    expect(msgs().filter(m => m.includes('ASK'))).toHaveLength(0);
   });
 
   it('no warning when ASK has pipe-separated options', async () => {

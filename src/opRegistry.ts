@@ -56,9 +56,9 @@ export const PRIMITIVE_DOCS: Record<string, PrimitiveDoc> = {
   },
   ASK: {
     name: 'ASK',
-    signature: 'ASK << question | option1 | option2 [...]',
-    description: 'Prompt the user with a question and a set of options. Skill halts until the user responds.',
-    example: 'ASK << Proceed? | Yes | No',
+    signature: 'ASK << question [| option1 | option2 ...]',
+    description: 'Prompt the user with a question. Skill halts until the user responds. Two modes: multiple-choice (provide options separated by `|`) or free-form (no options — accepts whatever the user types).',
+    example: 'ASK << Proceed? | Yes | No\nASK << What name should the new skill have?',
   },
   SHOW_PLAN: {
     name: 'SHOW_PLAN',

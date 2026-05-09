@@ -25,6 +25,11 @@ Sync to canopy v0.19.0. Adds language-server support for the new `PARALLEL` bloc
 - **`canopyVersion`** in `package.json`: `0.18.1` → `0.19.0` (tracking the framework release that introduced PARALLEL).
 - **Extension version**: `0.11.2` → `0.12.0` (minor — new feature support).
 
+### Fixed
+
+- **`ASK` free-form input no longer flagged as a warning** (`diagnosticsProvider.ts`): `ASK << question` without `|`-separated options is a valid mode — the runtime renders the question and accepts whatever the user types. The previous "requires at least one option separated by '|'" warning was overly strict and false-flagged legitimate free-form prompts. Error still fires when `ASK` has no input at all (a question is required).
+- **`PRIMITIVE_DOCS.ASK`** updated to document both modes (multiple-choice + free-form) in the signature, description, and example.
+
 ### Tests
 
 - 5 new vitest cases in `diagnosticsProvider.test.ts`:
@@ -34,6 +39,7 @@ Sync to canopy v0.19.0. Adds language-server support for the new `PARALLEL` bloc
   - `PARALLEL` with 0 children → hint
   - `PARALLEL` with ≥2 children, no input/output → clean
 - 1 new entry in the parameterised "ops.md redefining new primitives" test (`PARALLEL` joins the existing `FOR_EACH/SWITCH/CASE/DEFAULT` set).
+- Replaced "warns when ASK input has no | option separator" with "no warning when ASK has free-form input (no options)" — same test slot, opposite expectation, matching the fixed behavior.
 
 ## [0.11.2] — 2026-05-05
 
