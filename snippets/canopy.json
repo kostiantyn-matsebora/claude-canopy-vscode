@@ -196,6 +196,15 @@
       "    * BREAK"
     ]
   },
+  "PARALLEL": {
+    "prefix": "parallel",
+    "description": "PARALLEL block — heterogeneous fan-out across N subagents",
+    "body": [
+      "* PARALLEL",
+      "  * ${1:first subagent invocation} >> ${2:ctx_a}",
+      "  * ${3:second subagent invocation} >> ${4:ctx_b}"
+    ]
+  },
   "bind variable": {
     "prefix": "bind",
     "description": "Bind a context variable",
