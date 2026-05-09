@@ -36,6 +36,7 @@ Sync to canopy v0.20.0. Adds language-server support for the new **subagent disp
 - **`canopyVersion`** in `package.json`: `0.19.0` → `0.20.0`.
 - **Extension version**: `0.12.0` → `0.13.0` (minor — new feature support).
 - **`.canopy-version`**: `0.18.1` → `0.20.0`.
+- **README "Tracks framework v…" line**: `v0.18.1` → `v0.20.0`. Stale README copy was the trigger for the new rule entry in `.claude/rules/keep-in-sync.md` calling out all three version-tracking strings (canopyVersion, .canopy-version, README sentence) as a group.
 
 ### Tests
 

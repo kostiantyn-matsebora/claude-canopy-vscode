@@ -12,6 +12,9 @@ paths:
   - "syntaxes/canopy.tmLanguage.json"
   - "snippets/canopy.json"
   - "package.json"
+  - ".canopy-version"
+  - "README.md"
+  - "CHANGELOG.md"
 ---
 
 # Rule: Keeping the extension in sync with claude-canopy
@@ -35,5 +38,21 @@ This extension is a consumer of the Canopy framework. When `claude-canopy/` chan
 | Subagent dispatch model added (per-op marker + bold call-site, framework v0.20.0+) | Update `parseTreeLine` in `canopyDocument.ts` (bold-op-call detection, `subagentCall` flag); `parseOpDefinitions` (marker parsing, `isSubagent`/`outputContract`/`inputContract`/`markerLine` fields); add diagnostics in `diagnosticsProvider.ts` (`checkSubagentCallSites`, `checkSubagentMarkerDefs`); annotate hover (`hoverProvider.ts`); add schema-ref goto in `definitionProvider.ts`; add `subagent-call` and `subagent-marker` scopes in `syntaxes/canopy.tmLanguage.json`; add `op-subagent` and `call-subagent` snippets in `snippets/canopy.json` |
 | Ambient instruction protocol changes (canopy-runtime marker block content) | `src/commands/installCanopy.ts` (`MARKER_BLOCK` constant must mirror `claude-canopy/install.sh build_marker_block()` exactly); update the marker block at the bottom of `CLAUDE.md` too |
 | New canopy slash command added (e.g. `/canopy-debug`) | Add a corresponding `agentXxx` function in `src/commands/canopyAgent.ts`, register in `extension.ts`, and add the contribution in `package.json` |
+| **Framework version bump** (every release of `claude-canopy`, even if the API surface didn't change) | Update **all three** version-tracking strings in lockstep: `package.json#canopyVersion`, `.canopy-version`, and the **"Tracks framework vX.Y.Z"** sentence in `README.md` (line ~17, the marketplace blurb). The CHANGELOG version-bump bullet should call out all three. Stale README badge is the one most likely to be missed because it's prose, not code — grep `Tracks framework` before pushing. |
 
 When in doubt, treat [`docs/FRAMEWORK.md`](https://github.com/kostiantyn-matsebora/claude-canopy/blob/master/docs/FRAMEWORK.md) and `skills/canopy-runtime/references/skill-resources.md` as the canonical spec and audit the extension against them.
+
+## Pre-push grep checks
+
+For any framework-bump PR, run these before pushing:
+
+```bash
+# Every "Tracks framework v…" / "framework vX.Y.Z" mention in README:
+grep -n "Tracks framework\|framework v[0-9]" README.md
+
+# Confirm package.json#canopyVersion + .canopy-version + README all match:
+node -e "console.log(require('./package.json').canopyVersion)"
+cat .canopy-version
+```
+
+The three values must agree. README is the easiest to forget because it lives in prose and isn't part of the build.
