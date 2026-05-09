@@ -551,3 +551,77 @@ describe('diagnostics — ops.md', () => {
     expect(captured).toHaveLength(0);
   });
 });
+
+// ---------------------------------------------------------------------------
+// S2 — subagent dispatch (call-site bold + op-def marker)
+// ---------------------------------------------------------------------------
+
+describe('diagnostics — subagent call-site (S2)', () => {
+  it('warns when bold marker is applied to a framework primitive', async () => {
+    await provider.validate(skill('## Tree\n\n* **EXPLORE** >> ctx\n'));
+    expect(hasMsg('Subagent dispatch marker')).toBe(true);
+    expect(hasMsg('framework primitive')).toBe(true);
+    expect(hasSeverity(vscode.DiagnosticSeverity.Warning)).toBe(true);
+  });
+
+  it('non-bold primitive call is clean', async () => {
+    await provider.validate(skill('## Tree\n\n* EXPLORE >> ctx\n'));
+    expect(hasMsg('Subagent dispatch marker')).toBe(false);
+  });
+
+  it('bold call on an unknown op is silent at this check (unknown-op covers it)', async () => {
+    // No ops.md on disk → registry can't resolve MY_OP → checkSubagentCallSites
+    // skips. The unknown-ops check produces its own diagnostic, but we only
+    // assert the mismatch message doesn't surface.
+    await provider.validate(skill('## Tree\n\n* **MY_OP** << x >> y\n'));
+    expect(hasMsg('Subagent dispatch marker')).toBe(false);
+    expect(hasMsg('no \'> **Subagent.**\' marker')).toBe(false);
+  });
+});
+
+describe('diagnostics — subagent op-def marker (S2)', () => {
+  it('warns when subagent marker has no Output contract', async () => {
+    await provider.validate(ops(
+      '## MY_OP << x >> y\n\n> **Subagent.** Does some review.\n\nBody steps.\n'
+    ));
+    expect(hasMsg('missing \'Output contract')).toBe(true);
+    expect(hasSeverity(vscode.DiagnosticSeverity.Warning)).toBe(true);
+  });
+
+  it('warns when subagent Output contract file is missing', async () => {
+    vi.mocked(fs.existsSync).mockReturnValue(false);
+    await provider.validate(ops(
+      '## MY_OP << x >> y\n\n> **Subagent.** Output contract: `assets/schemas/my-op-output.json`.\n\nBody.\n'
+    ));
+    expect(hasMsg('Subagent output contract file')).toBe(true);
+    expect(hasMsg('not found')).toBe(true);
+  });
+
+  it('clean when Output contract file exists', async () => {
+    vi.mocked(fs.existsSync).mockReturnValue(true); // every existsSync call → true
+    await provider.validate(ops(
+      '## MY_OP << x >> y\n\n> **Subagent.** Output contract: `assets/schemas/my-op-output.json`.\n\nBody.\n'
+    ));
+    expect(hasMsg('Subagent output contract file')).toBe(false);
+    expect(hasMsg('missing \'Output contract')).toBe(false);
+  });
+
+  it('warns when subagent Input contract file is missing', async () => {
+    vi.mocked(fs.existsSync).mockImplementation((p: any) => {
+      // pretend output schema exists, input does not
+      return String(p).endsWith('output.json') || String(p).endsWith('SKILL.md');
+    });
+    await provider.validate(ops(
+      '## MY_OP << x >> y\n\n' +
+      '> **Subagent.** Output contract: `assets/schemas/my-op-output.json`.\n' +
+      '> Input contract: `assets/schemas/my-op-input.json`.\n\n' +
+      'Body.\n'
+    ));
+    expect(hasMsg('Subagent input contract file')).toBe(true);
+  });
+
+  it('plain op without marker has no S2 diagnostics', async () => {
+    await provider.validate(ops('## MY_OP << x >> y\n\nDoes a thing.\n'));
+    expect(hasMsg('Subagent')).toBe(false);
+  });
+});

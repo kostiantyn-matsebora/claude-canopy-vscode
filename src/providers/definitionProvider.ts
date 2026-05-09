@@ -4,6 +4,21 @@ import * as fs from 'fs';
 import { getOpNameAtPosition, isPrimitive } from '../canopyDocument';
 import { registry } from '../opRegistry';
 
+/** Walk up from a file path until a directory containing SKILL.md is found. */
+function walkToSkillRoot(startPath: string): string | undefined {
+  let current = path.dirname(startPath);
+  for (let i = 0; i < 4; i++) {
+    if (fs.existsSync(path.join(current, 'SKILL.md')) ||
+        fs.existsSync(path.join(current, 'skill.md'))) {
+      return current;
+    }
+    const parent = path.dirname(current);
+    if (parent === current) break;
+    current = parent;
+  }
+  return undefined;
+}
+
 export class CanopyDefinitionProvider implements vscode.DefinitionProvider {
   async provideDefinition(
     document: vscode.TextDocument,
@@ -35,6 +50,30 @@ export class CanopyDefinitionProvider implements vscode.DefinitionProvider {
       if (position.character >= pathStart && position.character <= pathEnd) {
         const skillDir = path.dirname(document.uri.fsPath);
         const target = path.join(skillDir, relPath);
+        if (fs.existsSync(target)) {
+          return new vscode.Location(
+            vscode.Uri.file(target),
+            new vscode.Position(0, 0)
+          );
+        }
+      }
+    }
+
+    // --- Go to subagent marker schema reference ---
+    // `> **Subagent.** Output contract: \`<path>\`` or `Input contract: \`<path>\``
+    // Schema paths in the marker resolve relative to the skill root, walking up
+    // from the ops file (which typically lives at `<skill>/references/ops.md`
+    // or `<skill>/references/ops/<name>.md`).
+    const subagentMarker = line.match(/^>\s+\*\*Subagent\.?\*\*/);
+    const contractMatch = line.match(/(?:Output|Input) contract:\s*`([^`]+)`/);
+    if ((subagentMarker || /(?:Output|Input) contract:/.test(line)) && contractMatch) {
+      const relPath = contractMatch[1];
+      const pathStart = line.indexOf('`' + relPath + '`') + 1;
+      const pathEnd = pathStart + relPath.length;
+      if (position.character >= pathStart && position.character <= pathEnd) {
+        const skillRoot = walkToSkillRoot(document.uri.fsPath);
+        const refRoot = skillRoot ?? path.dirname(document.uri.fsPath);
+        const target = path.join(refRoot, relPath);
         if (fs.existsSync(target)) {
           return new vscode.Location(
             vscode.Uri.file(target),

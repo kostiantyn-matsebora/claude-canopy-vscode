@@ -97,6 +97,27 @@
       "${4:Description of what this op does.}"
     ]
   },
+  "Subagent Op Definition": {
+    "prefix": "op-subagent",
+    "description": "New subagent op definition (S2 — marker dispatch)",
+    "body": [
+      "## ${1:OP_NAME} << ${2:input} >> ${3:output}",
+      "",
+      "> **Subagent.** Output contract: `assets/schemas/${4:${1/(.*)/${1:/downcase}/}}-output.json`.",
+      "",
+      "${5:Description of what this subagent op does.}",
+      "",
+      "* ${1:OP_NAME} << ${2:input} >> ${3:output}",
+      "  * ${6:Step using only << inputs and static skill assets}"
+    ]
+  },
+  "Subagent Call (bold)": {
+    "prefix": "call-subagent",
+    "description": "Subagent dispatch call-site — bold-wrapped op name",
+    "body": [
+      "* **${1:OP_NAME}** << ${2:input} >> ${3:output}"
+    ]
+  },
   "Op Definition with Tree": {
     "prefix": "op-tree",
     "description": "New op definition with tree body",

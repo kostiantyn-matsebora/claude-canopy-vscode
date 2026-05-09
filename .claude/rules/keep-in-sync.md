@@ -3,6 +3,7 @@ paths:
   - "src/providers/diagnosticsProvider.ts"
   - "src/providers/completionProvider.ts"
   - "src/providers/hoverProvider.ts"
+  - "src/providers/definitionProvider.ts"
   - "src/canopyDocument.ts"
   - "src/opRegistry.ts"
   - "src/commands/installCanopy.ts"
@@ -31,6 +32,7 @@ This extension is a consumer of the Canopy framework. When `claude-canopy/` chan
 | `SKILL.md` filename casing changes (legacy `skill.md` ↔ agentskills.io `SKILL.md`) | `canopyDocument.ts` (`isSkillFile`); `extension.ts` (`CANOPY_FILE_RE`); `commands/canopyAgent.ts` (`skillFileExists`); `commands/newResource.ts` (`hasSkillFile`); `package.json` (filename patterns) |
 | Framework skill renamed or split (e.g. canopy → canopy + canopy-runtime) | `commands/canopyAgent.ts` (`FRAMEWORK_MARKERS`, `FRAMEWORK_SKILL_NAMES`); `commands/installCanopy.ts` (`FRAMEWORK_SKILLS`) |
 | Canopy distribution model changes (install command, skill names) | Update `src/commands/installCanopy.ts` (the four install commands), `src/commands/canopyAgent.ts`, and `.claude/skills/update/commands/update.{sh,ps1}` |
+| Subagent dispatch model added (per-op marker + bold call-site, framework v0.20.0+) | Update `parseTreeLine` in `canopyDocument.ts` (bold-op-call detection, `subagentCall` flag); `parseOpDefinitions` (marker parsing, `isSubagent`/`outputContract`/`inputContract`/`markerLine` fields); add diagnostics in `diagnosticsProvider.ts` (`checkSubagentCallSites`, `checkSubagentMarkerDefs`); annotate hover (`hoverProvider.ts`); add schema-ref goto in `definitionProvider.ts`; add `subagent-call` and `subagent-marker` scopes in `syntaxes/canopy.tmLanguage.json`; add `op-subagent` and `call-subagent` snippets in `snippets/canopy.json` |
 | Ambient instruction protocol changes (canopy-runtime marker block content) | `src/commands/installCanopy.ts` (`MARKER_BLOCK` constant must mirror `claude-canopy/install.sh build_marker_block()` exactly); update the marker block at the bottom of `CLAUDE.md` too |
 | New canopy slash command added (e.g. `/canopy-debug`) | Add a corresponding `agentXxx` function in `src/commands/canopyAgent.ts`, register in `extension.ts`, and add the contribution in `package.json` |
 
