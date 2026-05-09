@@ -60,7 +60,7 @@ export interface ParsedSkillDocument {
 }
 
 const PRIMITIVES = new Set([
-  'IF', 'ELSE_IF', 'ELSE', 'SWITCH', 'CASE', 'DEFAULT', 'FOR_EACH',
+  'IF', 'ELSE_IF', 'ELSE', 'SWITCH', 'CASE', 'DEFAULT', 'FOR_EACH', 'PARALLEL',
   'BREAK', 'END', 'ASK', 'SHOW_PLAN', 'VERIFY_EXPECTED', 'EXPLORE'
 ]);
 

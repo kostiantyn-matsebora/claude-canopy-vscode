@@ -132,7 +132,7 @@ export class CanopyCompletionProvider implements vscode.CompletionItemProvider {
 
   private primitiveCompletions(nodePrefix = ''): vscode.CompletionItem[] {
     return Object.values(PRIMITIVE_DOCS).map(doc => {
-      const isControl = ['IF', 'ELSE_IF', 'ELSE', 'SWITCH', 'CASE', 'DEFAULT', 'FOR_EACH', 'BREAK', 'END'].includes(doc.name);
+      const isControl = ['IF', 'ELSE_IF', 'ELSE', 'SWITCH', 'CASE', 'DEFAULT', 'FOR_EACH', 'PARALLEL', 'BREAK', 'END'].includes(doc.name);
       const kind = isControl ? vscode.CompletionItemKind.Keyword : vscode.CompletionItemKind.Function;
       const item = new vscode.CompletionItem(doc.name, kind);
       item.detail = doc.signature;

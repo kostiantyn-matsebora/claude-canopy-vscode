@@ -5,7 +5,7 @@ import { parseDocument, isPrimitive, extractReadRefs } from '../canopyDocument';
 import { registry } from '../opRegistry';
 
 const RESERVED_PRIMITIVES = new Set([
-  'IF', 'ELSE_IF', 'ELSE', 'SWITCH', 'CASE', 'DEFAULT', 'FOR_EACH',
+  'IF', 'ELSE_IF', 'ELSE', 'SWITCH', 'CASE', 'DEFAULT', 'FOR_EACH', 'PARALLEL',
   'BREAK', 'END', 'ASK', 'SHOW_PLAN', 'VERIFY_EXPECTED', 'EXPLORE'
 ]);
 
@@ -33,6 +33,30 @@ const VALID_CATEGORIES = new Set([
 
 function isVerifyPath(p: string): boolean {
   return p.startsWith('assets/verify/') || p.startsWith('verify/');
+}
+
+/**
+ * Count direct children of the tree node at `parentIdx`. Direct children are
+ * tree nodes that follow the parent and share the same indent level — defined
+ * as the indent of the first node after the parent that has indent greater
+ * than the parent's. Stops counting when a node at indent ≤ parent.indent is
+ * reached (sibling or shallower).
+ */
+function countDirectChildren(
+  nodes: ReadonlyArray<{ indent: number }>,
+  parentIdx: number,
+): number {
+  if (parentIdx < 0 || parentIdx >= nodes.length) return 0;
+  const parent = nodes[parentIdx];
+  let firstChildIndent: number | null = null;
+  let count = 0;
+  for (let i = parentIdx + 1; i < nodes.length; i++) {
+    const n = nodes[i];
+    if (n.indent <= parent.indent) break;
+    if (firstChildIndent === null) firstChildIndent = n.indent;
+    if (n.indent === firstChildIndent) count++;
+  }
+  return count;
 }
 
 export class CanopyDiagnosticsProvider {
@@ -320,6 +344,25 @@ export class CanopyDiagnosticsProvider {
               `'${node.opName}' requires an input: '${node.opName} << ${node.opName === 'FOR_EACH' ? 'item in collection' : node.opName === 'SWITCH' ? 'expression' : 'value'}'.`,
               vscode.DiagnosticSeverity.Error
             ));
+          }
+          break;
+
+        case 'PARALLEL':
+          if (node.hasInput || node.hasOutput) {
+            diagnostics.push(new vscode.Diagnostic(
+              range,
+              `'PARALLEL' takes no inputs or outputs: write 'PARALLEL' on its own line with children indented underneath.`,
+              vscode.DiagnosticSeverity.Error
+            ));
+          } else {
+            const childCount = countDirectChildren(parsed.treeNodes, parsed.treeNodes.indexOf(node));
+            if (childCount < 2) {
+              diagnostics.push(new vscode.Diagnostic(
+                range,
+                `'PARALLEL' with fewer than 2 children has no fan-out benefit. Add ≥2 children or remove the PARALLEL block.`,
+                vscode.DiagnosticSeverity.Hint
+              ));
+            }
           }
           break;
 

@@ -2,6 +2,39 @@
 
 All notable changes to the Canopy Skills extension are documented here.
 
+## [0.12.0] — 2026-05-09
+
+Sync to canopy v0.19.0. Adds language-server support for the new `PARALLEL` block primitive — heterogeneous parallel-subagent fan-out as a real grammar element.
+
+### Added
+
+- **`PARALLEL` primitive** wired through every extension surface that touches the framework's primitive set:
+  - `RESERVED_PRIMITIVES` set (`diagnosticsProvider.ts`)
+  - `PRIMITIVES` set (`canopyDocument.ts`)
+  - `PRIMITIVE_DOCS.PARALLEL` entry with signature, description, and tree example (`opRegistry.ts`) — drives hover docs and completion items
+  - `primitive-control` regex + `op-call` negative lookahead (`syntaxes/canopy.tmLanguage.json`) so `PARALLEL` highlights as a control-flow keyword, not a custom op
+  - `parallel` snippet (`snippets/canopy.json`) — expands to a 2-child `PARALLEL` block skeleton
+  - Marker-block constant (`installCanopy.ts`) — control-flow primitives list updated; parity with framework v0.19.0 marker block is restored
+- **`checkPrimitiveSignatures()` `PARALLEL` case** (`diagnosticsProvider.ts`):
+  - Errors when the node carries `<<` or `>>` (PARALLEL takes no input or output)
+  - Hints when the block has fewer than 2 direct children (no fan-out benefit)
+- **`countDirectChildren()` helper** (`diagnosticsProvider.ts`) — counts indented children of a tree node by walking forward until indent ≤ parent. First child's indent defines the "direct child" level. New utility; reusable for future primitives that need child-count rules.
+
+### Changed
+
+- **`canopyVersion`** in `package.json`: `0.18.1` → `0.19.0` (tracking the framework release that introduced PARALLEL).
+- **Extension version**: `0.11.2` → `0.12.0` (minor — new feature support).
+
+### Tests
+
+- 5 new vitest cases in `diagnosticsProvider.test.ts`:
+  - `PARALLEL << foo` → error
+  - `PARALLEL >> result` → error
+  - `PARALLEL` with 1 child → hint
+  - `PARALLEL` with 0 children → hint
+  - `PARALLEL` with ≥2 children, no input/output → clean
+- 1 new entry in the parameterised "ops.md redefining new primitives" test (`PARALLEL` joins the existing `FOR_EACH/SWITCH/CASE/DEFAULT` set).
+
 ## [0.11.2] — 2026-05-05
 
 Bug-fix release. Cleans up the last legacy-flat-layout artifacts left over from the v0.11.0 sync to canopy v0.18.1 — every real canopy v0.18.0+ skill now validates without false positives.

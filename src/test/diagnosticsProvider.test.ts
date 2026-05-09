@@ -389,6 +389,37 @@ describe('diagnostics — primitive signatures: FOR_EACH', () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// Primitive signatures: PARALLEL
+// ---------------------------------------------------------------------------
+
+describe('diagnostics — primitive signatures: PARALLEL', () => {
+  it('errors when PARALLEL has << input', async () => {
+    await provider.validate(skill('## Tree\n\n* PARALLEL << foo\n  * sub-a\n  * sub-b\n'));
+    expect(hasMsg("'PARALLEL' takes no inputs or outputs")).toBe(true);
+  });
+
+  it('errors when PARALLEL has >> output', async () => {
+    await provider.validate(skill('## Tree\n\n* PARALLEL >> result\n  * sub-a\n  * sub-b\n'));
+    expect(hasMsg("'PARALLEL' takes no inputs or outputs")).toBe(true);
+  });
+
+  it('hints when PARALLEL has fewer than 2 children', async () => {
+    await provider.validate(skill('## Tree\n\n* PARALLEL\n  * lonely-child\n'));
+    expect(hasMsg('fewer than 2 children')).toBe(true);
+  });
+
+  it('hints when PARALLEL has zero children', async () => {
+    await provider.validate(skill('## Tree\n\n* PARALLEL\n'));
+    expect(hasMsg('fewer than 2 children')).toBe(true);
+  });
+
+  it('no error or hint when PARALLEL has ≥2 children and no input/output', async () => {
+    await provider.validate(skill('## Tree\n\n* PARALLEL\n  * sub-a >> ctx_a\n  * sub-b >> ctx_b\n'));
+    expect(msgs().filter(m => m.includes('PARALLEL'))).toHaveLength(0);
+  });
+});
+
 describe('diagnostics — primitive signatures: SWITCH', () => {
   it('errors when SWITCH has no << input', async () => {
     await provider.validate(skill('## Tree\n\n* SWITCH\n'));
@@ -426,7 +457,7 @@ describe('diagnostics — primitive signatures: DEFAULT', () => {
 });
 
 describe('diagnostics — ops.md redefining new primitives', () => {
-  it.each(['FOR_EACH', 'SWITCH', 'CASE', 'DEFAULT'])(
+  it.each(['FOR_EACH', 'SWITCH', 'CASE', 'DEFAULT', 'PARALLEL'])(
     'errors when %s is redefined in ops.md',
     async (prim) => {
       await provider.validate(ops(`## ${prim}\n\n* ${prim}\n  * some body\n`));

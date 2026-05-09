@@ -102,6 +102,12 @@ export const PRIMITIVE_DOCS: Record<string, PrimitiveDoc> = {
     description: 'Fallback branch inside a SWITCH block. Executes when no CASE matched.',
     example: 'DEFAULT\n  └── Set bump_type to "patch"',
   },
+  PARALLEL: {
+    name: 'PARALLEL',
+    signature: 'PARALLEL',
+    description: 'Heterogeneous parallel block — emit children as parallel subagent invocations in a single agent turn. Each child runs in its own context window; bind results via each child\'s >>. PARALLEL itself takes no input or output. Use for ≥2 independent fan-out tasks. Failure semantics: Promise.allSettled (sibling failures don\'t abort).',
+    example: 'PARALLEL\n  ├── EXPLORE_FRONTEND >> fe_ctx\n  ├── EXPLORE_BACKEND  >> be_ctx\n  └── EXPLORE_TESTS    >> tests_ctx',
+  },
 };
 
 // ---------------------------------------------------------------------------
