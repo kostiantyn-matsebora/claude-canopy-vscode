@@ -41,9 +41,52 @@
       "## Response: ${8:summary | details}"
     ]
   },
-  "New Skill with Agent": {
+  "New Skill with Subagent (marker dispatch, v0.20+)": {
+    "prefix": "skill-subagent",
+    "description": "New Canopy skill with an EXPLORE subagent declared via the v0.20+ per-op marker form (canonical). Op definition carries '> **Subagent.**' marker; tree opens with bold call site.",
+    "body": [
+      "---",
+      "name: ${1:skill-name}",
+      "description: ${2:One-line description.}",
+      "compatibility: Requires the canopy-runtime skill (published at github.com/kostiantyn-matsebora/claude-canopy). Install with any agentskills.io-compatible tool — e.g. `gh skill install`, `git clone`, the repo's `install.sh`/`install.ps1`, or the Claude Code plugin marketplace. Supports Claude Code and GitHub Copilot.",
+      "metadata:",
+      "  argument-hint: \"${3:<required-arg>}\"",
+      "  canopy-features: [interaction, subagent, verify]",
+      "---",
+      "",
+      "> **Runtime required.** This skill uses Canopy tree notation; canopy-runtime must be active.",
+      ">",
+      "> **Detect canopy-runtime** — present if either:",
+      "> - `canopy-runtime/SKILL.md` exists under `.claude/skills/`, `.github/skills/`, or `.agents/skills/`, OR",
+      "> - a canopy-runtime marker block exists in `CLAUDE.md` or `.github/copilot-instructions.md`.",
+      ">",
+      "> **If neither is present** — install canopy-runtime first (see the `compatibility` field for the source and install options), then re-invoke this skill.",
+      ">",
+      "> Do not interpret the `## Tree` without canopy-runtime active.",
+      "",
+      "${4:Parse \\$ARGUMENTS.}",
+      "",
+      "---",
+      "",
+      "## Tree",
+      "",
+      "* ${1:skill-name}",
+      "  * **EXPLORE** >> context",
+      "  * SHOW_PLAN >> ${5:what will change}",
+      "  * ASK << Proceed? | Yes | No",
+      "  * ${6:OP_NAME << context >> output}",
+      "  * VERIFY_EXPECTED << assets/verify/verify-expected.md",
+      "",
+      "## Rules",
+      "",
+      "- ${7:Add invariants here.}",
+      "",
+      "## Response: ${8:summary | details}"
+    ]
+  },
+  "New Skill with `## Agent` (legacy soft-compat)": {
     "prefix": "skill-explore",
-    "description": "New Canopy skill with explore subagent (agentskills.io layout — includes canopy-features manifest)",
+    "description": "Pre-v0.20 single-explore-subagent shape using the `## Agent` section. Soft-compat — runtime treats it as a single-element marked op named EXPLORE. New skills should prefer the `skill-subagent` snippet (per-op marker form).",
     "body": [
       "---",
       "name: ${1:skill-name}",
@@ -111,6 +154,35 @@
       "",
       "* ${1:OP_NAME} << ${2:input} >> ${3:output}",
       "  * ${6:Step using only << inputs and static skill assets}"
+    ]
+  },
+  "Op with universal contracts": {
+    "prefix": "op-contract",
+    "description": "New inline op with universal Input/Output contract markers (S3, v0.22.0+)",
+    "body": [
+      "## ${1:OP_NAME} << ${2:input} >> ${3:output}",
+      "",
+      "> **Input contract:** `assets/schemas/${4:${1/(.*)/${1:/downcase}/}}-input.json`",
+      "> **Output contract:** `assets/schemas/${5:${1/(.*)/${1:/downcase}/}}-output.json`",
+      "",
+      "${6:Description of what this op does.}",
+      "",
+      "* ${1:OP_NAME} << ${2:input} >> ${3:output}",
+      "  * ${7:body step}"
+    ]
+  },
+  "Output contract marker": {
+    "prefix": "contract-output",
+    "description": "Bare `> **Output contract:**` blockquote marker (S3, v0.22.0+)",
+    "body": [
+      "> **Output contract:** `assets/schemas/${1:op-name}-output.json`"
+    ]
+  },
+  "Input contract marker": {
+    "prefix": "contract-input",
+    "description": "Bare `> **Input contract:**` blockquote marker (S3, v0.22.0+)",
+    "body": [
+      "> **Input contract:** `assets/schemas/${1:op-name}-input.json`"
     ]
   },
   "Subagent Call (bold)": {

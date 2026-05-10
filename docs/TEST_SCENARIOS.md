@@ -4,7 +4,7 @@ Test suites for the `canopy-skills` VSCode extension (`claude-canopy-vscode`). S
 
 This document covers the extension only. For framework-side tests (install scripts, marker-block parity, autonomous-agent E2E, etc.), see [`claude-canopy/docs/TEST_SCENARIOS.md`](https://github.com/kostiantyn-matsebora/claude-canopy/blob/master/docs/TEST_SCENARIOS.md).
 
-**Tracks canopy v0.21.0** — sliced primitive spec (`core` / `interaction` / `control-flow` / `parallel` / `subagent` / `explore` / `verify`), per-skill `metadata.canopy-features` manifest, slim 5-line marker block.
+**Tracks canopy v0.22.0** — universal op contracts (S3): bare `> **Input contract:**` / `> **Output contract:**` blockquote markers on inline ops, `metadata.canopy-contracts: strict` opt-in, static type-flow analysis through the binding graph. Carries forward all v0.21.0 surface (sliced primitive spec + `metadata.canopy-features` manifest + slim 5-line marker block).
 
 ## Conventions
 
@@ -149,7 +149,7 @@ When canopy ships a new release that changes the marker block:
 Open a known SKILL.md (e.g. an example skill), trigger:
 - Completions on a tree node start (`SHOW_PLAN`, `ASK`, `IF`, custom op names registered in `references/ops.md`).
 - Hover on a frontmatter key (e.g. `compatibility:`) and a primitive (e.g. `IF`).
-- Go-to-definition on an `ALL_CAPS` op call (jumps to its definition in `references/ops.md` or `framework-ops.md`).
+- Go-to-definition on an `ALL_CAPS` op call (jumps to its definition in `references/ops.md` or the canopy-runtime `references/ops/<slice>.md` slice file).
 - **Expected:** all three respond instantly with the documented content.
 
 ### C6.5 — New-resource scaffold commands
@@ -428,11 +428,62 @@ Background: v0.20.0 introduced per-op marker blockquotes (`> **Subagent.** Outpu
 
 ---
 
+## Suite C13 — Universal op contracts (canopy 0.22.0+)
+
+Vitest-driven coverage of the S3 contract surface. Lives in `src/test/canopyDocument.test.ts` and `src/test/diagnosticsProvider.test.ts`; runs as part of the full C2 suite.
+
+### C13.1 — Bare `> **Output contract:**` blockquote sets `outputContract`, leaves `isSubagent` undefined
+- **Input:** `## RENDER << input >> output\n\n> **Output contract:** \`assets/schemas/render-output.json\`\n\nBody.`
+- **Expected:** `OpDefinition.outputContract === 'assets/schemas/render-output.json'`; `isSubagent === undefined`; `markerLine` is set.
+
+### C13.2 — Subagent marker still wins when both forms appear
+- **Input:** `## REVIEW << aspect >> findings\n\n> **Subagent.** Output contract: \`...\`\n\nBody.`
+- **Expected:** `isSubagent === true`; `outputContract` populated.
+
+### C13.3 — `parseOpSignature` extracts named inputs/outputs
+- **Cases:** `## REVIEW_ASPECT << aspect | file_paths >> findings` → `{inputs: ['aspect','file_paths'], outputs: ['findings']}`. Output-only ops, expression-shaped parts (quoted, dotted), no-op signatures all covered.
+
+### C13.4 — `metadata.canopy-contracts` parsed from frontmatter
+- **Cases:** `strict`, `"strict"`, absent. `ParsedSkillDocument.canopyContracts` and `canopyContractsLine` populated correctly.
+
+### C13.5 — `normalizeBindingKey` strips both `ctx.` and `context.` prefixes
+- **Cases:** `ctx.foo` → `foo`; `context.foo` → `foo`; `"security"` → undefined; `foo.length` → undefined.
+
+### C13.6 — `buildBindingGraph` resolves producers to consumers in tree order
+- **Cases:** matching `>>` / `<<` pairs become edges; consumers without an upstream producer land in `unresolved`; latest producer wins on rebound keys.
+
+### C13.7 — Diagnostics: missing schema file flagged on inline op
+- **Setup:** ops.md with `> **Input contract:** \`x.json\`` and `> **Output contract:** \`y.json\`` markers; mocked `fs.existsSync` returns false.
+- **Expected:** two warnings, one per missing file. Subagent-marked ops are not double-flagged by `checkUniversalContractMarkers`.
+
+### C13.8 — Diagnostics: contract-shape drift on signature mismatch
+- **Setup:** op signature `<< aspect | file_paths` but schema only defines `properties.findings`.
+- **Expected:** warning "missing properties for signature field(s)" naming `'aspect'` and `'file_paths'`.
+
+### C13.9 — Diagnostics: `metadata.canopy-contracts` validation
+- **Cases:** `strict` with no contract-bearing ops → Warning ("strict mode tightens nothing"); unrecognized value (e.g. `lenient`) → Error; absent → no diagnostic.
+
+### C13.10 — Hover for contract markers and the strict-mode flag
+- **Cases:** hovering on `> **Input contract:**` / `> **Output contract:**` blockquote → tooltip describing the contract role; hovering on `metadata.canopy-contracts:` → strict-mode tooltip; hovering on an inline-op name with declared contracts → contracts surfaced (previously only subagent).
+
+### C13.11 — Definition jump to bare-marker schema path
+- **Setup:** ops.md cursor on the `\`assets/schemas/render-output.json\`` token inside a bare `> **Output contract:**` blockquote.
+- **Expected:** definition provider opens the schema file relative to the skill root.
+
+### C13.12 — Completion: `canopy-contracts: ` offers `strict`
+- **Setup:** cursor positioned after `  canopy-contracts: ` under `metadata:`.
+- **Expected:** `strict` completion item with the strict-mode documentation.
+
+### C13.13 — Snippets parse cleanly
+- **Cases:** `op-contract`, `contract-input`, `contract-output` snippets in `snippets/canopy.json` produce valid Canopy markup that parses without diagnostics.
+
+---
+
 ## Parallelization graph
 
 ```
 C1 (compile)             ─┐
-C2 (vitest full)         ─┤── C3, C4, C8, C9, C10, C11, C12 are subsets of C2;
+C2 (vitest full)         ─┤── C3, C4, C8–C13 are subsets of C2;
 C3 (compat diagnostics)  ─┤   run alone for fast feedback or via the full C2.
 C4 (real-skills)         ─┤
 C5 (marker parity)       ─┤── all suites parallelize (no shared state)
@@ -441,6 +492,7 @@ C9 (layout migration)    ─┤
 C10 (manifest drift)     ─┤── v0.21.0+
 C11 (subagent dispatch)  ─┤── v0.20.0+
 C12 (PARALLEL)           ─┤── v0.19.0+
+C13 (universal contracts) ┤── v0.22.0+
 C6 (manual smoke) *      ─┤
 C7 (publish gate) **     ─┘
 
@@ -448,4 +500,4 @@ C7 (publish gate) **     ─┘
 ** C7 runs once per release tag.
 ```
 
-CI runs C1 + C2 (which transitively covers C3 + C4 + C8–C12) + C5 on every push to a feature branch and every PR. C6 is a pre-PR sanity check by the author. C7 gates the marketplace publish step in `release.yml`.
+CI runs C1 + C2 (which transitively covers C3 + C4 + C8–C13) + C5 on every push to a feature branch and every PR. C6 is a pre-PR sanity check by the author. C7 gates the marketplace publish step in `release.yml`.

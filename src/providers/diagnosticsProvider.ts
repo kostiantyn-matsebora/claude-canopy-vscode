@@ -3,6 +3,12 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { parseDocument, isPrimitive, extractReadRefs, computeUsedFeatures, CANOPY_FEATURE_VALUES, CanopyFeature } from '../canopyDocument';
 import { registry } from '../opRegistry';
+import { buildBindingGraph } from '../bindingGraph';
+import { loadSchema } from '../schemaResolver';
+
+// S3 (v0.22.0+): only `strict` is currently a recognized value for
+// `metadata.canopy-contracts`. Used by checkCanopyContractsManifest.
+const CANOPY_CONTRACT_VALUES = new Set(['strict']);
 
 const RESERVED_PRIMITIVES = new Set([
   'IF', 'ELSE_IF', 'ELSE', 'SWITCH', 'CASE', 'DEFAULT', 'FOR_EACH', 'PARALLEL',
@@ -100,6 +106,8 @@ export class CanopyDiagnosticsProvider {
         this.checkCompatibility(parsed, lines, diagnostics);
         this.checkSafetyPreamble(parsed, lines, diagnostics);
         this.checkCanopyFeaturesManifest(parsed, lines, diagnostics);
+        await this.checkCanopyContractsManifest(document, parsed, lines, diagnostics);
+        await this.checkContractFlow(document, parsed, lines, diagnostics);
       }
 
       if (parsed.hasAgentSection && parsed.hasTreeSection) {
@@ -211,6 +219,7 @@ export class CanopyDiagnosticsProvider {
 
       this.checkResourceRefs(parsed, lines, diagnostics, skillDir);
       this.checkSubagentMarkerDefs(parsed, lines, diagnostics, skillDir);
+      this.checkUniversalContractMarkers(parsed, lines, diagnostics, skillDir);
     }
 
     this.collection.set(document.uri, diagnostics);
@@ -867,6 +876,217 @@ export class CanopyDiagnosticsProvider {
           `Tree uses '${v}' but 'metadata.canopy-features' does not declare it. Drift — add the missing entry.`,
           vscode.DiagnosticSeverity.Error,
         ));
+      }
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // S3 (v0.22.0+): universal contract markers on inline ops (in ops.md)
+  // -------------------------------------------------------------------------
+
+  /**
+   * For every op definition in an ops.md file that carries `inputContract` or
+   * `outputContract` WITHOUT the `> **Subagent.**` lead (i.e. an inline op
+   * with universal-contract markers), verify the schema files exist relative
+   * to the skill root and the schemas' top-level `properties` align with the
+   * op's `<<` / `>>` named inputs/outputs.
+   *
+   * Subagent ops are already covered by `checkSubagentMarkerDefs` — we only
+   * handle the inline case here so the two methods don't double-flag.
+   */
+  private checkUniversalContractMarkers(
+    parsed: ReturnType<typeof parseDocument>,
+    lines: string[],
+    diagnostics: vscode.Diagnostic[],
+    skillDir: string,
+  ): void {
+    const skillRoot = this.findSkillRoot(skillDir);
+    const refRoot = skillRoot ?? skillDir;
+
+    for (const def of parsed.opDefinitions) {
+      // Subagent ops handled separately.
+      if (def.isSubagent) continue;
+      if (!def.inputContract && !def.outputContract) continue;
+
+      const markerLine = def.markerLine ?? def.startLine;
+      const markerLineText = lines[markerLine] ?? '';
+      const markerRange = new vscode.Range(markerLine, 0, markerLine, markerLineText.length);
+
+      // File existence — same severity as subagent variant.
+      if (def.outputContract) {
+        const target = path.join(refRoot, def.outputContract);
+        if (!fs.existsSync(target)) {
+          diagnostics.push(new vscode.Diagnostic(
+            markerRange,
+            `Output contract file '${def.outputContract}' (op '${def.name}') not found relative to skill root.`,
+            vscode.DiagnosticSeverity.Warning,
+          ));
+        } else {
+          this.checkContractShape(def, def.outputContract, 'output', refRoot, markerRange, diagnostics);
+        }
+      }
+      if (def.inputContract) {
+        const target = path.join(refRoot, def.inputContract);
+        if (!fs.existsSync(target)) {
+          diagnostics.push(new vscode.Diagnostic(
+            markerRange,
+            `Input contract file '${def.inputContract}' (op '${def.name}') not found relative to skill root.`,
+            vscode.DiagnosticSeverity.Warning,
+          ));
+        } else {
+          this.checkContractShape(def, def.inputContract, 'input', refRoot, markerRange, diagnostics);
+        }
+      }
+    }
+  }
+
+  /**
+   * Compare a contract's top-level `properties` against the op's named
+   * `<<` inputs (for input contracts) or `>>` named outputs (for output
+   * contracts). Drift surfaces as a Warning anchored to the marker line.
+   *
+   * Liberal by design: we only flag when both lists are non-empty AND
+   * disjoint enough that the schema clearly doesn't describe the signature.
+   * Permissive `additionalProperties: true` schemas should NOT trip this —
+   * they trip only when a named signature field is absent from `properties`.
+   */
+  private checkContractShape(
+    def: { name: string; inputs?: string[]; outputs?: string[] },
+    contractPath: string,
+    kind: 'input' | 'output',
+    refRoot: string,
+    range: vscode.Range,
+    diagnostics: vscode.Diagnostic[],
+  ): void {
+    const resolved = loadSchema(refRoot, contractPath);
+    if (!resolved || resolved.topLevelProperties.length === 0) return;
+    const declared = new Set(resolved.topLevelProperties);
+    const sigFields = (kind === 'input' ? def.inputs : def.outputs) ?? [];
+    if (sigFields.length === 0) return;
+
+    const missing = sigFields.filter(f => !declared.has(f));
+    if (missing.length === 0) return;
+
+    diagnostics.push(new vscode.Diagnostic(
+      range,
+      `${kind === 'input' ? 'Input' : 'Output'} contract '${contractPath}' for op '${def.name}' is missing properties for signature field(s): ${missing.map(m => `'${m}'`).join(', ')}. ` +
+      `Re-scaffold via /canopy improve --scaffold-contracts, or add the missing properties.`,
+      vscode.DiagnosticSeverity.Warning,
+    ));
+  }
+
+  // -------------------------------------------------------------------------
+  // S3: `metadata.canopy-contracts: strict` manifest check
+  // -------------------------------------------------------------------------
+
+  /**
+   * Validates the optional `metadata.canopy-contracts` manifest entry.
+   *
+   * - Value other than `strict` → Error (only `strict` is recognized).
+   * - `strict` declared but no op in any ops.md carries a contract → Warning
+   *   (strict mode tightens nothing — declare contracts on at least one op
+   *   or remove the flag).
+   *
+   * The strict-without-contracts check requires reading the skill's ops
+   * files. We use the registry's `allOpNames` resolution which has the same
+   * walk; for performance we read each ops.md once.
+   */
+  private async checkCanopyContractsManifest(
+    document: vscode.TextDocument,
+    parsed: ReturnType<typeof parseDocument>,
+    lines: string[],
+    diagnostics: vscode.Diagnostic[],
+  ): Promise<void> {
+    if (parsed.canopyContracts === undefined) return;
+
+    const lineNo = parsed.canopyContractsLine ?? 0;
+    const lineText = lines[lineNo] ?? '';
+    const range = new vscode.Range(lineNo, 0, lineNo, lineText.length);
+    const value = parsed.canopyContracts.trim();
+
+    if (!CANOPY_CONTRACT_VALUES.has(value)) {
+      diagnostics.push(new vscode.Diagnostic(
+        range,
+        `'metadata.canopy-contracts' value '${value}' is not recognized. ` +
+        `Valid values: ${[...CANOPY_CONTRACT_VALUES].join(', ')}.`,
+        vscode.DiagnosticSeverity.Error,
+      ));
+      return;
+    }
+
+    // Strict declared — verify at least one op has a contract.
+    const opNames = await registry.allOpNames(document.uri);
+    let anyContract = false;
+    for (const name of opNames) {
+      const resolved = await registry.resolve(name, document.uri);
+      if (resolved && (resolved.definition.inputContract || resolved.definition.outputContract)) {
+        anyContract = true;
+        break;
+      }
+    }
+    if (!anyContract) {
+      diagnostics.push(new vscode.Diagnostic(
+        range,
+        `'metadata.canopy-contracts: strict' declared but no op carries a contract. ` +
+        `Strict mode tightens enforcement only where contracts exist — declare ` +
+        `'> **Input contract:** \`...\`' / '> **Output contract:** \`...\`' on at least one op or remove the flag.`,
+        vscode.DiagnosticSeverity.Warning,
+      ));
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // S3: static type-flow analysis through the binding graph
+  // -------------------------------------------------------------------------
+
+  /**
+   * For each binding edge in the skill tree (a downstream consumer that
+   * binds a value emitted by an upstream producer), verify the producer's
+   * output schema includes the bound key as a top-level property.
+   *
+   * Drift cases surfaced as Warnings on the consumer line:
+   *   - Producer has an output contract but the bound `<key>` is not in
+   *     the schema's top-level `properties` — the consumer is reading a
+   *     field the producer doesn't declare it emits.
+   *   - Consumer has an input contract that names properties the producer
+   *     doesn't supply — the consumer expects more than the upstream
+   *     binding can provide.
+   *
+   * No diagnostics emit for edges where neither side declares a contract
+   * (back-compat: schema-less ops continue to work unchanged).
+   */
+  private async checkContractFlow(
+    document: vscode.TextDocument,
+    parsed: ReturnType<typeof parseDocument>,
+    lines: string[],
+    diagnostics: vscode.Diagnostic[],
+  ): Promise<void> {
+    const graph = buildBindingGraph(parsed);
+    if (graph.edges.length === 0) return;
+
+    const skillDir = path.dirname(document.uri.fsPath);
+    const skillRoot = this.findSkillRoot(skillDir) ?? skillDir;
+
+    for (const edge of graph.edges) {
+      const producerDef = await registry.resolve(edge.producer.producerOp, document.uri);
+      const consumerDef = await registry.resolve(edge.consumer.consumerOp, document.uri);
+
+      const producerOut = producerDef?.definition.outputContract;
+      if (producerOut) {
+        const schema = loadSchema(skillRoot, producerOut);
+        if (schema && schema.topLevelProperties.length > 0 &&
+            !schema.topLevelProperties.includes(edge.consumer.key)) {
+          const line = lines[edge.consumer.consumerNode.line] ?? '';
+          diagnostics.push(new vscode.Diagnostic(
+            new vscode.Range(edge.consumer.consumerNode.line, 0,
+                             edge.consumer.consumerNode.line, line.length),
+            `Binding '<< ${edge.consumer.key}' reads a key the upstream producer ` +
+            `'${edge.producer.producerOp}' (line ${edge.producer.producerNode.line + 1}) ` +
+            `does not declare in its output contract '${producerOut}'. ` +
+            `Add '${edge.consumer.key}' to the schema's properties, or update the binding.`,
+            vscode.DiagnosticSeverity.Warning,
+          ));
+        }
       }
     }
   }

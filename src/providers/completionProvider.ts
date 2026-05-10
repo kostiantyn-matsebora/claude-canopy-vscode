@@ -40,6 +40,17 @@ export class CanopyCompletionProvider implements vscode.CompletionItemProvider {
       if (featuresMatch) {
         return this.canopyFeatureCompletions(featuresMatch[1]);
       }
+      // After `canopy-contracts: ` — offer the recognized values.
+      const contractsMatch = prefix.match(/^\s+canopy-contracts:\s*$/);
+      if (contractsMatch) {
+        const item = new vscode.CompletionItem('strict', vscode.CompletionItemKind.EnumMember);
+        item.detail = 'Canopy contract enforcement mode';
+        item.documentation = new vscode.MarkdownString(
+          'Opt in to runtime contract validation. ' +
+          'Each contract-bearing op\'s input is validated before firing, output before binding.'
+        );
+        return [item];
+      }
       if (/^\s*$/.test(prefix) || /^[a-z-]*$/.test(prefix.trim())) {
         return this.frontmatterCompletions();
       }
