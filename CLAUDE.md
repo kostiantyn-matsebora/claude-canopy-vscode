@@ -19,7 +19,7 @@
   /plugin marketplace add kostiantyn-matsebora/claude-canopy
   /plugin install canopy@claude-canopy
   ```
-- Activation is automatic since canopy v0.18.0 — the runtime self-activates on first load and writes the marker block to this repo's `CLAUDE.md`
+- Activation is automatic — canopy-runtime self-activates on first load and writes the marker block to this repo's `CLAUDE.md`
 - The marker block is already committed below, so a fresh checkout + plugin install is enough; running `/canopy:canopy activate` is a safe no-op when the block matches the current canopy release
 - Re-run activation after `/plugin update canopy@claude-canopy` if the new release changed the block content
 
