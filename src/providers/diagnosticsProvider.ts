@@ -945,10 +945,22 @@ export class CanopyDiagnosticsProvider {
    * `<<` inputs (for input contracts) or `>>` named outputs (for output
    * contracts). Drift surfaces as a Warning anchored to the marker line.
    *
-   * Liberal by design: we only flag when both lists are non-empty AND
-   * disjoint enough that the schema clearly doesn't describe the signature.
-   * Permissive `additionalProperties: true` schemas should NOT trip this —
-   * they trip only when a named signature field is absent from `properties`.
+   * Two contract-shape conventions are accepted:
+   *   1. **Wrapper** — schema's top-level `properties` mirror the op's
+   *      named fields (e.g. signature `<< a | b | c` ↔ `{properties: {a, b, c}}`).
+   *      This is the only sound shape when the op has 2+ named fields.
+   *   2. **Direct shape** — the schema describes the shape of the single
+   *      bound binding directly (e.g. `EXPLORE_TARGET >> context` ↔
+   *      `{properties: {target, file_count, files, ...}}` describes the
+   *      shape of `context`). Valid only when the op has exactly 1 named
+   *      field on that side.
+   *
+   * Drift only surfaces when sigFields.length >= 2 AND a named field is
+   * absent from the schema. The 1-field case is intentionally permissive —
+   * either convention is valid and we can't know from the schema alone
+   * which one the author intended.
+   *
+   * Permissive `additionalProperties: true` schemas should NOT trip this.
    */
   private checkContractShape(
     def: { name: string; inputs?: string[]; outputs?: string[] },
@@ -962,7 +974,9 @@ export class CanopyDiagnosticsProvider {
     if (!resolved || resolved.topLevelProperties.length === 0) return;
     const declared = new Set(resolved.topLevelProperties);
     const sigFields = (kind === 'input' ? def.inputs : def.outputs) ?? [];
-    if (sigFields.length === 0) return;
+    // 0 named fields: nothing to compare. 1 named field: ambiguous between
+    // wrapper and direct-shape conventions — skip. 2+ fields: must be wrapper.
+    if (sigFields.length < 2) return;
 
     const missing = sigFields.filter(f => !declared.has(f));
     if (missing.length === 0) return;

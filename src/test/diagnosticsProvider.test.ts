@@ -761,6 +761,30 @@ describe('diagnostics — universal contract markers (inline ops)', () => {
     ));
     expect(hasMsg('missing properties for signature field')).toBe(false);
   });
+
+  it('contract-shape: single-output op with direct-shape schema (not wrapper) → no drift warning', async () => {
+    // Convention: when an op has exactly one named output (`EXPLORE_TARGET >> context`),
+    // the schema usually describes the shape of that single binding directly,
+    // not a wrapper around it. Either convention is valid for 1-field ops; the
+    // check should not flag drift here.
+    vi.mocked(fs.existsSync).mockReturnValue(true);
+    vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify({
+      type: 'object',
+      properties: {
+        target: { type: 'string' },
+        file_count: { type: 'integer' },
+        files: { type: 'array' },
+      },
+    }));
+    await provider.validate(ops(
+      '## EXPLORE_TARGET << target_path >> context\n\n' +
+      '> **Subagent.** Output contract: `assets/schemas/explore-schema.json`\n\n' +
+      'Body.\n'
+    ));
+    // The output sig is `context` (1 field). The schema has `target` / `file_count` / `files`
+    // — clearly describing the shape of `context`, not a wrapper. Should NOT warn.
+    expect(hasMsg('missing properties for signature field')).toBe(false);
+  });
 });
 
 // ---------------------------------------------------------------------------
