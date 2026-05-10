@@ -10,6 +10,15 @@ const CANOPY_FEATURES_DOC =
   'When absent, all slices are loaded for back-compat. ' +
   'Diagnostics surface drift: declared-but-unused, used-but-undeclared, unknown values, or `core` listed.';
 
+const CANOPY_CONTRACTS_DOC =
+  '**`canopy-contracts`** *(under `metadata:`)* — Opt-in runtime contract enforcement (v0.22.0+). ' +
+  'Recognized value: `strict`. ' +
+  'Under `strict`, the runtime validates each contract-bearing op\'s input against its declared `Input contract` before firing, ' +
+  'and validates the output against the `Output contract` before binding into context. ' +
+  'Halts with `[contract-violation]` on drift. ' +
+  'Ops without contracts are skipped. ' +
+  'Default (omitted): contracts are descriptive only; vscode static type-flow applies but runtime does not enforce.';
+
 const SECTION_DOCS: Record<string, string> = {
   Agent: '**`## Agent`** — Declare an `**explore**` subagent. When present, the first tree node must be `EXPLORE >> context`. Output contract is `assets/schemas/explore-schema.json` (agentskills layout) or `schemas/explore-schema.json` (legacy flat layout).',
   Tree: '**`## Tree`** *(required)* — The sequential execution pipeline. Nodes run top-to-bottom. Use `IF`/`ELSE_IF`/`ELSE` for branching. Two equivalent syntaxes: markdown list (`*`) or box-drawing (`├──`).',
@@ -57,6 +66,32 @@ export class CanopyHoverProvider implements vscode.HoverProvider {
       return new vscode.Hover(new vscode.MarkdownString(CANOPY_FEATURES_DOC));
     }
 
+    // --- Hover on metadata.canopy-contracts (S3) ---
+    const contractsMatch = line.match(/^\s+canopy-contracts:/);
+    if (contractsMatch) {
+      return new vscode.Hover(new vscode.MarkdownString(CANOPY_CONTRACTS_DOC));
+    }
+
+    // --- Hover on a contract-marker blockquote line ---
+    // `> **Input contract:** \`<path>\`` or `> **Output contract:** \`<path>\``
+    // Surface a brief "Op contract (v0.22.0+)" tooltip with the contract role.
+    const contractMarkerMatch = line.match(/^>\s+(?:\*\*)?(Input|Output) contract:?\*?\*?/i);
+    if (contractMarkerMatch) {
+      const kind = contractMarkerMatch[1].toLowerCase();
+      const md = new vscode.MarkdownString();
+      md.appendMarkdown(`**${kind === 'input' ? 'Input' : 'Output'} contract** *(v0.22.0+ universal op contract)*\n\n`);
+      md.appendMarkdown(
+        kind === 'input'
+          ? 'JSON Schema describing the bound `<<` input value. vscode walks the binding graph to ' +
+            'flag drift between this schema and the upstream producer\'s output. Under ' +
+            '`metadata.canopy-contracts: strict`, the runtime validates the bound input before the op fires.'
+          : 'JSON Schema describing the `>>` output value the op emits. Downstream consumers reading ' +
+            '`<< ctx.<key>` are statically checked against this schema. Under ' +
+            '`metadata.canopy-contracts: strict`, the runtime validates the output before binding into context.'
+      );
+      return new vscode.Hover(md);
+    }
+
     // --- Hover on ALL_CAPS op name ---
     const opName = getOpNameAtPosition(line, position.character);
     if (!opName) return undefined;
@@ -85,15 +120,19 @@ export class CanopyHoverProvider implements vscode.HoverProvider {
       const md = new vscode.MarkdownString();
       const dispatchSuffix = definition.isSubagent ? ', subagent dispatch' : '';
       md.appendMarkdown(`**\`${definition.signature}\`** *(${sourceLabel}${dispatchSuffix})*\n\n`);
-      if (definition.isSubagent) {
-        const lines: string[] = ['_Subagent op._'];
-        if (definition.outputContract) {
-          lines.push(`Output contract: \`${definition.outputContract}\``);
-        }
+      // S3: contracts surface for both subagent and inline ops.
+      if (definition.isSubagent || definition.outputContract || definition.inputContract) {
+        const tagLines: string[] = [];
+        if (definition.isSubagent) tagLines.push('_Subagent op._');
         if (definition.inputContract) {
-          lines.push(`Input contract: \`${definition.inputContract}\``);
+          tagLines.push(`Input contract: \`${definition.inputContract}\``);
         }
-        md.appendMarkdown(lines.join('  \n') + '\n\n');
+        if (definition.outputContract) {
+          tagLines.push(`Output contract: \`${definition.outputContract}\``);
+        }
+        if (tagLines.length > 0) {
+          md.appendMarkdown(tagLines.join('  \n') + '\n\n');
+        }
       }
       if (definition.bodyText) {
         // Show first non-empty paragraph of body

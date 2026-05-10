@@ -127,7 +127,7 @@
       }
     },
     "primitive-control": {
-      "comment": "Control flow primitives — defined in canopy-runtime/references/framework-ops.md",
+      "comment": "Control flow primitives — defined in canopy-runtime/references/ops/{core,control-flow,interaction,parallel}.md (sliced in v0.21.0)",
       "match": "\\b(IF|ELSE_IF|ELSE|SWITCH|CASE|DEFAULT|FOR_EACH|PARALLEL|BREAK|END)\\b",
       "name": "keyword.control.canopy"
     },

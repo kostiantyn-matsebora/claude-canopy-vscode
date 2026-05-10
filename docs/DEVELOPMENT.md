@@ -152,7 +152,7 @@ parseDocument()          ← canopyDocument.ts (called by every provider)
 2. `<skill>/ops.md` at root (skill-local, legacy flat layout — backward compatible)
 3. Legacy fallback: `<.claude-root>/skills/shared/<kind>/ops.md` and `<.claude-root>/canopy/skills/shared/<kind>/ops.md`
 
-Framework primitives (`IF`, `SWITCH`, `FOR_EACH`, `ASK`, `SHOW_PLAN`, `VERIFY_EXPECTED`, `EXPLORE`, …) are defined statically in `PRIMITIVE_DOCS` (in `opRegistry.ts`) — they are **not** loaded from disk. The canonical canopy v0.18.0+ source for primitives is `claude-canopy/skills/canopy-runtime/references/framework-ops.md`; if it diverges, sync `PRIMITIVE_DOCS` per the sync-points table in `CLAUDE.md`.
+Framework primitives (`IF`, `ELSE_IF`, `ELSE`, `SWITCH`, `CASE`, `DEFAULT`, `FOR_EACH`, `PARALLEL`, `BREAK`, `END`, `ASK`, `SHOW_PLAN`, `EXPLORE`, `VERIFY_EXPECTED`) are defined statically in `PRIMITIVE_DOCS` (in `opRegistry.ts`) — they are **not** loaded from disk. The canonical source is canopy's `skills/canopy-runtime/references/ops.md` index plus per-feature slice files under `references/ops/<slice>.md` (sliced in v0.21.0); if it diverges, sync `PRIMITIVE_DOCS` per the sync-points table in `CLAUDE.md`.
 
 The registry caches parsed definitions per file path. Call `registry.invalidate(uri)` when an `ops.md` file changes (wired in `extension.ts`).
 

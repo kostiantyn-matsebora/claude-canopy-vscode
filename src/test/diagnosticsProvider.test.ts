@@ -6,6 +6,7 @@ import * as fs from 'fs';
 vi.mock('fs', () => ({
   existsSync: vi.fn(),
   statSync: vi.fn().mockReturnValue({ isDirectory: () => false }),
+  readFileSync: vi.fn().mockReturnValue('{}'),
 }));
 
 // ---------------------------------------------------------------------------
@@ -678,5 +679,166 @@ describe('diagnostics — canopy-features manifest (S2.5)', () => {
   it('non-Tree skill (no ## Tree) → manifest check skipped', async () => {
     await provider.validate(makeDoc('---\nname: t\ndescription: t\n---\n\nJust prose.\n'));
     expect(hasMsg('canopy-features')).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// S3 (v0.22.0+) — universal contract markers on inline ops
+// ---------------------------------------------------------------------------
+
+describe('diagnostics — universal contract markers (inline ops)', () => {
+  it('inline op with `> **Output contract:**` blockquote and missing schema → warning', async () => {
+    vi.mocked(fs.existsSync).mockReturnValue(false);
+    await provider.validate(ops(
+      '## RENDER << input >> output\n\n' +
+      '> **Output contract:** `assets/schemas/render-output.json`\n\n' +
+      'Body.\n'
+    ));
+    expect(hasMsg("'assets/schemas/render-output.json'")).toBe(true);
+    expect(hasMsg('not found')).toBe(true);
+    expect(hasSeverity(vscode.DiagnosticSeverity.Warning)).toBe(true);
+  });
+
+  it('inline op with both Input + Output contract markers and missing files → 2 warnings', async () => {
+    vi.mocked(fs.existsSync).mockReturnValue(false);
+    await provider.validate(ops(
+      '## RENDER << input >> output\n\n' +
+      '> **Input contract:** `assets/schemas/render-input.json`\n' +
+      '> **Output contract:** `assets/schemas/render-output.json`\n\n' +
+      'Body.\n'
+    ));
+    expect(hasMsg("'assets/schemas/render-input.json'")).toBe(true);
+    expect(hasMsg("'assets/schemas/render-output.json'")).toBe(true);
+  });
+
+  it('subagent-marked op is NOT double-flagged by the universal-marker check', async () => {
+    vi.mocked(fs.existsSync).mockReturnValue(false);
+    await provider.validate(ops(
+      '## REVIEW << aspect | files >> findings\n\n' +
+      '> **Subagent.** Output contract: `assets/schemas/review-output.json`\n\n' +
+      'Body.\n'
+    ));
+    // checkSubagentMarkerDefs flags this once (the file is missing); the new
+    // checkUniversalContractMarkers must skip subagent ops to avoid duplication.
+    const matches = msgs().filter(m => m.includes("'assets/schemas/review-output.json'"));
+    expect(matches.length).toBe(1);
+  });
+
+  it('inline op without contract markers is fine (back-compat)', async () => {
+    await provider.validate(ops('## MY_OP << x >> y\n\nDoes a thing.\n'));
+    expect(captured).toHaveLength(0);
+  });
+
+  it('contract-shape drift: schema missing a signature input field → warning', async () => {
+    vi.mocked(fs.existsSync).mockReturnValue(true);
+    vi.mocked(fs.readFileSync).mockReturnValue(
+      JSON.stringify({ type: 'object', properties: { findings: { type: 'string' } } })
+    );
+    await provider.validate(ops(
+      '## RENDER << aspect | file_paths >> findings\n\n' +
+      '> **Input contract:** `assets/schemas/render-input.json`\n\n' +
+      'Body.\n'
+    ));
+    // schema has only `findings`, but signature inputs are aspect|file_paths
+    expect(hasMsg("missing properties for signature field(s)")).toBe(true);
+    expect(hasMsg("'aspect'")).toBe(true);
+    expect(hasMsg("'file_paths'")).toBe(true);
+  });
+
+  it('contract-shape: schema covers all signature fields → no drift warning', async () => {
+    vi.mocked(fs.existsSync).mockReturnValue(true);
+    vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify({
+      type: 'object',
+      properties: {
+        aspect: { type: 'string' },
+        file_paths: { type: 'array' },
+      },
+    }));
+    await provider.validate(ops(
+      '## RENDER << aspect | file_paths >> findings\n\n' +
+      '> **Input contract:** `assets/schemas/render-input.json`\n\n' +
+      'Body.\n'
+    ));
+    expect(hasMsg('missing properties for signature field')).toBe(false);
+  });
+
+  it('contract-shape: single-output op with direct-shape schema (not wrapper) → no drift warning', async () => {
+    // Convention: when an op has exactly one named output (`EXPLORE_TARGET >> context`),
+    // the schema usually describes the shape of that single binding directly,
+    // not a wrapper around it. Either convention is valid for 1-field ops; the
+    // check should not flag drift here.
+    vi.mocked(fs.existsSync).mockReturnValue(true);
+    vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify({
+      type: 'object',
+      properties: {
+        target: { type: 'string' },
+        file_count: { type: 'integer' },
+        files: { type: 'array' },
+      },
+    }));
+    await provider.validate(ops(
+      '## EXPLORE_TARGET << target_path >> context\n\n' +
+      '> **Subagent.** Output contract: `assets/schemas/explore-schema.json`\n\n' +
+      'Body.\n'
+    ));
+    // The output sig is `context` (1 field). The schema has `target` / `file_count` / `files`
+    // — clearly describing the shape of `context`, not a wrapper. Should NOT warn.
+    expect(hasMsg('missing properties for signature field')).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// S3 — `metadata.canopy-contracts` manifest
+// ---------------------------------------------------------------------------
+
+describe('diagnostics — canopy-contracts manifest', () => {
+  /** Build a SKILL.md with a custom metadata block (canopy-features + canopy-contracts). */
+  function skillWithContracts(treeBody: string, contracts: string, features: string = '[explore]') {
+    return makeDoc(
+      `---\nname: t\ndescription: t\ncompatibility: Requires the canopy-runtime skill (published at github.com/example/canopy). Install with any agentskills.io-compatible tool.\nmetadata:\n  canopy-features: ${features}\n  canopy-contracts: ${contracts}\n---\n\n` +
+      `> Safety preamble — requires canopy-runtime; halt if not installed.\n\n` +
+      `## Tree\n\n${treeBody}`
+    );
+  }
+
+  it('unrecognized value → error', async () => {
+    await provider.validate(skillWithContracts('* EXPLORE >> ctx\n', 'lenient'));
+    expect(hasMsg("'lenient'")).toBe(true);
+    expect(hasMsg('not recognized')).toBe(true);
+    expect(hasSeverity(vscode.DiagnosticSeverity.Error)).toBe(true);
+  });
+
+  it('strict declared but no op carries a contract → warning', async () => {
+    // No ops.md exists in mocked fs, so no contracts are found.
+    await provider.validate(skillWithContracts('* EXPLORE >> ctx\n', 'strict'));
+    expect(hasMsg('no op carries a contract')).toBe(true);
+    expect(hasSeverity(vscode.DiagnosticSeverity.Warning)).toBe(true);
+  });
+
+  it('omitted manifest → no diagnostic', async () => {
+    await provider.validate(skill('## Tree\n\n* EXPLORE >> ctx\n'));
+    expect(hasMsg('canopy-contracts')).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// S3 — static type-flow through the binding graph
+// ---------------------------------------------------------------------------
+
+describe('diagnostics — contract flow', () => {
+  it('clean tree with no contracts → no diagnostic', async () => {
+    await provider.validate(skill('## Tree\n\n* EXPLORE >> ctx\n* MY_OP << ctx\n', '[explore]'));
+    expect(hasMsg('does not declare in its output contract')).toBe(false);
+  });
+
+  it('tree with contract-bearing producer + matching consumer → no diagnostic', async () => {
+    // No existing ops.md — registry resolves nothing, so flow check finds no
+    // typed edges. This test asserts the *check itself* is robust to missing
+    // op definitions (no crash, no false positive).
+    await provider.validate(skill(
+      '## Tree\n\n* PRODUCE >> findings\n* CONSUME << findings\n',
+      '[explore]'
+    ));
+    expect(hasMsg('does not declare in its output contract')).toBe(false);
   });
 });

@@ -59,14 +59,17 @@ export class CanopyDefinitionProvider implements vscode.DefinitionProvider {
       }
     }
 
-    // --- Go to subagent marker schema reference ---
-    // `> **Subagent.** Output contract: \`<path>\`` or `Input contract: \`<path>\``
-    // Schema paths in the marker resolve relative to the skill root, walking up
-    // from the ops file (which typically lives at `<skill>/references/ops.md`
-    // or `<skill>/references/ops/<name>.md`).
+    // --- Go to op contract schema reference ---
+    // Two recognized marker forms (S3 universal, S2 subagent-bound):
+    //   `> **Subagent.** Output contract: \`<path>\`` or `Input contract: \`<path>\``
+    //   `> **Input contract:** \`<path>\``  /  `> **Output contract:** \`<path>\`` (bare blockquote)
+    // Schema paths resolve relative to the skill root, walking up from the
+    // ops file (which typically lives at `<skill>/references/ops.md` or
+    // `<skill>/references/ops/<name>.md`).
     const subagentMarker = line.match(/^>\s+\*\*Subagent\.?\*\*/);
-    const contractMatch = line.match(/(?:Output|Input) contract:\s*`([^`]+)`/);
-    if ((subagentMarker || /(?:Output|Input) contract:/.test(line)) && contractMatch) {
+    const bareContractMarker = line.match(/^>\s+(?:\*\*)?(?:Input|Output) contract:?\*?\*?/i);
+    const contractMatch = line.match(/(?:Output|Input) contract:\*?\*?\s*`([^`]+)`/);
+    if ((subagentMarker || bareContractMarker || /(?:Output|Input) contract:/.test(line)) && contractMatch) {
       const relPath = contractMatch[1];
       const pathStart = line.indexOf('`' + relPath + '`') + 1;
       const pathEnd = pathStart + relPath.length;

@@ -2,11 +2,20 @@ import { describe, it, expect } from 'vitest';
 import {
   parseDocument,
   parseOpDefinitions,
+  parseOpSignature,
   extractReadRefs,
   extractOpRefs,
   getOpNameAtPosition,
   isPrimitive,
 } from '../canopyDocument';
+import {
+  buildBindingGraph,
+  extractBindingKeys,
+  normalizeBindingKey,
+} from '../bindingGraph';
+import {
+  extractTopLevelProperties,
+} from '../schemaResolver';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -534,5 +543,203 @@ describe('parseDocument — subagent op-def marker', () => {
     );
     const { opDefinitions } = parseDocument(doc as any);
     expect(opDefinitions[0].isSubagent).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// S3 (v0.22.0+) — universal contract markers on inline ops
+// ---------------------------------------------------------------------------
+
+describe('parseDocument — universal contract markers (inline op)', () => {
+  it('inline op with bare `> **Output contract:**` marker sets outputContract, NOT isSubagent', () => {
+    const doc = makeDoc(
+      '## RENDER << input >> output\n\n' +
+      '> **Output contract:** `assets/schemas/render-output.json`\n\n' +
+      'Body.\n',
+      'ops.md'
+    );
+    const { opDefinitions } = parseDocument(doc as any);
+    expect(opDefinitions[0].isSubagent).toBeUndefined();
+    expect(opDefinitions[0].outputContract).toBe('assets/schemas/render-output.json');
+    expect(opDefinitions[0].markerLine).toBeDefined();
+  });
+
+  it('inline op with both Input and Output bare markers', () => {
+    const doc = makeDoc(
+      '## RENDER << input >> output\n\n' +
+      '> **Input contract:** `assets/schemas/render-input.json`\n' +
+      '> **Output contract:** `assets/schemas/render-output.json`\n\n' +
+      'Body.\n',
+      'ops.md'
+    );
+    const { opDefinitions } = parseDocument(doc as any);
+    expect(opDefinitions[0].isSubagent).toBeUndefined();
+    expect(opDefinitions[0].inputContract).toBe('assets/schemas/render-input.json');
+    expect(opDefinitions[0].outputContract).toBe('assets/schemas/render-output.json');
+  });
+
+  it('subagent marker still wins when present alongside bare markers', () => {
+    const doc = makeDoc(
+      '## REVIEW << aspect >> findings\n\n' +
+      '> **Subagent.** Output contract: `assets/schemas/findings.json`\n\n' +
+      'Body.\n',
+      'ops.md'
+    );
+    const { opDefinitions } = parseDocument(doc as any);
+    expect(opDefinitions[0].isSubagent).toBe(true);
+    expect(opDefinitions[0].outputContract).toBe('assets/schemas/findings.json');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// parseOpSignature
+// ---------------------------------------------------------------------------
+
+describe('parseOpSignature', () => {
+  it('extracts named inputs and outputs', () => {
+    expect(parseOpSignature('## REVIEW_ASPECT << aspect | file_paths >> findings'))
+      .toEqual({ inputs: ['aspect', 'file_paths'], outputs: ['findings'] });
+  });
+
+  it('handles output-only ops', () => {
+    expect(parseOpSignature('## SHOW_PLAN >> files | api_calls'))
+      .toEqual({ inputs: [], outputs: ['files', 'api_calls'] });
+  });
+
+  it('skips expression-shaped parts (quoted strings, dots)', () => {
+    expect(parseOpSignature('## CALL << "literal" | context.foo >> result'))
+      .toEqual({ inputs: [], outputs: ['result'] });
+  });
+
+  it('handles no-input no-output op', () => {
+    expect(parseOpSignature('## STANDALONE'))
+      .toEqual({ inputs: [], outputs: [] });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// S3 — metadata.canopy-contracts parsing
+// ---------------------------------------------------------------------------
+
+describe('parseDocument — metadata.canopy-contracts', () => {
+  it('parses `canopy-contracts: strict` from metadata block', () => {
+    const doc = makeDoc(
+      '---\nname: t\ndescription: t\nmetadata:\n  canopy-contracts: strict\n---\n\n## Tree\n* EXPLORE >> ctx\n'
+    );
+    const parsed = parseDocument(doc as any);
+    expect(parsed.canopyContracts).toBe('strict');
+    expect(parsed.canopyContractsLine).toBeDefined();
+  });
+
+  it('parses quoted value', () => {
+    const doc = makeDoc(
+      '---\nname: t\ndescription: t\nmetadata:\n  canopy-contracts: "strict"\n---\n\n## Tree\n* EXPLORE >> ctx\n'
+    );
+    const parsed = parseDocument(doc as any);
+    expect(parsed.canopyContracts).toBe('strict');
+  });
+
+  it('absent → canopyContracts undefined', () => {
+    const doc = makeDoc(
+      '---\nname: t\ndescription: t\nmetadata:\n  canopy-features: [explore]\n---\n\n## Tree\n* EXPLORE >> ctx\n'
+    );
+    const parsed = parseDocument(doc as any);
+    expect(parsed.canopyContracts).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// S3 — bindingGraph
+// ---------------------------------------------------------------------------
+
+describe('normalizeBindingKey', () => {
+  it('strips `ctx.` prefix', () => {
+    expect(normalizeBindingKey('ctx.foo')).toBe('foo');
+    expect(normalizeBindingKey('foo')).toBe('foo');
+  });
+
+  it('rejects expression-shaped tokens', () => {
+    expect(normalizeBindingKey('"security"')).toBeUndefined();
+    expect(normalizeBindingKey('foo.length')).toBeUndefined();
+    expect(normalizeBindingKey('42')).toBeUndefined();
+  });
+});
+
+describe('extractBindingKeys', () => {
+  it('extracts identifier-shaped binding names from a `|`-separated payload', () => {
+    expect(extractBindingKeys('ctx.findings | file_paths'))
+      .toEqual(['findings', 'file_paths']);
+  });
+
+  it('skips quoted literals and expressions', () => {
+    expect(extractBindingKeys('"security" | context.file_paths | findings'))
+      .toEqual(['file_paths', 'findings']);
+  });
+
+  it('handles undefined input', () => {
+    expect(extractBindingKeys(undefined)).toEqual([]);
+  });
+});
+
+describe('buildBindingGraph', () => {
+  it('builds producer→consumer edges in tree order', () => {
+    const doc = treeDoc(
+      '* EXPLORE >> context\n' +
+      '* RENDER << context >> report\n' +
+      '* PUBLISH << report\n'
+    );
+    const parsed = parseDocument(doc as any);
+    const graph = buildBindingGraph(parsed);
+    expect(graph.producers.map(p => p.key)).toEqual(['context', 'report']);
+    expect(graph.consumers.map(c => c.key)).toEqual(['context', 'report']);
+    expect(graph.edges.length).toBe(2);
+    expect(graph.edges[0].producer.producerOp).toBe('EXPLORE');
+    expect(graph.edges[0].consumer.consumerOp).toBe('RENDER');
+    expect(graph.edges[1].producer.producerOp).toBe('RENDER');
+    expect(graph.edges[1].consumer.consumerOp).toBe('PUBLISH');
+  });
+
+  it('records consumers with no upstream producer as unresolved', () => {
+    const doc = treeDoc('* RENDER << dangling_key\n');
+    const graph = buildBindingGraph(parseDocument(doc as any));
+    expect(graph.unresolved.length).toBe(1);
+    expect(graph.unresolved[0].key).toBe('dangling_key');
+  });
+
+  it('latest producer wins when key is rebound', () => {
+    const doc = treeDoc(
+      '* FIRST >> x\n' +
+      '* SECOND >> x\n' +
+      '* CONSUME << x\n'
+    );
+    const graph = buildBindingGraph(parseDocument(doc as any));
+    expect(graph.edges.length).toBe(1);
+    expect(graph.edges[0].producer.producerOp).toBe('SECOND');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// S3 — schemaResolver
+// ---------------------------------------------------------------------------
+
+describe('extractTopLevelProperties', () => {
+  it('returns property names of a plain object schema', () => {
+    expect(extractTopLevelProperties({
+      type: 'object',
+      properties: { foo: { type: 'string' }, bar: { type: 'number' } },
+    })).toEqual(['foo', 'bar']);
+  });
+
+  it('walks oneOf / anyOf to collect union of properties', () => {
+    expect(extractTopLevelProperties({
+      oneOf: [
+        { type: 'object', properties: { a: { type: 'string' } } },
+        { type: 'object', properties: { b: { type: 'number' } } },
+      ],
+    }).sort()).toEqual(['a', 'b']);
+  });
+
+  it('returns empty array for schemas with no properties', () => {
+    expect(extractTopLevelProperties({ type: 'array', items: { type: 'string' } })).toEqual([]);
   });
 });

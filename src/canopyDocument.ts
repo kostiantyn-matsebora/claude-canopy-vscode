@@ -48,9 +48,15 @@ export interface OpDefinition {
   // S2: subagent dispatch marker (`> **Subagent.** Output contract: <path>` blockquote
   // immediately under the heading). Absence of marker == inline op.
   isSubagent?: boolean;
+  // S3 (v0.22.0+): contracts are universal — any op (inline or subagent) may declare
+  // input/output contracts via `> **Input contract:** \`<path>\`` / `> **Output
+  // contract:** \`<path>\`` blockquotes. Subagent ops carry the same fields via the
+  // `> **Subagent.** ... contract: ...` marker.
   outputContract?: string; // schema path from `Output contract: <path>`
   inputContract?: string;  // optional schema path from `Input contract: <path>`
-  markerLine?: number;     // line index of the `> **Subagent.**` line (for diagnostics)
+  markerLine?: number;     // line index of the marker block start (for diagnostics)
+  inputs?: string[];       // parsed `<<` named inputs (e.g. ["aspect", "file_paths"])
+  outputs?: string[];      // parsed `>>` named outputs
 }
 
 export interface ParsedSkillDocument {
@@ -61,6 +67,10 @@ export interface ParsedSkillDocument {
   metadataFields: FrontmatterField[]; // fields nested under `metadata:` block
   canopyFeatures?: string[];          // parsed from metadata.canopy-features (S2.5)
   canopyFeaturesLine?: number;        // line number for diagnostic anchoring
+  // S3 (v0.22.0+): runtime contract enforcement opt-in. `metadata.canopy-contracts: strict`
+  // turns on per-op input/output validation at runtime.
+  canopyContracts?: string;           // parsed from metadata.canopy-contracts
+  canopyContractsLine?: number;       // line number for diagnostic anchoring
   sections: Section[];
   treeNodes: TreeNode[];
   opDefinitions: OpDefinition[];   // populated for ops.md, or the ## OP_NAME headers in skill.md context
@@ -158,6 +168,10 @@ export function parseDocument(document: vscode.TextDocument): ParsedSkillDocumen
             // diagnostics can flag it; the line index is still captured.
             result.canopyFeatures = [];
           }
+        } else if (indentedMatch[1] === 'canopy-contracts') {
+          // S3 (v0.22.0+): opt-in runtime enforcement. Recognized values: `strict`.
+          result.canopyContractsLine = lineIdx;
+          result.canopyContracts = value.replace(/^["']|["']$/g, '');
         }
       }
       lineIdx++;
@@ -329,6 +343,7 @@ export function parseOpDefinitions(lines: string[], uri: vscode.Uri): OpDefiniti
         bodyLineNumbers.push(i);
         i++;
       }
+      const sigParsed = parseOpSignature(signature);
       const def: OpDefinition = {
         name,
         signature,
@@ -336,18 +351,25 @@ export function parseOpDefinitions(lines: string[], uri: vscode.Uri): OpDefiniti
         endLine: i - 1,
         bodyText: bodyLines.join('\n').trim(),
         sourceUri: uri,
+        inputs: sigParsed.inputs,
+        outputs: sigParsed.outputs,
       };
 
       // S2: detect subagent marker `> **Subagent.** Output contract: <path>` as the
       // first non-blank content under the heading. The marker may span multiple
       // blockquote lines (with `Inputs:` bullets and/or `Input contract:`).
-      const markerInfo = parseSubagentMarker(bodyLines, bodyLineNumbers);
+      // S3 (v0.22.0+): also recognize bare `> **Input contract:**` /
+      // `> **Output contract:**` blockquotes (no `**Subagent.**` lead) — these
+      // declare contracts on inline ops without dispatch.
+      const markerInfo = parseOpContractMarker(bodyLines, bodyLineNumbers);
       if (markerInfo.isSubagent) {
         def.isSubagent = true;
-        def.markerLine = markerInfo.markerLine;
-        if (markerInfo.outputContract) def.outputContract = markerInfo.outputContract;
-        if (markerInfo.inputContract) def.inputContract = markerInfo.inputContract;
       }
+      if (markerInfo.markerLine !== undefined) {
+        def.markerLine = markerInfo.markerLine;
+      }
+      if (markerInfo.outputContract) def.outputContract = markerInfo.outputContract;
+      if (markerInfo.inputContract) def.inputContract = markerInfo.inputContract;
 
       defs.push(def);
     } else {
@@ -357,7 +379,7 @@ export function parseOpDefinitions(lines: string[], uri: vscode.Uri): OpDefiniti
   return defs;
 }
 
-interface SubagentMarkerInfo {
+interface OpContractMarkerInfo {
   isSubagent: boolean;
   markerLine?: number;
   outputContract?: string;
@@ -365,15 +387,22 @@ interface SubagentMarkerInfo {
 }
 
 /**
- * Detect a subagent marker in an op body. The marker is a blockquote starting
- * with `> **Subagent.**` (or `> **Subagent**`) as the first non-blank line of
- * the body, and may span multiple consecutive blockquote lines carrying
- * `Output contract: \`<path>\`` and optionally `Input contract: \`<path>\``.
+ * Detect contract markers in an op body. Two recognized forms:
+ *
+ *   Subagent (S2): `> **Subagent.**` blockquote, optionally carrying
+ *     `Output contract: \`<path>\`` and `Input contract: \`<path>\``.
+ *
+ *   Inline contract (S3): `> **Input contract:** \`<path>\`` and/or
+ *     `> **Output contract:** \`<path>\`` as bare blockquote lines (no
+ *     `**Subagent.**` lead). Declares typed contracts on an inline op.
+ *
+ * The marker block starts at the first non-blank body line and runs through
+ * consecutive blockquote lines until a blank or non-blockquote line.
  */
-function parseSubagentMarker(
+function parseOpContractMarker(
   bodyLines: string[],
   bodyLineNumbers: number[],
-): SubagentMarkerInfo {
+): OpContractMarkerInfo {
   let firstNonBlankIdx = -1;
   for (let j = 0; j < bodyLines.length; j++) {
     if (bodyLines[j].trim()) {
@@ -384,7 +413,12 @@ function parseSubagentMarker(
   if (firstNonBlankIdx < 0) return { isSubagent: false };
 
   const firstLine = bodyLines[firstNonBlankIdx].trim();
-  if (!/^>\s+\*\*Subagent\.?\*\*/.test(firstLine)) {
+  const isSubagentMarker = /^>\s+\*\*Subagent\.?\*\*/.test(firstLine);
+  // Bare contract marker (S3): blockquote starting with **Input contract:** or
+  // **Output contract:** (with optional bold around the label).
+  const isBareContractMarker = /^>\s+(?:\*\*)?(?:Input|Output) contract:?\*?\*?/i.test(firstLine);
+
+  if (!isSubagentMarker && !isBareContractMarker) {
     return { isSubagent: false };
   }
 
@@ -396,8 +430,6 @@ function parseSubagentMarker(
     if (t.startsWith('>')) {
       markerText.push(t);
     } else if (!t) {
-      // blank line — stops the marker block (markdown blockquote rules vary,
-      // but treating blank as terminator is the simple, predictable choice)
       break;
     } else {
       break;
@@ -405,14 +437,60 @@ function parseSubagentMarker(
   }
 
   const joined = markerText.join('\n');
-  const outputMatch = joined.match(/Output contract:\s*`([^`]+)`/);
-  const inputMatch = joined.match(/Input contract:\s*`([^`]+)`/);
+  // Allow bold-close `**` between the label and the backtick path:
+  //   `Output contract:** \`path\``  ← bare-marker form
+  //   `Output contract: \`path\``    ← subagent-marker form
+  const outputMatch = joined.match(/Output contract:\*?\*?\s*`([^`]+)`/);
+  const inputMatch = joined.match(/Input contract:\*?\*?\s*`([^`]+)`/);
 
   return {
-    isSubagent: true,
+    isSubagent: isSubagentMarker,
     markerLine: bodyLineNumbers[firstNonBlankIdx],
     outputContract: outputMatch?.[1],
     inputContract: inputMatch?.[1],
+  };
+}
+
+/**
+ * Extract the `<<` named-input list and `>>` named-output list from an op
+ * heading signature line. Each list is `|`-separated. Anonymous expressions
+ * (containing operators, dots, quotes) are kept as-is — used as fallback
+ * shape hints, not as schema property names.
+ *
+ * Examples:
+ *   `## REVIEW_ASPECT << aspect | file_paths >> findings`
+ *     → inputs=["aspect", "file_paths"], outputs=["findings"]
+ *   `## SHOW_PLAN >> files | api_calls`
+ *     → inputs=[], outputs=["files", "api_calls"]
+ */
+export function parseOpSignature(signature: string): { inputs: string[]; outputs: string[] } {
+  const stripped = signature.replace(/^##\s+/, '').trim();
+  const inputIdx = stripped.indexOf('<<');
+  const outputIdx = stripped.indexOf('>>');
+
+  let inputsPart = '';
+  let outputsPart = '';
+  if (inputIdx >= 0 && outputIdx > inputIdx) {
+    inputsPart = stripped.slice(inputIdx + 2, outputIdx).trim();
+    outputsPart = stripped.slice(outputIdx + 2).trim();
+  } else if (inputIdx >= 0) {
+    inputsPart = stripped.slice(inputIdx + 2).trim();
+  } else if (outputIdx >= 0) {
+    outputsPart = stripped.slice(outputIdx + 2).trim();
+  }
+
+  const splitNamed = (s: string): string[] => {
+    if (!s) return [];
+    return s.split('|').map(part => part.trim()).filter(part => {
+      // Identifier-only parts qualify as named (snake_case, single word).
+      // Skip parts that look like expressions, paths, quoted strings, or context refs.
+      return /^[a-z_][a-z0-9_]*$/i.test(part);
+    });
+  };
+
+  return {
+    inputs: splitNamed(inputsPart),
+    outputs: splitNamed(outputsPart),
   };
 }
 

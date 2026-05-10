@@ -2,6 +2,44 @@
 
 All notable changes to the Canopy Skills extension are documented here.
 
+## [0.15.0] — 2026-05-10
+
+Sync to canopy v0.22.0. Adds language-server support for **universal op contracts** (S3): a static type-flow analyzer that walks the binding graph from producer `>>` to consumer `<<` and surfaces drift between declared schemas as authoring-time diagnostics.
+
+### Added
+
+- **Universal contract marker parser** (`canopyDocument.ts`):
+  - `parseSubagentMarker` is replaced by `parseOpContractMarker`, which now also recognizes bare `> **Input contract:** \`<path>\`` and `> **Output contract:** \`<path>\`` blockquotes (no `**Subagent.**` lead) — declares contracts on inline ops without dispatch.
+  - Subagent ops continue to declare contracts via the existing `> **Subagent.**` blockquote; both forms populate the same `inputContract` / `outputContract` fields on `OpDefinition`.
+  - Contract path-extraction regex updated to allow the bold-close `**` between `Output contract:` (or `Input contract:`) and the backtick path.
+  - `OpDefinition` gains `inputs?: string[]` / `outputs?: string[]` — the `<<` / `>>` named-field lists parsed from the op signature, used by the contract-shape check below. New `parseOpSignature(signature)` helper exposes the same.
+- **`metadata.canopy-contracts` parser** (`canopyDocument.ts`): `ParsedSkillDocument` gains `canopyContracts?` and `canopyContractsLine?` for the new opt-in runtime-enforcement field.
+- **Binding-graph builder** (new `bindingGraph.ts`): walks the tree and resolves every `consumer << ctx.<key>` to its most-recent upstream `producer >> ctx.<key>`. Exposes `Binding`, `BindingConsumer`, `BindingEdge`, `BindingGraph`. Strips both `ctx.` and `context.` prefixes; rejects expression-shaped tokens (quoted literals, dotted paths beyond the prefix, numerics).
+- **Schema resolver** (new `schemaResolver.ts`): loads JSON Schema files relative to a skill root and extracts top-level property names (handles plain `properties`, plus `oneOf` / `anyOf` / `allOf` unions). Exposes `loadSchema()`, `extractTopLevelProperties()`, `findSkillRoot()`.
+- **Static type-flow diagnostics** (`diagnosticsProvider.ts`):
+  - **`checkUniversalContractMarkers`** — for every op in `ops.md` carrying contract markers without the `> **Subagent.**` lead, verify the schema files exist and that the schemas' top-level `properties` cover the op's `<<` / `>>` named-field signature when the signature has 2+ named fields (the wrapper convention). Single-field signatures are intentionally not flagged because the schema may legitimately describe the *shape* of the single binding directly (the v0.20 `EXPLORE_TARGET >> context` ↔ `explore-schema.json` convention) instead of wrapping it. Subagent ops continue to be covered by `checkSubagentMarkerDefs` to avoid double-flagging.
+  - **`checkCanopyContractsManifest`** — validates the `metadata.canopy-contracts` value (only `strict` is recognized → Error otherwise) and warns when `strict` is declared on a skill with no contract-bearing ops.
+  - **`checkContractFlow`** — for every binding edge in the tree, if the producer carries an output contract, verifies the bound `<key>` appears as a top-level property of the producer's output schema. Surfaces drift as a Warning anchored to the consumer line, naming the producer and its line for cross-reference.
+- **Hover for contract markers and the strict-mode flag** (`hoverProvider.ts`):
+  - Hovering on `metadata.canopy-contracts` surfaces a tooltip describing the strict mode.
+  - Hovering on a `> **Input contract:**` or `> **Output contract:**` blockquote surfaces a brief "Op contract (v0.22.0+)" tooltip with the contract role.
+  - Hovering on an op-name reference now surfaces declared contracts for inline ops too (previously only subagent ops).
+- **Definition jump for bare contract markers** (`definitionProvider.ts`): clicking a contract path inside `> **Input contract:** \`...\`` or `> **Output contract:** \`...\`` (no `**Subagent.**` lead) navigates to the schema file relative to the skill root. Existing subagent-marker behavior unchanged.
+- **Completion for `canopy-contracts: ` value** (`completionProvider.ts`): offers `strict` after typing `canopy-contracts: ` under `metadata:`.
+- **Snippets** (`snippets/canopy.json`):
+  - `op-contract` — new inline op with bare Input + Output contract markers (S3).
+  - `contract-input` and `contract-output` — bare blockquote markers.
+- **Tests** (`canopyDocument.test.ts`, `diagnosticsProvider.test.ts`): coverage for bare-marker parsing, subagent-marker still wins when both are present, `parseOpSignature`, `metadata.canopy-contracts` parsing, `normalizeBindingKey` (both `ctx.` and `context.` prefixes), `extractBindingKeys`, `buildBindingGraph` (producers, consumers, edges, unresolved, latest-producer-wins), `extractTopLevelProperties`, contract-marker file-existence diagnostics, contract-shape drift, and the `metadata.canopy-contracts` manifest checks.
+
+### Changed
+
+- **Framework version bump.** `package.json#canopyVersion`, `.canopy-version`, and the README "Tracks framework v…" badge all move to v0.22.0.
+
+### Notes
+
+- Cross-skill `$ref` resolution is out of scope for this release. The schema resolver currently only resolves contracts within the same skill's `assets/schemas/` directory.
+- Runtime contract validation is governed by canopy-runtime — the extension surfaces the strict-mode flag in diagnostics and hover; actual enforcement lives in the runtime spec, not the extension.
+
 ## [0.14.0] — 2026-05-09
 
 Sync to canopy v0.21.0. Adds language-server support for the **sliced primitive spec** and the per-skill `metadata.canopy-features` manifest, slims the marker block to the v0.21.0 5-line form (4-source parity restored), and adds smoke-test scenarios for PARALLEL / subagent dispatch / manifest drift.
